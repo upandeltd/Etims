@@ -1,0 +1,53 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:{country_name}",
+ "creation": "2024-02-16 18:33:20.332035",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "country_name",
+  "code_name"
+ ],
+ "fields": [
+  {
+   "fieldname": "country_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Country Name"
+  },
+  {
+   "fieldname": "code_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Code Name"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-02-16 18:33:20.332035",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS Country",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

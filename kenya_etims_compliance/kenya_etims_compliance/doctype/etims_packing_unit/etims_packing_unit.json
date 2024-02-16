@@ -1,0 +1,97 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:{etims_code_name}",
+ "creation": "2024-02-16 18:35:35.470666",
+ "default_view": "List",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "etims_code",
+  "etims_code_name",
+  "description",
+  "sort_order",
+  "column_break_endd",
+  "user_define_code_1",
+  "user_define_code_2",
+  "user_define_code_3",
+  "use_yes_or_no"
+ ],
+ "fields": [
+  {
+   "fieldname": "etims_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Code"
+  },
+  {
+   "fieldname": "etims_code_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Code Name"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Code Description"
+  },
+  {
+   "fieldname": "sort_order",
+   "fieldtype": "Data",
+   "label": "Sort Order"
+  },
+  {
+   "fieldname": "column_break_endd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "user_define_code_1",
+   "fieldtype": "Data",
+   "label": "User Define Code 1"
+  },
+  {
+   "fieldname": "user_define_code_2",
+   "fieldtype": "Data",
+   "label": "User Define Code 2"
+  },
+  {
+   "fieldname": "user_define_code_3",
+   "fieldtype": "Data",
+   "label": "User Define Code 3"
+  },
+  {
+   "fieldname": "use_yes_or_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Use Yes or No"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-02-16 18:35:35.470666",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS Packing Unit",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

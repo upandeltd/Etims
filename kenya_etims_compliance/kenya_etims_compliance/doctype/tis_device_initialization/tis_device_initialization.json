@@ -1,0 +1,117 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format: {pin}-{branch_id}",
+ "creation": "2024-02-16 18:04:41.375235",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "pin",
+  "branch_id",
+  "column_break_uu1j",
+  "device_serial_number",
+  "verify_device",
+  "section_break_xcij",
+  "communication_key",
+  "device_id",
+  "column_break_iy7d",
+  "sales_control_unit_id",
+  "mrc_no"
+ ],
+ "fields": [
+  {
+   "fieldname": "pin",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "PIN",
+   "length": 11,
+   "reqd": 1
+  },
+  {
+   "fieldname": "branch_id",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Branch ID",
+   "length": 2,
+   "options": "Tax Branch Office",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_uu1j",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "device_serial_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Device Serial Number",
+   "length": 100,
+   "reqd": 1
+  },
+  {
+   "fieldname": "verify_device",
+   "fieldtype": "Button",
+   "label": "Initialize Device"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_xcij",
+   "fieldtype": "Section Break",
+   "label": "Credentials"
+  },
+  {
+   "depends_on": "eval:!(doc.sales_control_unit_id)",
+   "fieldname": "communication_key",
+   "fieldtype": "Data",
+   "label": "Communication Key",
+   "read_only": 1
+  },
+  {
+   "fieldname": "device_id",
+   "fieldtype": "Data",
+   "label": "Device ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_iy7d",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sales_control_unit_id",
+   "fieldtype": "Data",
+   "label": "Sales Control Unit ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "mrc_no",
+   "fieldtype": "Data",
+   "label": "MRC No",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-02-16 18:04:41.375235",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "TIS Device Initialization",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

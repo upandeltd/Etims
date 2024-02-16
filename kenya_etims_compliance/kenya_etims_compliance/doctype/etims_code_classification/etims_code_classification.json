@@ -1,0 +1,97 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:{code_class_name}",
+ "creation": "2024-02-16 18:26:23.505311",
+ "default_view": "List",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "code_class",
+  "code_class_name",
+  "code_description",
+  "column_break_endd",
+  "user_define_code_1",
+  "user_define_code_2",
+  "user_define_code_3",
+  "use_yes_or_no",
+  "section_break_5jts",
+  "items"
+ ],
+ "fields": [
+  {
+   "fieldname": "code_class",
+   "fieldtype": "Data",
+   "label": "Code Class"
+  },
+  {
+   "fieldname": "code_class_name",
+   "fieldtype": "Data",
+   "label": "Code Class Name"
+  },
+  {
+   "fieldname": "code_description",
+   "fieldtype": "Small Text",
+   "label": "Code Class Description"
+  },
+  {
+   "fieldname": "column_break_endd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "user_define_code_1",
+   "fieldtype": "Data",
+   "label": "User Define Code 1"
+  },
+  {
+   "fieldname": "user_define_code_2",
+   "fieldtype": "Data",
+   "label": "User Define Code 2"
+  },
+  {
+   "fieldname": "user_define_code_3",
+   "fieldtype": "Data",
+   "label": "User Define Code 3"
+  },
+  {
+   "fieldname": "use_yes_or_no",
+   "fieldtype": "Data",
+   "label": "Use Yes or No"
+  },
+  {
+   "fieldname": "section_break_5jts",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Items",
+   "options": "TIMS Code Classification Item"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-02-16 18:26:32.848704",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS Code Classification",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

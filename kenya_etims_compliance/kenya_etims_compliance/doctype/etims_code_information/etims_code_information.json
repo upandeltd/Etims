@@ -1,0 +1,130 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-02-16 18:19:36.556434",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "last_search_date_and_time",
+  "code_request_datetime",
+  "column_break_imke",
+  "search_code",
+  "code_response_url",
+  "2_customer_search_section",
+  "customer_tin",
+  "search_customer",
+  "customer_details",
+  "3_notice_search",
+  "last_request_date",
+  "notice_date_and_time",
+  "search_notice",
+  "notices"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Section Break",
+   "label": "1. Code Search"
+  },
+  {
+   "fieldname": "last_search_date_and_time",
+   "fieldtype": "Datetime",
+   "label": "Last Search Date and Time",
+   "read_only": 1
+  },
+  {
+   "fieldname": "code_request_datetime",
+   "fieldtype": "Datetime",
+   "label": "Start Search From"
+  },
+  {
+   "fieldname": "column_break_imke",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "search_code",
+   "fieldtype": "Button",
+   "label": "Search Code"
+  },
+  {
+   "fieldname": "code_response_url",
+   "fieldtype": "Button",
+   "label": "View Search Response"
+  },
+  {
+   "fieldname": "2_customer_search_section",
+   "fieldtype": "Section Break",
+   "label": "2. Customer Search"
+  },
+  {
+   "fieldname": "customer_tin",
+   "fieldtype": "Data",
+   "label": "Customer TIN",
+   "length": 11
+  },
+  {
+   "fieldname": "search_customer",
+   "fieldtype": "Button",
+   "label": "Search Customer"
+  },
+  {
+   "fieldname": "customer_details",
+   "fieldtype": "Table",
+   "label": "Customer Details",
+   "options": "TIMS Customer"
+  },
+  {
+   "fieldname": "3_notice_search",
+   "fieldtype": "Section Break",
+   "label": "3. Notice Search"
+  },
+  {
+   "fieldname": "last_request_date",
+   "fieldtype": "Datetime",
+   "label": "Last Search Date and Time",
+   "read_only": 1
+  },
+  {
+   "fieldname": "notice_date_and_time",
+   "fieldtype": "Datetime",
+   "label": "Start Search From"
+  },
+  {
+   "fieldname": "search_notice",
+   "fieldtype": "Button",
+   "label": "Search Notice"
+  },
+  {
+   "fieldname": "notices",
+   "fieldtype": "Table",
+   "label": "Notices",
+   "options": "TIMS Notice"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2024-02-16 18:19:36.556434",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS Code Information",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

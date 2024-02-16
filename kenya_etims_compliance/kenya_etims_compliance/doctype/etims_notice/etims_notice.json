@@ -1,0 +1,68 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-02-16 18:31:25.076027",
+ "default_view": "List",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "notice_number",
+  "title",
+  "contents",
+  "column_break_hqd4",
+  "detail_url",
+  "registration_name",
+  "registration_date_and_time"
+ ],
+ "fields": [
+  {
+   "fieldname": "notice_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Notice Number"
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Title"
+  },
+  {
+   "fieldname": "contents",
+   "fieldtype": "Long Text",
+   "label": "Contents"
+  },
+  {
+   "fieldname": "column_break_hqd4",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "detail_url",
+   "fieldtype": "Data",
+   "label": "Detail Url"
+  },
+  {
+   "fieldname": "registration_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Registration Name"
+  },
+  {
+   "fieldname": "registration_date_and_time",
+   "fieldtype": "Datetime",
+   "label": "Registration Date And Time"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2024-02-16 18:31:32.146299",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS Notice",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
