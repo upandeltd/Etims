@@ -1,5 +1,5 @@
 import frappe, traceback
-from kenya_tims_compliance.utils.etims_utils import eTIMS
+from kenya_etims_compliance.utils.etims_utils import eTIMS
 
 def update_stock_to_etims(doc, method):
     if not doc.stock_updated == 1:
@@ -81,7 +81,7 @@ def get_branch_and_pin():
     print(tax_branch)
     own_pin = ""
     
-    init_doc = frappe.db.get_all("Device Initialization", filters={"branch_id": tax_branch}, fields=["pin"])
+    init_doc = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": tax_branch}, fields=["pin"])
     
     if init_doc:
         own_pin = init_doc[0].get("pin")
