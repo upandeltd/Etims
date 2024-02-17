@@ -1,7 +1,7 @@
 import requests
 
 import frappe
-from kenya_tims_compliance.utils.etims_utils import eTIMS
+from kenya_etims_compliance.utils.etims_utils import eTIMS
 
 def update_stock_to_etims(doc, method):
     item_count = 0

@@ -1,5 +1,5 @@
 import frappe
-from kenya_tims_compliance.utils.etims_utils import eTIMS
+from kenya_etims_compliance.utils.etims_utils import eTIMS
 
 def update_stock_to_etims(doc, method):
     if not doc.stock_updated == 1:
