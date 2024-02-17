@@ -1,0 +1,128 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-02-14 02:30:46.377585",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "api_settings_section",
+  "is_production",
+  "is_sandbox",
+  "branch_details_section",
+  "branch_id",
+  "tax_rates_section",
+  "vat_tax_rate_a",
+  "vat_tax_rate_b",
+  "vat_tax_rate_c",
+  "vat_tax_rate_d",
+  "vat_tax_rate_e",
+  "column_break_9nny",
+  "last_sales_invoice_number",
+  "last_purchase_invoice_number",
+  "last_stock_release_number"
+ ],
+ "fields": [
+  {
+   "fieldname": "api_settings_section",
+   "fieldtype": "Section Break",
+   "label": "API Settings"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_production",
+   "fieldtype": "Check",
+   "label": "Production"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_sandbox",
+   "fieldtype": "Check",
+   "label": "Sandbox"
+  },
+  {
+   "fieldname": "branch_details_section",
+   "fieldtype": "Section Break",
+   "label": "Branch Details"
+  },
+  {
+   "fieldname": "branch_id",
+   "fieldtype": "Data",
+   "label": "Branch Id"
+  },
+  {
+   "fieldname": "tax_rates_section",
+   "fieldtype": "Section Break",
+   "label": "Tax Rates"
+  },
+  {
+   "fieldname": "vat_tax_rate_a",
+   "fieldtype": "Int",
+   "label": "VAT Tax Rate A"
+  },
+  {
+   "fieldname": "vat_tax_rate_b",
+   "fieldtype": "Int",
+   "label": "VAT Tax Rate B"
+  },
+  {
+   "fieldname": "vat_tax_rate_c",
+   "fieldtype": "Int",
+   "label": "VAT Tax Rate C"
+  },
+  {
+   "fieldname": "vat_tax_rate_d",
+   "fieldtype": "Int",
+   "label": "VAT Tax Rate D"
+  },
+  {
+   "fieldname": "vat_tax_rate_e",
+   "fieldtype": "Int",
+   "label": "VAT Tax Rate E"
+  },
+  {
+   "fieldname": "column_break_9nny",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "last_sales_invoice_number",
+   "fieldtype": "Int",
+   "label": "Last Sales Invoice Number"
+  },
+  {
+   "fieldname": "last_purchase_invoice_number",
+   "fieldtype": "Int",
+   "label": "Last Purchase Invoice Number"
+  },
+  {
+   "fieldname": "last_stock_release_number",
+   "fieldtype": "Int",
+   "label": "Last Stock Release Number"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2024-02-17 08:10:55.853513",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "TIS Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

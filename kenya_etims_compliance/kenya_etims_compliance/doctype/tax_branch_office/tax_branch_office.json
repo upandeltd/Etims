@@ -1,0 +1,46 @@
+{
+ "actions": [],
+ "autoname": "format:{branch_id}",
+ "creation": "2024-02-14 02:04:46.411550",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "branch_id"
+ ],
+ "fields": [
+  {
+   "fieldname": "branch_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Branch ID",
+   "reqd": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-02-17 08:07:28.360503",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "Tax Branch Office",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
