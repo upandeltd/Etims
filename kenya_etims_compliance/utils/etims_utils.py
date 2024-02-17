@@ -5,7 +5,7 @@ import frappe
 class eTIMS():
     def get_headers():
         branch_id = eTIMS.get_user_branch_id()
-        header_docs = frappe.db.get_all("Device Initialization", filters={"branch_id": branch_id}, fields=["*"])
+        header_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id}, fields=["*"])
         
         if header_docs[0]:
             headers = {

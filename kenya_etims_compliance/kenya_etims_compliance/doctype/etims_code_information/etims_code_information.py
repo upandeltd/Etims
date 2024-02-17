@@ -6,7 +6,7 @@ import requests, traceback
 
 import frappe
 from frappe.model.document import Document
-from kenya_tims_compliance.utils.etims_utils import eTIMS
+from kenya_etims_compliance.utils.etims_utils import eTIMS
 
 
 class eTIMSCodeInformation(Document):
