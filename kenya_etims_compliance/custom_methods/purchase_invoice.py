@@ -2,7 +2,7 @@ import requests
 from datetime import datetime
 
 import frappe
-from kenya_tims_compliance.utils.etims_utils import eTIMS
+from kenya_etims_compliance.utils.etims_utils import eTIMS
 def validate(doc, method):
     '''
     Method validate invoice number before submitting invoice
@@ -177,11 +177,11 @@ def stockIOSaveReq(doc, date_str, item_count):
 def get_etims_sar_no(doc):
     etims_sar_no = 1
     try:
-        etims_sar_docs = frappe.get_last_doc("TIMS Stock Release Number")
+        etims_sar_docs = frappe.get_last_doc("eTIMS Stock Release Number")
         
         new_sar_no = etims_sar_docs.get("sr_number") + 1
         
-        new_doc = frappe.new_doc("TIMS Stock Release Number") 
+        new_doc = frappe.new_doc("eTIMS Stock Release Number") 
         new_doc.reference_type = "Purchase Invoice"
         new_doc.reference = doc.name
         new_doc.sr_number = new_sar_no
@@ -191,7 +191,7 @@ def get_etims_sar_no(doc):
 
         return new_sar_no
     except:
-        new_doc = frappe.new_doc("TIMS Stock Release Number") 
+        new_doc = frappe.new_doc("eTIMS Stock Release Number") 
         new_doc.reference_type = "Purchase Invoice"
         new_doc.reference = doc.name
         new_doc.sr_number = etims_sar_no 
@@ -205,7 +205,7 @@ def get_org_etims_sar_no(doc):
     org_etims_sar_no = 0
     
     if doc.custom_original_invoice_number:
-        prev_doc  = frappe.db.get_all("TIMS Stock Release Number", filters={"reference": doc.amended_from}, fields=["sr_number"])
+        prev_doc  = frappe.db.get_all("eTIMS Stock Release Number", filters={"reference": doc.amended_from}, fields=["sr_number"])
         
         org_etims_sar_no = prev_doc[0].get("sr_number")
     
@@ -225,7 +225,7 @@ def get_supplier_details(supplier):
     return supp_dict
     
 def get_last_inv_number(doc):
-    last_invoice_no_doc = frappe.get_doc("TIMS Settings")
+    last_invoice_no_doc = frappe.get_doc("TIS Settings")
     invoice_number = 0
     last_inv_no = last_invoice_no_doc.get("last_purchase_invoice_number")
     

@@ -2,7 +2,7 @@ import requests, re
 from datetime import datetime
 
 import frappe
-from kenya_tims_compliance.utils.etims_utils import eTIMS
+from kenya_etims_compliance.utils.etims_utils import eTIMS
     
 @frappe.whitelist()
 def itemSaveReq(doc_name):
@@ -217,7 +217,7 @@ def autofill_tims_info(doc, method):
         
 def get_item_pkg_unit_codes(pkg_unit):
     try:
-        etims_code_doc = frappe.get_doc("TIMS Packing Unit", pkg_unit)
+        etims_code_doc = frappe.get_doc("eTIMS Packing Unit", pkg_unit)
         if etims_code_doc:
             return etims_code_doc.get("etims_code")
     except:
@@ -226,7 +226,7 @@ def get_item_pkg_unit_codes(pkg_unit):
 
 def get_item_qty_unit_codes(qty_unit):
     try:
-        etims_code_doc = frappe.get_doc("TIMS Quantity Unit", qty_unit)
+        etims_code_doc = frappe.get_doc("eTIMS Quantity Unit", qty_unit)
         if etims_code_doc:
             return etims_code_doc.get("etims_code")
     except:
