@@ -1,0 +1,104 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-02-17 06:55:17.527834",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "1_item_classification_search_section",
+  "last_search_date_and_time",
+  "search_datetime",
+  "column_break_manu",
+  "search_item_classification",
+  "view_itemcls_search_response",
+  "2_item_search_section",
+  "item_last_search_date_and_time",
+  "item_request_datetime",
+  "request_items",
+  "registered_items"
+ ],
+ "fields": [
+  {
+   "fieldname": "1_item_classification_search_section",
+   "fieldtype": "Section Break",
+   "label": "1. Item Classification Search"
+  },
+  {
+   "fieldname": "last_search_date_and_time",
+   "fieldtype": "Datetime",
+   "label": "Last Search Date and Time",
+   "read_only": 1
+  },
+  {
+   "fieldname": "search_datetime",
+   "fieldtype": "Datetime",
+   "label": "Start Search From"
+  },
+  {
+   "fieldname": "column_break_manu",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "search_item_classification",
+   "fieldtype": "Button",
+   "label": "Search Item Classification"
+  },
+  {
+   "fieldname": "view_itemcls_search_response",
+   "fieldtype": "Button",
+   "label": "View Response"
+  },
+  {
+   "fieldname": "2_item_search_section",
+   "fieldtype": "Section Break",
+   "label": "2. Item Search"
+  },
+  {
+   "fieldname": "item_last_search_date_and_time",
+   "fieldtype": "Datetime",
+   "label": "Last Search Date and Time",
+   "read_only": 1
+  },
+  {
+   "fieldname": "item_request_datetime",
+   "fieldtype": "Datetime",
+   "label": "Start Search From"
+  },
+  {
+   "fieldname": "request_items",
+   "fieldtype": "Button",
+   "label": "Request Items"
+  },
+  {
+   "fieldname": "registered_items",
+   "fieldtype": "Table",
+   "label": "Registered Items",
+   "options": "eTIMS Registered Items"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2024-02-17 06:58:22.640821",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS Item Information",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

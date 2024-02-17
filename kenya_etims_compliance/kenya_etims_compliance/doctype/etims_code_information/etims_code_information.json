@@ -74,7 +74,7 @@
    "fieldname": "customer_details",
    "fieldtype": "Table",
    "label": "Customer Details",
-   "options": "TIMS Customer"
+   "options": "eTIMS Customer"
   },
   {
    "fieldname": "3_notice_search",
@@ -101,13 +101,13 @@
    "fieldname": "notices",
    "fieldtype": "Table",
    "label": "Notices",
-   "options": "TIMS Notice"
+   "options": "eTIMS Notice"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-02-16 18:19:36.556434",
+ "modified": "2024-02-17 06:57:53.962445",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Code Information",

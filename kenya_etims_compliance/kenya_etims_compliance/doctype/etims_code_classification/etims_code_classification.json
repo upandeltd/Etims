@@ -66,12 +66,12 @@
    "fieldname": "items",
    "fieldtype": "Table",
    "label": "Items",
-   "options": "TIMS Code Classification Item"
+   "options": "eTIMS Code Classification Item"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-02-16 18:26:32.848704",
+ "modified": "2024-02-17 06:59:39.355194",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Code Classification",

@@ -1,0 +1,215 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-02-17 06:56:57.509926",
+ "default_view": "List",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "pin",
+  "item_classification_code",
+  "item_code",
+  "item_type_code",
+  "item_name",
+  "item_standard_name",
+  "column_break_4tzj",
+  "origin_place_code_nation",
+  "packing_unit_code",
+  "quantity_unit_code",
+  "taxation_type_code",
+  "batch_number",
+  "regist_branch_office_id",
+  "column_break_nmep",
+  "barcode",
+  "default_unit_price",
+  "group1_unit_price",
+  "group2_unit_price",
+  "group3_unit_price",
+  "group4_unit_price",
+  "column_break_vlz0",
+  "group5_unit_price",
+  "add_information",
+  "safety_quantity",
+  "insurance_appicable_yn",
+  "kra_modify_yn_item_classification_code",
+  "usedunused"
+ ],
+ "fields": [
+  {
+   "fieldname": "pin",
+   "fieldtype": "Data",
+   "label": "Pin",
+   "length": 11
+  },
+  {
+   "fieldname": "item_classification_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Item Classification Code",
+   "length": 10
+  },
+  {
+   "fieldname": "item_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Item Code",
+   "length": 20
+  },
+  {
+   "fieldname": "item_type_code",
+   "fieldtype": "Data",
+   "label": "Item Type Code",
+   "length": 5
+  },
+  {
+   "fieldname": "item_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Item Name",
+   "length": 200
+  },
+  {
+   "fieldname": "item_standard_name",
+   "fieldtype": "Data",
+   "label": "Item Standard Name",
+   "length": 200
+  },
+  {
+   "fieldname": "column_break_4tzj",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "origin_place_code_nation",
+   "fieldtype": "Data",
+   "label": "Origin Place Code (Nation)",
+   "length": 5
+  },
+  {
+   "fieldname": "packing_unit_code",
+   "fieldtype": "Data",
+   "label": "Packing Unit Code",
+   "length": 5
+  },
+  {
+   "fieldname": "quantity_unit_code",
+   "fieldtype": "Data",
+   "label": "Quantity Unit Code",
+   "length": 5
+  },
+  {
+   "fieldname": "taxation_type_code",
+   "fieldtype": "Data",
+   "label": "Taxation Type Code",
+   "length": 5
+  },
+  {
+   "fieldname": "batch_number",
+   "fieldtype": "Data",
+   "label": "Batch Number",
+   "length": 10
+  },
+  {
+   "fieldname": "regist_branch_office_id",
+   "fieldtype": "Data",
+   "label": "Regist Branch Office ID",
+   "length": 2
+  },
+  {
+   "fieldname": "column_break_nmep",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "barcode",
+   "fieldtype": "Data",
+   "label": "Barcode",
+   "length": 20
+  },
+  {
+   "fieldname": "default_unit_price",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Default Unit Price",
+   "length": 18
+  },
+  {
+   "fieldname": "group1_unit_price",
+   "fieldtype": "Float",
+   "label": "Group1 Unit Price",
+   "length": 18
+  },
+  {
+   "fieldname": "group2_unit_price",
+   "fieldtype": "Float",
+   "label": "Group2 Unit Price",
+   "length": 18
+  },
+  {
+   "fieldname": "group3_unit_price",
+   "fieldtype": "Float",
+   "label": "Group3 Unit Price",
+   "length": 18
+  },
+  {
+   "fieldname": "group4_unit_price",
+   "fieldtype": "Float",
+   "label": "Group4 Unit Price",
+   "length": 18
+  },
+  {
+   "fieldname": "column_break_vlz0",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "group5_unit_price",
+   "fieldtype": "Float",
+   "label": "Group5 Unit Price",
+   "length": 18
+  },
+  {
+   "fieldname": "add_information",
+   "fieldtype": "Data",
+   "label": "Add Information",
+   "length": 7
+  },
+  {
+   "fieldname": "safety_quantity",
+   "fieldtype": "Float",
+   "label": "Safety Quantity",
+   "length": 13
+  },
+  {
+   "fieldname": "insurance_appicable_yn",
+   "fieldtype": "Data",
+   "label": "Insurance Appicable Y/N",
+   "length": 1
+  },
+  {
+   "fieldname": "kra_modify_yn_item_classification_code",
+   "fieldtype": "Data",
+   "label": "KRA Modify Y/N (Item Classification Code)",
+   "length": 1
+  },
+  {
+   "fieldname": "usedunused",
+   "fieldtype": "Data",
+   "label": "Used/UnUsed",
+   "length": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2024-02-17 06:56:57.509926",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS Registered Items",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
