@@ -1,0 +1,155 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-02-17 07:52:02.515496",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "item_sequence",
+  "item_code",
+  "item_class_code",
+  "item_name",
+  "barcode",
+  "package_unit_code",
+  "package_quantity",
+  "unit_quantity_code",
+  "unit_quantity",
+  "column_break_n85z",
+  "item_expired_date",
+  "unit_price",
+  "supply_amount",
+  "discount_rate",
+  "taxable_amount",
+  "taxation_type_code",
+  "tax_amount",
+  "total_amount",
+  "stock_updated"
+ ],
+ "fields": [
+  {
+   "fieldname": "item_sequence",
+   "fieldtype": "Int",
+   "label": "Item Sequence",
+   "length": 3
+  },
+  {
+   "fieldname": "item_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Item Code",
+   "length": 20
+  },
+  {
+   "fieldname": "item_class_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Item Class Code",
+   "length": 10
+  },
+  {
+   "fieldname": "item_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Item Name"
+  },
+  {
+   "fieldname": "barcode",
+   "fieldtype": "Data",
+   "label": "Barcode",
+   "length": 20
+  },
+  {
+   "fieldname": "package_unit_code",
+   "fieldtype": "Data",
+   "label": "Package Unit Code",
+   "length": 5
+  },
+  {
+   "fieldname": "package_quantity",
+   "fieldtype": "Float",
+   "label": "Package Quantity"
+  },
+  {
+   "fieldname": "unit_quantity_code",
+   "fieldtype": "Data",
+   "label": "Unit Quantity Code",
+   "length": 5
+  },
+  {
+   "fieldname": "unit_quantity",
+   "fieldtype": "Float",
+   "label": "Unit Quantity"
+  },
+  {
+   "fieldname": "column_break_n85z",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "item_expired_date",
+   "fieldtype": "Datetime",
+   "label": "Item Expired Date"
+  },
+  {
+   "fieldname": "unit_price",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Unit Price"
+  },
+  {
+   "fieldname": "supply_amount",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Supply Amount"
+  },
+  {
+   "fieldname": "discount_rate",
+   "fieldtype": "Float",
+   "label": "Discount Rate"
+  },
+  {
+   "fieldname": "taxable_amount",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Taxable Amount"
+  },
+  {
+   "fieldname": "taxation_type_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Taxation Type Code",
+   "length": 5
+  },
+  {
+   "fieldname": "tax_amount",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Tax Amount"
+  },
+  {
+   "fieldname": "total_amount",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Total Amount"
+  },
+  {
+   "default": "0",
+   "fieldname": "stock_updated",
+   "fieldtype": "Check",
+   "label": "Stock Updated"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2024-02-17 07:52:02.515496",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS Stock Movement Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

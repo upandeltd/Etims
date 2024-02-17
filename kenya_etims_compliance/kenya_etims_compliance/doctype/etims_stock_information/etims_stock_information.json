@@ -1,0 +1,96 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-02-17 07:53:17.558565",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "search_stock_movement_section",
+  "last_search_date_and_time",
+  "from_date_and_time",
+  "column_break_lk3k",
+  "search_stock_movement",
+  "view_stock_movement",
+  "stock_master_save_section",
+  "consolidate_stock",
+  "items",
+  "save_stock"
+ ],
+ "fields": [
+  {
+   "fieldname": "search_stock_movement_section",
+   "fieldtype": "Section Break",
+   "label": "1. Search Stock Movement"
+  },
+  {
+   "fieldname": "last_search_date_and_time",
+   "fieldtype": "Datetime",
+   "label": "Last Search Date and Time"
+  },
+  {
+   "fieldname": "from_date_and_time",
+   "fieldtype": "Datetime",
+   "label": "From Date and Time"
+  },
+  {
+   "fieldname": "column_break_lk3k",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "search_stock_movement",
+   "fieldtype": "Button",
+   "label": "Search Stock Movement"
+  },
+  {
+   "fieldname": "view_stock_movement",
+   "fieldtype": "Button",
+   "label": "View Stock Movement"
+  },
+  {
+   "fieldname": "stock_master_save_section",
+   "fieldtype": "Section Break",
+   "label": "2. Stock Master Save"
+  },
+  {
+   "fieldname": "consolidate_stock",
+   "fieldtype": "Button",
+   "label": "Consolidate Stock"
+  },
+  {
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Items",
+   "options": "eTIMS Stock Item"
+  },
+  {
+   "fieldname": "save_stock",
+   "fieldtype": "Button",
+   "label": "Save Stock"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2024-02-17 07:57:03.961446",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS Stock Information",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

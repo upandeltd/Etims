@@ -1,0 +1,73 @@
+{
+ "actions": [],
+ "autoname": "format: {sr_number}",
+ "creation": "2024-02-17 07:53:54.294388",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "reference_type",
+  "reference",
+  "column_break_tawp",
+  "sr_number",
+  "orginal_sr_number"
+ ],
+ "fields": [
+  {
+   "fieldname": "reference_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Reference Type",
+   "options": "DocType"
+  },
+  {
+   "fieldname": "reference",
+   "fieldtype": "Dynamic Link",
+   "in_list_view": 1,
+   "label": "Reference",
+   "options": "reference_type"
+  },
+  {
+   "fieldname": "column_break_tawp",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sr_number",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "SR Number"
+  },
+  {
+   "fieldname": "orginal_sr_number",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Orginal SR Number"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-02-17 07:53:54.294388",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS Stock Release Number",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
