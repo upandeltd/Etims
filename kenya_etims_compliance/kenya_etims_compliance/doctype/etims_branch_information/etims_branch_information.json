@@ -1,0 +1,106 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-02-17 07:15:25.752472",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "1_search_branch_information_section",
+  "tin",
+  "data_from_datetime",
+  "search_branch_info",
+  "branch_details_tab",
+  "3_save_branch_user_section",
+  "branch_user_list",
+  "save_branch_user",
+  "4_save_insurance_information_section",
+  "insurance_item_list",
+  "save_insurance_information"
+ ],
+ "fields": [
+  {
+   "fieldname": "1_search_branch_information_section",
+   "fieldtype": "Section Break",
+   "label": "1. Search Branch Information"
+  },
+  {
+   "fieldname": "tin",
+   "fieldtype": "Data",
+   "label": "Pin",
+   "length": 11
+  },
+  {
+   "fieldname": "data_from_datetime",
+   "fieldtype": "Datetime",
+   "label": "Data From Datetime"
+  },
+  {
+   "fieldname": "search_branch_info",
+   "fieldtype": "Button",
+   "label": "Search"
+  },
+  {
+   "fieldname": "branch_details_tab",
+   "fieldtype": "Table",
+   "label": "Branch Details",
+   "options": "eTIMS Branch Item"
+  },
+  {
+   "fieldname": "3_save_branch_user_section",
+   "fieldtype": "Section Break",
+   "label": "2. Save Branch User "
+  },
+  {
+   "fieldname": "branch_user_list",
+   "fieldtype": "Table",
+   "label": "Branch User List",
+   "options": "eTIMS Branch User"
+  },
+  {
+   "fieldname": "save_branch_user",
+   "fieldtype": "Button",
+   "label": "Save Branch User"
+  },
+  {
+   "fieldname": "4_save_insurance_information_section",
+   "fieldtype": "Section Break",
+   "label": "3. Save Insurance Information"
+  },
+  {
+   "fieldname": "insurance_item_list",
+   "fieldtype": "Table",
+   "label": "Insurance Item List",
+   "options": "eTIMS Insurance Item"
+  },
+  {
+   "fieldname": "save_insurance_information",
+   "fieldtype": "Button",
+   "label": "Save Insurance Information"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2024-02-17 07:17:36.540565",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS Branch Information",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
