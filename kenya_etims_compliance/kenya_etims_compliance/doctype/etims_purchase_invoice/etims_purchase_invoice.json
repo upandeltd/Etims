@@ -1,0 +1,290 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-02-17 07:44:29.932748",
+ "default_view": "List",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "supplier_pin",
+  "supplier_name",
+  "supplier_branch_id",
+  "supplier_invoice_invoice",
+  "receipt_type_code",
+  "payment_type_code",
+  "validated_date",
+  "sale_date",
+  "column_break_jkio",
+  "stock_released_date",
+  "total_item_count",
+  "taxable_amount_a",
+  "taxable_amount_b",
+  "taxable_amount_c",
+  "taxable_amount_d",
+  "taxable_amount_e",
+  "stock_updated",
+  "column_break_finn",
+  "tax_rate_a",
+  "tax_rate_b",
+  "tax_rate_c",
+  "tax_rate_d",
+  "tax_rate_e",
+  "tax_amt_a",
+  "tax_amt_b",
+  "column_break_fd3l",
+  "tax_amt_c",
+  "tax_amt_d",
+  "tax_amt_e",
+  "total_taxable_amount",
+  "total_tax_amount",
+  "total_amount",
+  "remark",
+  "section_break_f3rs",
+  "items"
+ ],
+ "fields": [
+  {
+   "fieldname": "supplier_pin",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Supplier PIN",
+   "length": 11,
+   "read_only": 1
+  },
+  {
+   "fieldname": "supplier_name",
+   "fieldtype": "Data",
+   "label": "Supplier Name",
+   "length": 60,
+   "read_only": 1
+  },
+  {
+   "fieldname": "supplier_branch_id",
+   "fieldtype": "Data",
+   "label": "Supplier Branch ID",
+   "length": 2,
+   "read_only": 1
+  },
+  {
+   "fieldname": "supplier_invoice_invoice",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Supplier Invoice Invoice",
+   "length": 38,
+   "read_only": 1
+  },
+  {
+   "fieldname": "receipt_type_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Receipt Type Code",
+   "length": 5,
+   "read_only": 1
+  },
+  {
+   "fieldname": "payment_type_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Payment Type Code",
+   "length": 5,
+   "read_only": 1
+  },
+  {
+   "fieldname": "validated_date",
+   "fieldtype": "Datetime",
+   "label": "Validated Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sale_date",
+   "fieldtype": "Date",
+   "label": "Sale Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_jkio",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "stock_released_date",
+   "fieldtype": "Datetime",
+   "label": "Stock Released Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_item_count",
+   "fieldtype": "Int",
+   "label": "Total Item Count",
+   "length": 10,
+   "read_only": 1
+  },
+  {
+   "fieldname": "taxable_amount_a",
+   "fieldtype": "Data",
+   "label": "Taxable Amount A",
+   "read_only": 1
+  },
+  {
+   "fieldname": "taxable_amount_b",
+   "fieldtype": "Data",
+   "label": "Taxable Amount B",
+   "read_only": 1
+  },
+  {
+   "fieldname": "taxable_amount_c",
+   "fieldtype": "Data",
+   "label": "Taxable Amount C",
+   "read_only": 1
+  },
+  {
+   "fieldname": "taxable_amount_d",
+   "fieldtype": "Data",
+   "label": "Taxable Amount D",
+   "read_only": 1
+  },
+  {
+   "fieldname": "taxable_amount_e",
+   "fieldtype": "Data",
+   "label": "Taxable Amount E",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "stock_updated",
+   "fieldtype": "Check",
+   "label": "Stock Updated"
+  },
+  {
+   "fieldname": "column_break_finn",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "tax_rate_a",
+   "fieldtype": "Float",
+   "label": "Tax Rate A",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tax_rate_b",
+   "fieldtype": "Float",
+   "label": "Tax Rate B",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tax_rate_c",
+   "fieldtype": "Float",
+   "label": "Tax Rate C",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tax_rate_d",
+   "fieldtype": "Float",
+   "label": "Tax Rate D",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tax_rate_e",
+   "fieldtype": "Float",
+   "label": "Tax Rate E",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tax_amt_a",
+   "fieldtype": "Float",
+   "label": "Tax Amt A",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tax_amt_b",
+   "fieldtype": "Float",
+   "label": "Tax Amt B",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_fd3l",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "tax_amt_c",
+   "fieldtype": "Float",
+   "label": "Tax Amt C",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tax_amt_d",
+   "fieldtype": "Float",
+   "label": "Tax Amt D",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tax_amt_e",
+   "fieldtype": "Float",
+   "label": "Tax Amt E",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_taxable_amount",
+   "fieldtype": "Float",
+   "label": "Total Taxable Amount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_tax_amount",
+   "fieldtype": "Float",
+   "label": "Total Tax Amount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_amount",
+   "fieldtype": "Data",
+   "label": "Total Amount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "remark",
+   "fieldtype": "Small Text",
+   "label": "Remark",
+   "length": 400,
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_f3rs",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Items",
+   "options": "eTIMS Purchase Item",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-02-17 07:45:51.338483",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS Purchase Invoice",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

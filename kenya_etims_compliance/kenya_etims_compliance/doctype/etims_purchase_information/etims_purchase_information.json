@@ -1,0 +1,71 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-02-17 07:43:57.158659",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "1_search_purchase_information_section",
+  "last_search_date_and_time",
+  "last_request_date",
+  "column_break_xbgc",
+  "search_purchases",
+  "view_purchase_invoices"
+ ],
+ "fields": [
+  {
+   "fieldname": "1_search_purchase_information_section",
+   "fieldtype": "Section Break",
+   "label": "1. Search Purchase Information"
+  },
+  {
+   "fieldname": "last_search_date_and_time",
+   "fieldtype": "Datetime",
+   "label": "Last Search Date and Time"
+  },
+  {
+   "fieldname": "last_request_date",
+   "fieldtype": "Datetime",
+   "label": "From Date and Time"
+  },
+  {
+   "fieldname": "column_break_xbgc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "search_purchases",
+   "fieldtype": "Button",
+   "label": "Search Purchases"
+  },
+  {
+   "fieldname": "view_purchase_invoices",
+   "fieldtype": "Button",
+   "label": "View Purchase Invoices"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2024-02-17 07:43:57.158659",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS Purchase Information",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
