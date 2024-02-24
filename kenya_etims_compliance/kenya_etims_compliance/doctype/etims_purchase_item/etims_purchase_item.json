@@ -23,7 +23,7 @@
   "taxable_amount",
   "tax_amount",
   "total_amount",
-  "stock_updated"
+  "updated_in_purchase"
  ],
  "fields": [
   {
@@ -122,15 +122,15 @@
   },
   {
    "default": "0",
-   "fieldname": "stock_updated",
+   "fieldname": "updated_in_purchase",
    "fieldtype": "Check",
-   "label": "Stock Updated"
+   "label": "Updated In Purchase"
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2024-02-17 07:45:09.952486",
+ "modified": "2024-02-24 19:36:22.074118",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Purchase Item",

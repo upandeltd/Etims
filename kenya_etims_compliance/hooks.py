@@ -144,9 +144,9 @@ doc_events = {
             "before_submit": "kenya_etims_compliance.custom_methods.purchase_invoice.trnsPurchaseSaveReq",
             "on_update": "kenya_etims_compliance.custom_methods.purchase_invoice.insert_invoice_number"
         },
-        "eTIMS Purchase Invoice": {
-            "on_update": "kenya_etims_compliance.custom_methods.etims_purchase_invoice.update_stock_to_etims",
-        },
+        # "eTIMS Purchase Invoice": {
+        #     "on_update": "kenya_etims_compliance.custom_methods.etims_purchase_invoice.update_stock_to_etims",
+        # },
         "eTIMS Stock Movement": {
             "on_update": "kenya_etims_compliance.custom_methods.etims_stock_movement.update_stock_to_etims",
         }

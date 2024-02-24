@@ -22,7 +22,7 @@ class eTIMSPurchaseInformation(Document):
         try:
             response = requests.request(
                             "POST", 
-                            eTIMS.tims_base_url() + 'selectTrnsPurchaseSalesList',
+                            eTIMS.get_base_url() + '/api/method/kenya_etims_compliance.utils.etims_response.' + 'selectTrnsPurchaseSalesList',
                             json = payload, 
                             headers=headers
                         )

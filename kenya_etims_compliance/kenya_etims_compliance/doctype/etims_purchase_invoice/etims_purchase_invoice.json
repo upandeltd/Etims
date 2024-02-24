@@ -9,7 +9,7 @@
   "supplier_pin",
   "supplier_name",
   "supplier_branch_id",
-  "supplier_invoice_invoice",
+  "supplier_invoice_number",
   "receipt_type_code",
   "payment_type_code",
   "validated_date",
@@ -65,15 +65,6 @@
    "fieldtype": "Data",
    "label": "Supplier Branch ID",
    "length": 2,
-   "read_only": 1
-  },
-  {
-   "fieldname": "supplier_invoice_invoice",
-   "fieldtype": "Int",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Supplier Invoice Invoice",
-   "length": 38,
    "read_only": 1
   },
   {
@@ -268,11 +259,20 @@
    "fieldtype": "Link",
    "label": "ERPNext Purchase Invoice",
    "options": "Purchase Invoice"
+  },
+  {
+   "fieldname": "supplier_invoice_number",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Supplier Invoice Number",
+   "length": 38,
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-02-24 18:51:42.014471",
+ "modified": "2024-02-24 19:33:48.225365",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Purchase Invoice",
