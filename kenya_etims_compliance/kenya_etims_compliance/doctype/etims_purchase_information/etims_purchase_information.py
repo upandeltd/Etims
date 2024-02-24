@@ -90,7 +90,7 @@ def process_purchases(response_json):
                 new_doc.total_amount = invoice.get("totAmt")
                 new_doc.remark = invoice.get("remark")
                 
-                new_doc.insert()
+                # new_doc.save()
                 
                 for item_detail in invoice.get("itemList"):
                     try:
@@ -98,12 +98,12 @@ def process_purchases(response_json):
                         item_dict = assign_purchase_item(item_detail)
                     
                         new_doc.append("items", item_dict)
-                        
-                        new_doc.save()
 
                         frappe.db.commit()
                     except:
                         frappe.throw(traceback.format_exc())
+                
+                new_doc.insert()
      
 def check_if_doc_exists(doc, doc_filter, doc_value):
     cdcls_exists = False
