@@ -35,26 +35,30 @@ class eTIMSPurchaseInvoice(Document):
         new_purchase_doc.bill_no = self.supplier_invoice_number
         new_purchase_doc.bill_date = self.sale_date
         new_purchase_doc.custom_etims_purchase_invoice = self.name
+        new_purchase_doc.custom_update_purchase_in_tims = 1
+        new_purchase_doc.update_stock = 1
+        
 
         for item in self.items:
-            create_selling_price_list(item)
+            create_buying_price_list(item)
 
-            if not item.get("updated_in_purchase") == 1:
+            if not item.get("purchase_invoice_created") == 1:
                 
                 try:
                     item_dict = assign_purchase_item(item)
                 
                     new_purchase_doc.append("items", item_dict)
-                    
-                    item.updated_in_purchase = 1
+                   
                     new_purchase_doc.save()
 
+                    # update etims purchase item
+                    frappe.db.set_value('eTIMS Purchase Item', item.name, {'purchase_invoice_created': 1}, update_modified=True)
+                    frappe.db.set_value('eTIMS Purchase Invoice', self.name, {'erpnext_purchase_invoice_updated': 1, "erpnext_purchase_invoice": new_purchase_doc.name}, update_modified=True)
+                    
                     frappe.db.commit()
                 except:
                     frappe.throw(traceback.format_exc())
-    # self.erpnext_purchase_invoice_updated = 1
-
-    
+        
     def create_supplier(self):
         supplier_exists = frappe.db.exists("Supplier", {"supplier_name": self.supplier_name})
         
@@ -67,7 +71,7 @@ class eTIMSPurchaseInvoice(Document):
             new_supplier.insert()
             frappe.db.commit()
             
-def create_selling_price_list(item):
+def create_buying_price_list(item):
     price_list_exists = frappe.db.exists("Item Price", {"item_code": item.item_name, "price_list": "Standard Buying"})
     
     if not price_list_exists:

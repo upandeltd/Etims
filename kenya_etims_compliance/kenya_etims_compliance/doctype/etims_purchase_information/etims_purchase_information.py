@@ -53,7 +53,7 @@ def process_purchases(response_json):
     if invoices:
         for invoice in invoices:
             doc_exists = check_if_doc_exists(
-                        "eTIMS Purchase Invoice", "supplier_invoice_invoice", invoice.get("spplrInvcNo")
+                        "eTIMS Purchase Invoice", "supplier_invoice_number", invoice.get("spplrInvcNo")
                     )
             
             sale_date = eTIMS.strp_date_object(invoice.get("salesDt"))
@@ -63,7 +63,7 @@ def process_purchases(response_json):
                 new_doc.supplier_pin = invoice.get("spplrTin")
                 new_doc.supplier_name = invoice.get("spplrNm")
                 new_doc.supplier_branch_id = invoice.get("spplrBhfId")
-                new_doc.supplier_invoice_invoice = invoice.get("spplrInvcNo")
+                new_doc.supplier_invoice_number = invoice.get("spplrInvcNo")
                 new_doc.receipt_type_code = invoice.get("rcptTyCd")
                 new_doc.payment_type_code = invoice.get("pmtTyCd")
                 new_doc.validated_date = invoice.get("cfmDt")

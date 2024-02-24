@@ -119,7 +119,7 @@ def selectStockMoveList():
                     {
                         "custTin":"P600000233A",
                         "custBhfId":"00",
-                        "sarNo":6,
+                        "sarNo":7,
                         "ocrnDt":"20200120",
                         "totItemCnt":1,
                         "totTaxblAmt":1800000,
@@ -194,7 +194,7 @@ def selectTrnsPurchaseSalesList():
                         "spplrTin":"A123456789Z",
                         "spplrNm":"Taxpayer1111",
                         "spplrBhfId":"00",
-                        "spplrInvcNo":2,
+                        "spplrInvcNo":11,
                         "rcptTyCd":"S",
                         "pmtTyCd":"01",
                         "cfmDt":"2020-01-27 21:03:00",

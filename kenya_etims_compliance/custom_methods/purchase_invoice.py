@@ -114,10 +114,10 @@ def trnsPurchaseSaveReq(doc, method):
             stockIOSaveReq(doc, date_str, count)
             doc.custom_item_updated_in_tims = 1
             
-            return {"Success": response_json.get("resultMsg")}
+            frappe.msgprint(response_json.get("resultMsg"))
 
         except:
-                return {"Error":"Oops Bad Request!"}
+            frappe.throw(response_json.get("resultMsg"))
     else:
         print(payload)
         stockIOSaveReq(doc, date_str, count)
@@ -276,7 +276,7 @@ def validate_inv_number(doc):
 def etims_sale_item_list(doc):
     sales_item_list = []
     for item in doc.items:
-        item_tax_details = get_tax_template_details(item.get("item_tax_template"))
+        item_tax_details = get_tax_template_details(item.get("item_code"))
         item_detail = frappe.db.get_all("Item", filters={"disabled": 0, "item_code": item.get("item_code")}, fields = ["*"])
         item_tax_amount = format(item.get("amount") * (eTIMS.get_default_tax_rate_b()/100), ".2f")
         
@@ -299,7 +299,7 @@ def etims_sale_item_list(doc):
 					"splyAmt": item.get("amount"),
 					"dcRt": item.get("discount_percentage"),
 					"dcAmt": item.get("discount_amount"),
-                    "taxTyCd": item_tax_details.get("tax_code"),
+                    "taxTyCd": item_tax_details,
 					"taxblAmt": item.get("amount"),
 					"taxAmt": round((item.get("amount") - item.get("net_amount")), 2),
 					"totAmt": item.get("amount"),
@@ -311,20 +311,13 @@ def etims_sale_item_list(doc):
             
     return sales_item_list
 
-def get_tax_template_details(template_name):
-    tax_temp_list = []
-    tax_doc = frappe.get_doc("Item Tax Template", template_name)
-    if tax_doc:
-        for tax_item in tax_doc.taxes:
-            tax_details = {
-                "rate": tax_item.tax_rate,
-                "tax_code": tax_item.custom_code,
-                "tax_name": tax_item.custom_code_name
-            }
-
-            if not tax_details in tax_temp_list:
-                tax_temp_list.append(tax_details)
-    
-        return tax_temp_list[0]
+def get_tax_template_details(item_code):
+    item_doc = frappe.get_doc("Item", item_code)
+    if item_doc:
+        for tax_item in item_doc.taxes:
+            tax_code = frappe.get_doc("Item Tax Template", tax_item.get("item_tax_template"))
+            
+            if tax_code:
+                return tax_code.get("custom_code")
     else:
         return "D"

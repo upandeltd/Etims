@@ -23,7 +23,7 @@
   "taxable_amount",
   "tax_amount",
   "total_amount",
-  "updated_in_purchase"
+  "purchase_invoice_created"
  ],
  "fields": [
   {
@@ -122,15 +122,15 @@
   },
   {
    "default": "0",
-   "fieldname": "updated_in_purchase",
+   "fieldname": "purchase_invoice_created",
    "fieldtype": "Check",
-   "label": "Updated In Purchase"
+   "label": "Purchase Invoice Created"
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2024-02-24 19:36:22.074118",
+ "modified": "2024-02-24 23:22:15.499496",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Purchase Item",
