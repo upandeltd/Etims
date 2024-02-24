@@ -66,7 +66,7 @@ def selectImportItemList():
                     "itemSeq":1,
                     "dclNo":"C3460-2019- TZDL",
                     "hsCd":"20055900000",
-                    "itemNm":"BAKED BEANS",
+                    "itemNm":"FRIED BEANS",
                     "imptItemsttsCd":"2",
                     "orgnNatCd":"BR",
                     "exptNatCd":"BR",
@@ -80,7 +80,7 @@ def selectImportItemList():
                     "agntNm":"BN METRO Ltd",
                     "invcFcurAmt":296865.6,
                     "invcFcurCd":"USD",
-                    "invcFcurExcrt":150.79
+                    "invcFcurExcrt":100.79
                     },
                     {
                     "taskCd":"2239079",

@@ -1,0 +1,68 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-02-17 12:07:31.636745",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "1_search_import_item_section",
+  "last_search_date_and_time",
+  "data_from_datetime",
+  "search_import_item",
+  "import_items"
+ ],
+ "fields": [
+  {
+   "fieldname": "1_search_import_item_section",
+   "fieldtype": "Section Break",
+   "label": "1. Search Import Item"
+  },
+  {
+   "fieldname": "last_search_date_and_time",
+   "fieldtype": "Datetime",
+   "label": "Last Search Date and Time",
+   "read_only": 1
+  },
+  {
+   "fieldname": "data_from_datetime",
+   "fieldtype": "Datetime",
+   "label": "Data From Datetime"
+  },
+  {
+   "fieldname": "search_import_item",
+   "fieldtype": "Button",
+   "label": "Search Import Item"
+  },
+  {
+   "fieldname": "import_items",
+   "fieldtype": "Table",
+   "label": "Import Items",
+   "options": "eTIMS Import Item"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2024-02-17 12:07:31.636745",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS Import Item Information",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

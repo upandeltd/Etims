@@ -1,0 +1,215 @@
+# Copyright (c) 2023, Upande Ltd and contributors
+# For license information, please see license.txt
+
+from datetime  import datetime
+import requests, traceback
+
+import frappe
+from frappe.model.document import Document
+from kenya_etims_compliance.utils.etims_utils import eTIMS
+
+
+class eTIMSImportItemInformation(Document):
+    @frappe.whitelist()
+    def importItemSearchReq(self):
+        request_datetime = self.data_from_datetime
+        date_time_str = eTIMS.strf_datetime_object(request_datetime)
+        
+        headers = eTIMS.get_headers()
+
+        payload = {
+                "lastReqDt" : date_time_str, 
+        }
+
+        try:
+            response = requests.request(
+                "POST", 
+                eTIMS.tims_base_url() + 'selectImportItemList', 
+                json = payload, 
+                headers=headers
+            )
+            response_data = response.json()
+            response_json = eTIMS.get_response_data(response_data)
+   
+            if not response_json.get("resultCd") == '000':
+                return {"Error":response_json.get("resultMsg")}
+
+            item_list = process_item_information(response_json)
+            # print(item_list)
+            self.last_search_date_and_time = request_datetime
+               
+            
+            for item in item_list:
+                item_exists = check_import_item_exits(item.get("task_code"))
+                if not item_exists == True:
+                    map_import_item(item)
+                    self.append("import_items", item)
+
+                    self.save()
+                self.create_import_stock_entry(item)
+            return {"Success": response_json.get("resultMsg")}
+
+        except:
+            eTIMS.log_errors("Search Import Item", traceback.format_exc())
+            return {"Error":"Oops Bad Request!"}
+        
+    def create_import_stock_entry(self, import_item):
+        tax_branch = eTIMS.get_user_branch_id()
+        
+        store_warehouse = frappe.db.get_all("Warehouse", filters={"warehouse_type": "Stores", "is_group": 0, "custom_tax_branch_office": tax_branch}, fields=["warehouse_name", "name"])
+        
+        if store_warehouse:
+            receipt_store = store_warehouse[0].get("name")
+            for item in self.import_items:
+                if not item.stock_updated:                
+                    new_item_doc = frappe.new_doc("Stock Entry")
+                    new_item_doc.stock_entry_type = "Material Receipt"
+                    # new_item_doc.custom_send_to_tims = 1
+                    new_item_doc.append("items", {
+                        "item_code": import_item.get("item_name"),
+                        "t_warehouse": receipt_store,
+                        "qty": import_item.get("quantity")
+                    })
+                    
+                    new_item_doc.insert()
+                    # new_item_doc.submit()
+                    item.stock_updated = 1
+                    self.save()    
+        else:
+            frappe.throw("Warehouse not found for tax branch!")
+            
+    
+    # @frappe.whitelist()#custom_is_import_item
+    # def importItemUpdateReq(self):
+    #     headers = eTIMS.get_headers()
+
+    #     for import_item in self.import_items_for_update:
+    #         if not import_item.get("saved") == 1:
+    #             payload = {
+    #                 "taskCd": import_item.get("task_code"),
+    #                 "dclDe": import_item.get("declaration_date"),
+    #                 "itemSeq": import_item.get("item_sequence"),
+    #                 "hsCd": import_item.get("hs_code"),
+    #                 "itemClsCd": import_item.get("item_classification_code"),
+    #                 "itemCd": import_item.get("item_code"),
+    #                 "imptItemSttsCd": import_item.get("import_item_status_code"),
+    #                 "remark": import_item.get("remark"),
+    #                 "modrId": import_item.get("modifier_id"),
+    #                 "modrNm": import_item.get("modifier_name")
+    #             }
+    
+    #             try:
+    #                 response = requests.request("POST", 'https://etims-api-sbx.kra.go.ke/etims-api/updateImportItem', json = payload, headers=headers)
+    #                 response_json = response.json()
+     
+    #                 if not response_json.get("resultCd") == '000':
+    #                     return {"Error":response_json.get("resultMsg")}
+            
+    #                 import_item.saved = 1
+    #                 self.save()
+    #                 return {"Success":response_json.get("resultMsg")}
+
+    #             except:
+    #                 return "Bad Request!"	       	
+
+
+    
+#  pkgUnitCd': 'KGM', 'qty': 14, 'qtyUnitCd': 'KGM', 'totWt': 140, 'netWt': 14, 'spplrNm': 'SEITZ GMGH', 'agntNm': 'SCHENKER LIMITED', 'invcFcurAmt': 11817.5, 'invcFcurCd': 'EUR', 'invcFcurExcrt': 135.73}, {'taskCd': '20230209004633', 'dclDe': '01022023', 'itemSeq': 1, 'dclNo': '23NBOIM401167364', 'hsCd': '63079000', 'itemNm': 'N; LIFTING BELTS 2t x 4m,3t x4m,5t x 4m,2t x 1m; L; 1; 1; 1; ', 'imptItemsttsCd': '2', 'orgnNatCd': 'DE', 'exptNatCd': 'DE', 'pkg': 17, 'pkgUnitCd': 'KGM', 'qty': 14, 'qtyUnitCd': 'KGM', 'totWt': 140, 'netWt': 14, 'spplrNm': 'SEITZ GMGH', 'agntNm': 'SCHENKER LIMITED', 'invcFcurAmt': 11817.5, 'invcFcurCd': 'EUR', 'invcFcurExcrt': 135.73}, {'taskCd': '20230209004634', 'dclDe': '01022023', 'itemSeq': 1, 'dclNo': '23NBOIM401167364', 'hsCd': '63079000', 'itemNm': 'N; LIFTING BELTS 2t x 4m,3t x4m,5t x 4m,2t x 1m; L; 1; 1; 1; ', 'imptItemsttsCd': '2', 'orgnNatCd': 'DE', 'exptNatCd': 'DE', 'pkg': 17, 'pkgUnitCd': 'KGM', 'qty': 14, 'qtyUnitCd': 'KGM', 'totWt': 140, 'netWt': 14, 'spplrNm': 'SEITZ GMGH'
+######################################### Global Methods ################################
+def process_item_information(response_result):
+    item_list = []
+    data = response_result.get("data")
+
+    if data.get("itemList"):
+        for item in data.get("itemList"):
+            data = {
+                "task_code": item.get("taskCd"),
+                "declaration_date": item.get("dclDe"),
+                "item_sequence": item.get("itemSeq"),
+                "declaration_number": item.get("dclNo"),
+                "hs_code": item.get("hsCd"),
+                "item_name": item.get("itemNm"),
+                "import_item_status_code": item.get("imptItemsttsCd"),
+                "origin_nation_code": item.get("orgnNatCd"),
+                "export_nation_code": item.get("exptNatCd"),
+                "package": item.get("pkg"),
+                "packaging_unit_code": item.get("pkgUnitCd"),
+                "quantity": item.get("qty"),
+                "quantity_unit_code": item.get("qtyUnitCd"),
+                "gross_weight": item.get("totWt"),
+                "net_weight": item.get("netWt"),
+                "supplier_name": item.get("spplrNm"),
+                "agent_name": item.get("agntNm"),
+                "invoice_foreign_currency_amount": item.get("invcFcurAmt"),
+                "invoice_foreign_currency": item.get("invcFcurCd"),
+                "invoice_foreign_currency_crt": item.get("invcFcurExcrt")
+            }
+
+            if not data in item_list:
+                item_list.append(data)
+    return item_list
+
+def check_import_item_exits(task_code):
+    item_exists = False
+    import_item = frappe.db.get_all(
+        "eTIMS Import Item", filters={"task_code": task_code}
+    )
+
+    if import_item:
+        item_exists = True
+
+    return item_exists
+
+def map_import_item(item):
+    item_exists = check_if_item_exits(item.get("item_name"))
+    
+    if item_exists == False:
+        # create item if not exists
+        create_import_item_doctype(item)
+        
+        # create stock entry for receipt and update stock
+    else:
+        #check if item is update
+        
+        # create stock entry for receipt and update stock
+        pass
+
+def check_if_item_exits(item_code):
+    item_exists = frappe.db.exists({"doctype": "Item", "item_code": item_code})
+    
+    if item_exists:
+        
+        return True
+    else:
+        return False
+
+def create_import_item_doctype(item):
+    date_str = item.get("declaration_date")
+    date_obj = datetime.strptime(date_str, "%d%m%Y").date()
+    item_price_ksh = (item.get("invoice_foreign_currency_amount")/item.get("quantity"))/item.get("invoice_foreign_currency_crt")
+    
+    new_item_doc = frappe.new_doc("Item")
+    new_item_doc.item_code = item.get("item_name")
+    new_item_doc.item_group = "All Item Groups"
+    new_item_doc.stock_uom = "Nos"
+    new_item_doc.custom_is_import_item = 1
+    new_item_doc.valuation_rate = item_price_ksh
+    new_item_doc.custom_task_code = item.get("task_code")
+    new_item_doc.custom_declaration_date = date_obj
+    new_item_doc.custom_hs_code = item.get("hs_code")
+    new_item_doc.custom_remark = item.get("remark")
+    
+    if item.get("import_item_status_code") == "1":
+        new_item_doc.custom_import_item_status_code = "Unsent"
+    
+    elif item.get("import_item_status_code") == "2":
+        new_item_doc.custom_import_item_status_code = "Waiting"
+        
+    elif item.get("import_item_status_code") == "3":
+        new_item_doc.custom_import_item_status_code = "Approved"
+        
+    elif item.get("import_item_status_code") == "4":
+        new_item_doc.custom_import_item_status_code = "Cancelled"
+    
+    new_item_doc.insert()
+

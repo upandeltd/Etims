@@ -153,7 +153,7 @@ def autofill_tims_info(doc, method):
     '''
     Method autofills tims info for item
     '''
-    if doc.custom_update_item_to_tims:
+    if doc.custom_update_item_to_tims == 1:
         doc.custom_item_name = doc.item_code
         doc.custom_item_standard_name = doc.item_name
         doc.custom_quantity_unit_code = get_item_qty_unit_codes(doc.custom_default_quantity_unit)
@@ -165,9 +165,9 @@ def autofill_tims_info(doc, method):
         doc.custom_group4_unit_price = get_item_prices(doc)
         doc.custom_item_type_code = get_item_type_code(doc)
         doc.custom_registration_id = doc.owner
-        # doc.custom_registration_name = doc.owner
+        doc.custom_registration_name = doc.owner
         doc.custom_modifier_id = doc.modified_by
-        # doc.custom_modifier_name = doc.modified_by
+        doc.custom_modifier_name = doc.modified_by
         # doc.save()
         if doc.taxes:
             for tax_item in doc.taxes:
@@ -264,11 +264,12 @@ def get_item_type_code(doc):
         return item_type_doc.get("custom_etims_item_type_code")
     
 def get_item_code(doc):
-    str_item_code = doc.custom_origin_place_code_nation + str(get_item_type_code(doc)) + get_item_pkg_unit_codes(doc.custom_default_packing_unit) + get_item_qty_unit_codes(doc.custom_default_quantity_unit)
+    if doc.custom_origin_place_code_nation:
+        str_item_code = doc.custom_origin_place_code_nation + str(get_item_type_code(doc)) + get_item_pkg_unit_codes(doc.custom_default_packing_unit) + get_item_qty_unit_codes(doc.custom_default_quantity_unit)
     
-    item_code = str(str_item_code) + create_item_digit_code(doc)
+        item_code = str(str_item_code) + create_item_digit_code(doc)
     
-    return item_code
+        return item_code
     
 def item_code_increment(doc):
     item_code_list = []

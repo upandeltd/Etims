@@ -1,0 +1,178 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-02-17 12:06:56.878316",
+ "default_view": "List",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "task_code",
+  "declaration_date",
+  "item_sequence",
+  "declaration_number",
+  "hs_code",
+  "item_name",
+  "import_item_status_code",
+  "origin_nation_code",
+  "export_nation_code",
+  "package",
+  "packaging_unit_code",
+  "column_break_r8de",
+  "quantity",
+  "quantity_unit_code",
+  "gross_weight",
+  "net_weight",
+  "tax_rate",
+  "supplier_name",
+  "agent_name",
+  "invoice_foreign_currency_amount",
+  "invoice_foreign_currency",
+  "invoice_foreign_currency_crt",
+  "stock_updated"
+ ],
+ "fields": [
+  {
+   "fieldname": "task_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Task Code",
+   "length": 50
+  },
+  {
+   "fieldname": "declaration_date",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Declaration Date"
+  },
+  {
+   "fieldname": "item_sequence",
+   "fieldtype": "Int",
+   "label": "Item Sequence",
+   "length": 10
+  },
+  {
+   "fieldname": "declaration_number",
+   "fieldtype": "Data",
+   "label": "Declaration Number",
+   "length": 50
+  },
+  {
+   "fieldname": "hs_code",
+   "fieldtype": "Data",
+   "label": "HS Code",
+   "length": 17
+  },
+  {
+   "fieldname": "item_name",
+   "fieldtype": "Long Text",
+   "in_list_view": 1,
+   "label": "Item Name",
+   "length": 500
+  },
+  {
+   "fieldname": "import_item_status_code",
+   "fieldtype": "Data",
+   "label": "Import Item Status Code",
+   "length": 5
+  },
+  {
+   "fieldname": "origin_nation_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Origin Nation Code",
+   "length": 5
+  },
+  {
+   "fieldname": "export_nation_code",
+   "fieldtype": "Data",
+   "label": "Export Nation Code"
+  },
+  {
+   "fieldname": "package",
+   "fieldtype": "Float",
+   "label": "Package",
+   "length": 5
+  },
+  {
+   "fieldname": "packaging_unit_code",
+   "fieldtype": "Data",
+   "label": "Packaging Unit Code"
+  },
+  {
+   "fieldname": "column_break_r8de",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "quantity",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Quantity",
+   "length": 5
+  },
+  {
+   "fieldname": "quantity_unit_code",
+   "fieldtype": "Data",
+   "label": "Quantity Unit Code"
+  },
+  {
+   "fieldname": "gross_weight",
+   "fieldtype": "Float",
+   "label": "Gross Weight"
+  },
+  {
+   "fieldname": "net_weight",
+   "fieldtype": "Float",
+   "label": "Net Weight"
+  },
+  {
+   "fieldname": "tax_rate",
+   "fieldtype": "Data",
+   "label": "Tax Rate"
+  },
+  {
+   "fieldname": "supplier_name",
+   "fieldtype": "Small Text",
+   "label": "Supplier Name"
+  },
+  {
+   "fieldname": "agent_name",
+   "fieldtype": "Small Text",
+   "label": "Agent name"
+  },
+  {
+   "fieldname": "invoice_foreign_currency_amount",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Invoice Foreign Currency Amount"
+  },
+  {
+   "fieldname": "invoice_foreign_currency",
+   "fieldtype": "Data",
+   "label": "Invoice Foreign Currency"
+  },
+  {
+   "fieldname": "invoice_foreign_currency_crt",
+   "fieldtype": "Float",
+   "label": "Invoice Foreign Currency CRT"
+  },
+  {
+   "default": "0",
+   "fieldname": "stock_updated",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Stock Updated"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2024-02-17 12:06:56.878316",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS Import Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

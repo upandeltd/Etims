@@ -1,0 +1,89 @@
+{
+ "actions": [],
+ "autoname": "format:{item_class_code}",
+ "creation": "2024-02-24 11:33:47.040388",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "item_class_code",
+  "item_class_name",
+  "item_class_level",
+  "taxation_type_code",
+  "is_major_target",
+  "usedunused"
+ ],
+ "fields": [
+  {
+   "fieldname": "item_class_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": " Item Class Code",
+   "length": 10
+  },
+  {
+   "fieldname": "item_class_name",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Item Class Name",
+   "length": 200
+  },
+  {
+   "fieldname": "item_class_level",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "Item Class Level"
+  },
+  {
+   "fieldname": "taxation_type_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Taxation Type Code",
+   "length": 5
+  },
+  {
+   "fieldname": "is_major_target",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "Is Major Target",
+   "length": 1
+  },
+  {
+   "fieldname": "usedunused",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Used/UnUsed",
+   "length": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-02-24 11:33:47.040388",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS Item Classification",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -43,7 +43,7 @@ class eTIMSPurchaseInformation(Document):
             return {"Success":response_json.get("resultMsg")}
 
         except:
-            return "Bad Request!"	
+            return {"Oops!":"An error occured on TIS server!"}	
         # self.item_classification_data = response_result
     
 def process_purchases(response_json):

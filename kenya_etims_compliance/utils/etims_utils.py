@@ -63,7 +63,7 @@ class eTIMS():
     
     def tims_base_url():
         settings_doc = frappe.get_doc("TIS Settings", "TIS Settings")
-        tims_base_url = eTIMS.get_base_url() + '/api/method/kenya_tims_compliance.utils.etims_response.'
+        tims_base_url = eTIMS.get_base_url() + '/api/method/kenya_etims_compliance.utils.etims_response.'
         
         if settings_doc.is_production == 1:
             tims_base_url = 'https://etims-api.kra.go.ke/etims-api/'

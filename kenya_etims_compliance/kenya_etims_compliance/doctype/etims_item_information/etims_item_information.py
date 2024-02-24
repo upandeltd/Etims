@@ -132,7 +132,7 @@ def process_item_cls_info(response):
         
 def check_if_doc_exists(item_code):
     cdcls_exists = False
-    code_info_docs = frappe.db.get_all("eTIMS Item Classification",filters = {"item_class_code": item_code})
+    code_info_docs = frappe.db.get_all("eTIMS Item Classification",filters = {"item_class_code": item_code}, fields=["name"])
     
     if code_info_docs:
         cdcls_exists = True

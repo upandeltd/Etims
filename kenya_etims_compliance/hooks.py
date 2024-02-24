@@ -25,7 +25,12 @@ app_license = "mit"
 # webform_include_css = {"doctype": "public/css/doctype.css"}
 
 # include js in page
-# page_js = {"page" : "public/js/file.js"}
+doctype_js = {
+	# "doctype" : "public/js/doctype.js"
+	"Item" : "custom_methods/item.js",
+    "Customer" : "custom_methods/customer.js"
+	
+}
 
 # include js in doctype views
 # doctype_js = {"doctype" : "public/js/doctype.js"}
@@ -122,14 +127,30 @@ app_license = "mit"
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-#	"*": {
-#		"on_update": "method",
-#		"on_cancel": "method",
-#		"on_trash": "method"
-#	}
-# }
-
+doc_events = {
+        "Sales Invoice": {
+            "before_save": "kenya_etims_compliance.custom_methods.sales_invoice.validate",
+            "before_submit": "kenya_etims_compliance.custom_methods.sales_invoice.trnsSalesSaveWrReq",
+            "on_update": "kenya_etims_compliance.custom_methods.sales_invoice.insert_invoice_number"
+        },
+        "Stock Entry": {
+            "before_submit": "kenya_etims_compliance.custom_methods.stock.update_stock_to_etims"
+        },
+        "Item": {
+            "before_save": "kenya_etims_compliance.custom_methods.item.autofill_tims_info"
+        },
+        "Purchase Invoice": {
+            "before_save": "kenya_etims_compliance.custom_methods.purchase_invoice.validate",
+            "before_submit": "kenya_etims_compliance.custom_methods.purchase_invoice.trnsPurchaseSaveReq",
+            "on_update": "kenya_etims_compliance.custom_methods.purchase_invoice.insert_invoice_number"
+        },
+        "eTIMS Purchase Invoice": {
+            "on_update": "kenya_etims_compliance.custom_methods.etims_purchase_invoice.update_stock_to_etims",
+        },
+        "eTIMS Stock Movement": {
+            "on_update": "kenya_etims_compliance.custom_methods.etims_stock_movement.update_stock_to_etims",
+        }
+}
 # Scheduled Tasks
 # ---------------
 
@@ -219,3 +240,5 @@ app_license = "mit"
 # auth_hooks = [
 #	"kenya_etims_compliance.auth.validate"
 # ]
+
+fixtures = ["Custom Field"]

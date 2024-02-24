@@ -7,7 +7,7 @@ def update_stock_to_etims(doc, method):
             if not item.stock_updated == 1:
                 try:
                     create_stock_receipt_entry(item)
-                    doc.stock_updated = 1
+                    # doc.stock_updated = 1
                 except:
                     frappe.throw("Failed!")
                     
@@ -30,7 +30,7 @@ def create_stock_receipt_entry(item):
         })
         
         new_item_doc.insert()
-        new_item_doc.submit()
+        # new_item_doc.submit()
         
         item.stock_updated = 1
         frappe.db.commit()   
