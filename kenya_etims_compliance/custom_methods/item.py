@@ -6,65 +6,7 @@ from kenya_etims_compliance.utils.etims_utils import eTIMS
     
 @frappe.whitelist()
 def itemSaveReq(doc_name):
-    headers = eTIMS.get_headers()
-    
-    item = frappe.get_doc("Item", doc_name)
-    
-    if item.get("custom_item_classification_code"):
-    
-        payload = {
-            "itemCd":item.get("custom_item_code"),
-            "itemClsCd":item.get("custom_item_classification_code"),
-            "itemClsNm":item.get("custom_item_classification_name"),
-            "itemTyCd":item.get("custom_item_type_code"),
-            "itemNm":item.get("custom_item_name"),
-            "itemStdNm":item.get("custom_item_standard_name"),
-            "orgnNatCd":item.get("custom_origin_place_code_nation"),
-            "pkgUnitCd":item.get("custom_packaging_unit_code"),
-            "qtyUnitCd":item.get("custom_quantity_unit_code"),
-            "taxTyCd":item.get("custom_taxation_type_code"),
-            "btchNo":item.get("custom_batch_number"),
-            "bcd":item.get("custom_barcode"),
-            "dftPrc":item.get("custom_default_unit_price"),
-            "grpPrcL1":item.get("custom_group1_unit_price"),
-            "grpPrcL2":item.get("custom_group2_unit_price"),
-            "grpPrcL3": item.get("custom_group3_unit_price"),
-            "grpPrcL4":item.get("custom_group4_unit_price"),
-            "grpPrcL5":item.get("custom_group5_unit_price"),
-            "addInfo":item.get("custom_additional_information"),
-            "sftyQty":item.get("custom_safety_quantity"),
-            "isrcAplcbYn":item.get("custom_insurance_appicableyn"),
-            "useYn":item.get("custom_used__unused"),
-            "regrId":item.get("custom_registration_id"),
-            "regrNm":item.get("custom_registration_name"), 
-            "modrId":item.get("custom_modifier_id"), 
-            "modrNm":item.get("custom_modifier_name")
-        }
-        
-        try:
-            response = requests.request(
-                "POST", 
-                eTIMS.tims_base_url() + 'saveItem', 
-                json = payload,
-                headers=headers
-            )
-
-            response_json = response.json()
-            
-            if not response_json.get("resultCd") == '000':
-                
-                return {"Error":response_json.get("resultMsg")}
-            
-            item.custom_registered_in_tims = 1
-            item.save()
-
-            return {"Success":response_json.get("resultMsg")}
-
-        except:
-            
-            return {"Error":"Oops Bad Request!"}
-    else:
-        frappe.throw("Missing Item Classification Code!")
+    eTIMS.itemSaveReq(doc_name)
     
 
 @frappe.whitelist()
@@ -159,60 +101,28 @@ def autofill_tims_info(doc, method):
         doc.custom_quantity_unit_code = get_item_qty_unit_codes(doc.custom_default_quantity_unit)
         doc.custom_packaging_unit_code = get_item_pkg_unit_codes(doc.custom_default_packing_unit)
         doc.custom_used__unused = get_item_status(doc)
-        doc.custom_group1_unit_price = get_item_prices(doc)
-        doc.custom_group2_unit_price = get_item_prices(doc)
-        doc.custom_group3_unit_price = get_item_prices(doc)
-        doc.custom_group4_unit_price = get_item_prices(doc)
+        # doc.custom_group1_unit_price = get_item_prices(doc)
+        # doc.custom_group2_unit_price = get_item_prices(doc)
+        # doc.custom_group3_unit_price = get_item_prices(doc)
+        # doc.custom_group4_unit_price = get_item_prices(doc)
         doc.custom_item_type_code = get_item_type_code(doc)
         doc.custom_registration_id = doc.owner
         doc.custom_registration_name = doc.owner
         doc.custom_modifier_id = doc.modified_by
         doc.custom_modifier_name = doc.modified_by
-        # doc.save()
+
         if doc.taxes:
             for tax_item in doc.taxes:
                 doc.custom_taxation_type_code = get_taxation_type(tax_item.get("item_tax_template"))
         else:
             frappe.throw("Tax template for Item is required!")
-            
-        doc.custom_default_unit_price = get_item_prices(doc)
+        
+        if not doc.custom_default_unit_price:
+            doc.custom_default_unit_price = get_item_prices(doc)
         
         if not doc.custom_item_code:
             doc.custom_item_code = get_item_code(doc)
 
-# @frappe.whitelist()
-# def fill_custom_fields(doc_name):
-#     # print("*"*80)
-#     # print(doc_name)
-#     doc = frappe.get_doc("Item", doc_name)
-    
-#     doc.custom_item_name = doc.item_code
-#     doc.custom_item_standard_name = doc.item_name
-   
-#     doc.custom_origin_place_code_nation = get_country_of_origin(doc.custom_country_of_origin)
-#     doc.custom_quantity_unit_code = get_item_qty_unit_codes(doc.stock_uom)
-#     doc.custom_packaging_unit_code = get_item_pkg_unit_codes(doc.custom_default_packing_unit)
-#     doc.custom_used__unused = get_item_status(doc)
-#     doc.custom_group1_unit_price = get_item_prices(doc)
-#     doc.custom_group2_unit_price = get_item_prices(doc)
-#     doc.custom_group3_unit_price = get_item_prices(doc)
-#     doc.custom_group4_unit_price = get_item_prices(doc)
-#     doc.custom_item_type_code = get_item_type_code(doc)
-#     doc.custom_item_code = get_country_of_origin(doc.custom_country_of_origin) + str(get_item_type_code(doc)) + get_item_pkg_unit_codes(doc.custom_default_packing_unit) + get_item_qty_unit_codes(doc.stock_uom)
-    
-#     # doc.save()
-#     if doc.taxes:
-#         for tax_item in doc.taxes:
-#             doc.custom_taxation_type_code = get_taxation_type(tax_item.get("item_tax_template"))
-        
-#     doc.custom_default_unit_price = get_item_prices(doc)
-    
-#     doc.save()
-#     print("*"*80)
-#     print(doc.custom_item_name)
-#     # doc.save()
-    
-#     return True
 
         
 def get_item_pkg_unit_codes(pkg_unit):
@@ -249,13 +159,14 @@ def get_taxation_type(tax_template):
     return tax_list[0]
 
 def get_item_prices(doc):
-    item_price_doc = frappe.db.get_all("Item Price", filters={"item_code": doc.item_code, "selling":1, "customer": ""}, fields=["price_list_rate"])
-    
-    if item_price_doc:
+    if not doc.custom_default_unit_price:
+        item_price_doc = frappe.db.get_all("Item Price", filters={"item_code": doc.item_code, "selling":1, "customer": ""}, fields=["price_list_rate"])
         
-        return item_price_doc[0].get("price_list_rate")
-    else:
-        frappe.throw("Price list for Item is required!")
+        if item_price_doc:
+            
+            return item_price_doc[0].get("price_list_rate")
+        else:
+            frappe.throw("Price list for Item is required!")
     
 def get_item_type_code(doc):
     item_type_doc = frappe.get_doc("Item Group", doc.item_group)

@@ -22,7 +22,6 @@
   "taxable_amount_c",
   "taxable_amount_d",
   "taxable_amount_e",
-  "stock_updated",
   "column_break_finn",
   "tax_rate_a",
   "tax_rate_b",
@@ -31,6 +30,8 @@
   "tax_rate_e",
   "tax_amt_a",
   "tax_amt_b",
+  "erpnext_purchase_invoice_updated",
+  "erpnext_purchase_invoice",
   "column_break_fd3l",
   "tax_amt_c",
   "tax_amt_d",
@@ -153,12 +154,6 @@
    "read_only": 1
   },
   {
-   "default": "0",
-   "fieldname": "stock_updated",
-   "fieldtype": "Check",
-   "label": "Stock Updated"
-  },
-  {
    "fieldname": "column_break_finn",
    "fieldtype": "Column Break"
   },
@@ -261,11 +256,23 @@
    "label": "Items",
    "options": "eTIMS Purchase Item",
    "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "erpnext_purchase_invoice_updated",
+   "fieldtype": "Check",
+   "label": "ERPNext Purchase Invoice Updated"
+  },
+  {
+   "fieldname": "erpnext_purchase_invoice",
+   "fieldtype": "Link",
+   "label": "ERPNext Purchase Invoice",
+   "options": "Purchase Invoice"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-02-17 07:45:51.338483",
+ "modified": "2024-02-24 18:51:42.014471",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Purchase Invoice",
