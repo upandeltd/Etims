@@ -145,7 +145,7 @@ def stockIOSaveReq(doc, date_str, item_count):
         "itemList": etims_sale_item_list(doc)
         }
     
-    if doc.custom_original_invoice_number != 0: 
+    if doc.custom_original_invoice_number != 0 or doc.is_return == 1: 
         payload["sarTyCd"] = "12"
     
     else:

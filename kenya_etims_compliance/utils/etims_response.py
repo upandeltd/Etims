@@ -117,9 +117,9 @@ def selectStockMoveList():
             "data":{
                 "stockList":[
                     {
-                        "custTin":"P600000233A",
+                        "custTin":"P051304671B",
                         "custBhfId":"00",
-                        "sarNo":7,
+                        "sarNo":9,
                         "ocrnDt":"20200120",
                         "totItemCnt":1,
                         "totTaxblAmt":1800000,
@@ -131,7 +131,7 @@ def selectStockMoveList():
                                 "itemSeq":1,
                                 "itemCd":"KR2BZCAX0000001",
                                 "itemClsCd":"1110162100",
-                                "itemNm":"Grocery_Item#1",
+                                "itemNm":"Grocery_Item#3",
                                 "bcd":"8801234567051",
                                 "pkgUnitCd":"BZ",
                                 "pkg":0,
@@ -149,7 +149,7 @@ def selectStockMoveList():
                         ]
                     },
                     {
-                        "custTin":"P600000233A",
+                        "custTin":"P051304671B",
                         "custBhfId":"01",
                         "sarNo":59,
                         "ocrnDt":"20200110",
@@ -194,7 +194,7 @@ def selectTrnsPurchaseSalesList():
                         "spplrTin":"A123456789Z",
                         "spplrNm":"Taxpayer1111",
                         "spplrBhfId":"00",
-                        "spplrInvcNo":11,
+                        "spplrInvcNo":17,
                         "rcptTyCd":"S",
                         "pmtTyCd":"01",
                         "cfmDt":"2020-01-27 21:03:00",
@@ -225,7 +225,7 @@ def selectTrnsPurchaseSalesList():
                                 "itemSeq":1,
                                 "itemCd":"ZR1NTXU0000001",
                                 "itemClsCd":"5059690800",
-                                "itemNm":"test item 1",
+                                "itemNm":"test item 6",
                                 "bcd":"",
                                 "pkgUnitCd":"NT",
                                 "pkg":2,

@@ -38,7 +38,9 @@ class eTIMSPurchaseInvoice(Document):
         new_purchase_doc.custom_update_purchase_in_tims = 1
         new_purchase_doc.update_stock = 1
         
-
+        if receipt_type_code == "R":
+            new_purchase_doc.is_return == 1
+        
         for item in self.items:
             create_buying_price_list(item)
 

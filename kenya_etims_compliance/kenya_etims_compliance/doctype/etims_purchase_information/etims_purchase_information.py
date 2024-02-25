@@ -94,7 +94,7 @@ def process_purchases(response_json):
                 
                 for item_detail in invoice.get("itemList"):
                     try:
-                        eTIMS.map_purchase_item(item_detail)
+                        eTIMS.map_new_item(item_detail)
                         item_dict = assign_purchase_item(item_detail)
                     
                         new_doc.append("items", item_dict)

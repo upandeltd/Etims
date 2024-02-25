@@ -1,6 +1,6 @@
 from datetime  import datetime
 import requests
-# from kenya_etims_compliance.custom_methods.item import itemSaveReq
+
     
 import frappe
 
@@ -9,7 +9,7 @@ class eTIMS():
         branch_id = eTIMS.get_user_branch_id()
         header_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id}, fields=["*"])
         
-        if header_docs[0]:
+        if header_docs:
             headers = {
                 "tin":header_docs[0].get("pin"),
                 "bhfId":header_docs[0].get("branch_id"),
@@ -215,12 +215,12 @@ class eTIMS():
             frappe.throw("Missing Item Classification Code!")
     
         
-    def map_purchase_item(item):
+    def map_new_item(item):
         item_exists = check_if_item_exits(item.get("itemNm"))
     
         if item_exists == False:
             # create item if not exists
-            create_import_item_doctype(item)
+            create_new_item_doctype(item)
             
             # create stock entry for receipt and update stock
         else:
@@ -238,7 +238,7 @@ def check_if_item_exits(item_code):
     else:
         return False
 
-def create_import_item_doctype(item):
+def create_new_item_doctype(item):
     current_user = frappe.session.user
     
     pkgUnitNm, qtyUnitNm = get_packing_and_quantity_unit(item.get("pkgUnitCd"), item.get("qtyUnitCd"))

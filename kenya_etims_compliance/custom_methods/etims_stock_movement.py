@@ -21,6 +21,7 @@ def create_stock_trns_entry(doc, item):
     
     if doc.customer_tin == self_pin:
         if not doc.customer_branch == "00":
+            
             source_warehouse = frappe.db.get_all("Warehouse", filters={"warehouse_type": "Stores", "is_group": 0, "custom_tax_branch_office": "00"}, fields=["warehouse_name", "name"])
             
             target_warehouse = frappe.db.get_all("Warehouse", filters={"warehouse_type": "Stores", "is_group": 0, "custom_tax_branch_office": doc.customer_branch}, fields=["warehouse_name", "name"])
@@ -28,6 +29,7 @@ def create_stock_trns_entry(doc, item):
             if source_warehouse and target_warehouse:
                 source_store = source_warehouse[0].get("name")
                 receipt_store = target_warehouse[0].get("name")
+                # print(source_store, receipt_store)
                 
                 if not item.stock_updated:                
                     new_item_doc = frappe.new_doc("Stock Entry")
@@ -77,8 +79,7 @@ def create_stock_trns_entry(doc, item):
 
 def get_branch_and_pin():
     tax_branch = eTIMS.get_user_branch_id()
-    print("&"*90)
-    print(tax_branch)
+  
     own_pin = ""
     
     init_doc = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": tax_branch}, fields=["pin"])
