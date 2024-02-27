@@ -66,21 +66,6 @@ def trnsSalesSaveWrReq(doc, method):
         "salesDt": date_str,
         "stockRlsDt": date_time_str,
         "totItemCnt": count,
-        "taxblAmtA":0,
-        "taxblAmtB":doc.grand_total,
-        "taxblAmtC":0,
-        "taxblAmtD":0,
-        "taxblAmtE":0,
-        "taxRtA": eTIMS.get_default_tax_rate_a(),
-        "taxRtB": eTIMS.get_default_tax_rate_b(),
-        "taxRtC": eTIMS.get_default_tax_rate_c(),
-        "taxRtD": eTIMS.get_default_tax_rate_d(),
-        "taxRtE": eTIMS.get_default_tax_rate_e(),
-        "taxAmtA":0,
-        "taxAmtB":doc.base_total_taxes_and_charges,
-        "taxAmtC":0,
-        "taxAmtD":0,
-        "taxAmtE":0,
         "totTaxblAmt":doc.grand_total,
         "totTaxAmt":doc.base_total_taxes_and_charges,
         "totAmt":doc.grand_total,
@@ -103,6 +88,57 @@ def trnsSalesSaveWrReq(doc, method):
         "itemList": etims_sale_item_list(doc)
     }
     
+    for tax_item in doc.taxes:
+        if tax_item.custom_code == "A":
+            if not tax_item.get("tax_amount_after_discount_amount") > 0:
+                payload["taxblAmtA"] = 0
+                payload["taxRtA"] =  tax_item.get("rate")
+                payload["taxAmtA"] = tax_item.get("tax_amount_after_discount_amount")
+            else:
+                payload["taxblAmtA"] = tax_item.get("base_total")
+                payload["taxRtA"] =  tax_item.get("rate")
+                payload["taxAmtA"] = tax_item.get("tax_amount_after_discount_amount")
+          
+        if tax_item.custom_code == "B":
+            if not tax_item.get("tax_amount_after_discount_amount") > 0:
+                payload["taxblAmtB"] = 0
+                payload["taxRtB"] =  tax_item.get("rate")
+                payload["taxAmtB"] = tax_item.get("tax_amount_after_discount_amount")
+            else:
+                payload["taxblAmtB"] = tax_item.get("base_total")
+                payload["taxRtB"] =  tax_item.get("rate")
+                payload["taxAmtB"] = tax_item.get("tax_amount_after_discount_amount")
+        
+        if tax_item.custom_code == "C":
+            if not tax_item.get("tax_amount_after_discount_amount") > 0:
+                payload["taxblAmtC"] = 0
+                payload["taxRtC"] =  tax_item.get("rate")
+                payload["taxAmtC"] = tax_item.get("tax_amount_after_discount_amount")
+            else:
+                payload["taxblAmtC"] = tax_item.get("base_total")
+                payload["taxRtC"] =  tax_item.get("rate")
+                payload["taxAmtC"] = tax_item.get("tax_amount_after_discount_amount")
+          
+        if tax_item.custom_code == "D":
+            if not tax_item.get("tax_amount_after_discount_amount") > 0:
+                payload["taxblAmtD"] = 0
+                payload["taxRtD"] =  tax_item.get("rate")
+                payload["taxAmtD"] = tax_item.get("tax_amount_after_discount_amount")
+            else:
+                payload["taxblAmtD"] = tax_item.get("base_total")
+                payload["taxRtD"] =  tax_item.get("rate")
+                payload["taxAmtD"] = tax_item.get("tax_amount_after_discount_amount")
+            
+        if tax_item.custom_code == "E":
+            if not tax_item.get("tax_amount_after_discount_amount") > 0:
+                payload["taxblAmtE"] = 0
+                payload["taxRtE"] =  tax_item.get("rate")
+                payload["taxAmtE"] = tax_item.get("tax_amount_after_discount_amount")
+            else:
+                payload["taxblAmtE"] = tax_item.get("base_total")
+                payload["taxRtE"] =  tax_item.get("rate")
+                payload["taxAmtE"] = tax_item.get("tax_amount_after_discount_amount")
+            
     if int(doc.custom_original_invoice_number) > 0:
         payload["cnclReqDt"] = conc_datetime_str
         payload["cnclDt"] = conc_datetime_str
