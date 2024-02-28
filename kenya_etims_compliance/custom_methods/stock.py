@@ -137,7 +137,7 @@ def check_if_interbranch(item):
 def etims_stock_item_list(doc):
     stock_item_list = []
     for item in doc.items:
-        item_tax_details = get_tax_template_details(item.get("item_code")) ####################################
+        item_tax_code = get_tax_template_details(item.get("item_code"))
         item_detail = frappe.db.get_all("Item", filters={"disabled": 0, "item_code": item.get("item_code")}, fields = ["*"])
         item_etims_data = {
 					"itemSeq": item.get("idx"),
@@ -158,10 +158,10 @@ def etims_stock_item_list(doc):
 					# "isrcRt":null,
 					# "isrcAmt":null,
                     "totDcAmt": 0.0,
-					# "taxTyCd": item_tax_details.get("tax_code"),
-					# "taxblAmt": item.get("basic_amount"),###############################
+					"taxTyCd": item_tax_code,
+					"taxblAmt": item.get("amount"),
 					# "taxAmt": round((item.get("amount") - item.get("net_amount")), 2),###############################
-					# "totAmt": item.get("amount")###############################
+					"totAmt": item.get("amount")
 				}
 
         if not item_etims_data in stock_item_list:
@@ -169,20 +169,13 @@ def etims_stock_item_list(doc):
             
     return stock_item_list
 
-def get_tax_template_details(template_name):
-    tax_temp_list = []
-    tax_doc = frappe.get_doc("Item Tax Template", template_name)
-    if tax_doc:
-        for tax_item in tax_doc.taxes:
-            tax_details = {
-                "rate": tax_item.tax_rate,
-                "tax_code": tax_item.custom_code,
-                "tax_name": tax_item.custom_code_name
-            }
-
-            if not tax_details in tax_temp_list:
-                tax_temp_list.append(tax_details)
-    
-        return tax_temp_list[0]
+def get_tax_template_details(item_code):
+    item_doc = frappe.get_doc("Item", item_code)
+    if item_doc:
+        for tax_item in item_doc.taxes:
+            tax_code = frappe.get_doc("Item Tax Template", tax_item.get("item_tax_template"))
+            
+            if tax_code:
+                return tax_code.get("custom_code")
     else:
         return "D"
