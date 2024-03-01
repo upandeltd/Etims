@@ -50,6 +50,9 @@ class eTIMSCodeInformation(Document):
 
     @frappe.whitelist()
     def custSearchReq(self):
+        self.set("customer_details", [])
+        self.save()
+        
         headers = eTIMS.get_headers()
 
         payload = {

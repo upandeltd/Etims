@@ -41,7 +41,7 @@ def stockIOSaveReq(doc, date_str, item_count, sar_type):
         "ocrnDt": date_str,
         "totItemCnt": item_count,
         "totTaxblAmt": doc.total_incoming_value,
-        "totTaxAmt": "doc.base_total_taxes_and_charges",#########################
+        # "totTaxAmt": doc.total_incoming_value,
         "totAmt": doc.total_incoming_value,
         "remark": doc.remarks,
         "regrId": doc.owner,
