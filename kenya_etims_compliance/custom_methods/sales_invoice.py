@@ -171,7 +171,7 @@ def trnsSalesSaveWrReq(doc, method):
             return {"Success": response_json.get("resultMsg")}
 
         except:
-                return {"Error":"Oops Bad Request!"}
+            return {"Error":"Oops Bad Request!"}
     else:
         print(payload)
         stockIOSaveReq(doc, date_str, count)
@@ -224,7 +224,7 @@ def stockIOSaveReq(doc, date_str, item_count):
             return {"Success": response_json.get("resultMsg")}
 
         except:
-                return {"Error":"Oops Bad Request!"}
+            return {"Error":"Oops Bad Request!"}
     else:
         print(payload)
 

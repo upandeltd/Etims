@@ -10,6 +10,9 @@ from kenya_etims_compliance.utils.etims_utils import eTIMS
 class eTIMSBranchInformation(Document):
     @frappe.whitelist()
     def bhfSearchReq(self):
+        self.set("branch_details_tab", [])
+        self.save()
+        
         request_datetime = self.data_from_datetime
         date_time_str = eTIMS.strf_datetime_object(request_datetime)
         

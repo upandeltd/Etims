@@ -1,4 +1,4 @@
-import requests, re
+import requests, traceback
 from datetime import datetime
 
 import frappe
@@ -6,7 +6,14 @@ from kenya_etims_compliance.utils.etims_utils import eTIMS
     
 @frappe.whitelist()
 def itemSaveReq(doc_name):
-    eTIMS.itemSaveReq(doc_name)
+    response = eTIMS.itemSaveReq(doc_name)
+    
+    for key, value in response.items():
+        if key == "Success":
+            return {"Success": value}
+        else:
+            eTIMS.log_errors("Item Registration", value)
+            return {"Error": value}
     
 
 @frappe.whitelist()
@@ -40,6 +47,7 @@ def itemSaveComposition(doc_name):
         return {"Success":response_json.get("resultMsg")}
 
     except:
+        eTIMS.log_errors("Item Save Composition", traceback.format_exc())
         return {"Error":"Oops Bad Request!"}	
 
 
@@ -79,6 +87,7 @@ def importItemUpdateReq(doc_name):
             return {"Success":response_json.get("resultMsg")}
 
         except:
+            eTIMS.log_errors("Import Item Update", traceback.format_exc())
             return {"Error":"Oops Bad Request!"}	       	
     
 def get_status_code(code_name):    

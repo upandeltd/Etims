@@ -1,5 +1,5 @@
 from datetime  import datetime
-import requests
+import requests, traceback
 
     
 import frappe
@@ -210,6 +210,7 @@ class eTIMS():
 
             except:
                 
+                eTIMS.log_errors("Item Registration", traceback.format_exc())
                 return {"Error":"Oops Bad Request!"}
         else:
             frappe.throw("Missing Item Classification Code!")
