@@ -41,7 +41,7 @@ def stockIOSaveReq(doc, date_str, item_count, sar_type):
         "ocrnDt": date_str,
         "totItemCnt": item_count,
         "totTaxblAmt": doc.total_incoming_value,
-        # "totTaxAmt": doc.total_incoming_value,
+        "totTaxAmt": doc.custom_tax_amount,
         "totAmt": doc.total_incoming_value,
         "remark": doc.remarks,
         "regrId": doc.owner,
@@ -160,7 +160,7 @@ def etims_stock_item_list(doc):
                     "totDcAmt": 0.0,
 					"taxTyCd": item_tax_code,
 					"taxblAmt": item.get("amount"),
-					# "taxAmt": round((item.get("amount") - item.get("net_amount")), 2),###############################
+					"taxAmt": item.get("custom_tax_amount"),
 					"totAmt": item.get("amount")
 				}
 

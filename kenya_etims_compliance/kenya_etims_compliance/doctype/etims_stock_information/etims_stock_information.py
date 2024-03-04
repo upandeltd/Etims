@@ -46,7 +46,7 @@ class eTIMSStockInformation(Document):
             return {"Success":response_json.get("resultMsg")}
 
         except:
-            
+            print(traceback.format_exc())
             return {"Error":"Oops Bad Request!"}	
  
     @frappe.whitelist()
@@ -156,7 +156,6 @@ def create_stock_mvnt_doc(response_result):
                 new_doc.total_vat = item.get("totTaxAmt")
                 new_doc.total_amount = item.get("totAmt")
                 new_doc.remark = item.get("remark")
-                new_doc.insert()
                 
                 for item_detail in item.get("itemList"):
                     eTIMS.map_new_item(item_detail)
@@ -170,9 +169,9 @@ def create_stock_mvnt_doc(response_result):
                         item_dict = assign_stock_mvnt_item_no_date(item_detail)
                         new_doc.append("items", item_dict)
 
-                new_doc.save()
+                new_doc.insert()
 
-                frappe.db.commit()
+                # frappe.db.commit()
      
 def check_if_doc_exists(doc, doc_filter, doc_value):
     cdcls_exists = False

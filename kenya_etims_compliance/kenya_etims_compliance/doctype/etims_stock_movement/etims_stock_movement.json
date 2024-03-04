@@ -13,6 +13,7 @@
   "occurred_date",
   "total_item_count",
   "stock_updated",
+  "stock_entry",
   "column_break_rqr1",
   "total_supply_price",
   "total_vat",
@@ -107,11 +108,17 @@
    "label": "Stock Movement Items",
    "options": "eTIMS Stock Movement Item",
    "read_only": 1
+  },
+  {
+   "fieldname": "stock_entry",
+   "fieldtype": "Link",
+   "label": "Stock Entry",
+   "options": "Stock Entry"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-02-17 07:54:59.434331",
+ "modified": "2024-03-04 12:46:19.233212",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Stock Movement",
