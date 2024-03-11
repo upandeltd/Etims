@@ -39,12 +39,14 @@ class eTIMSStockMovement(Document):
                         new_stock_doc.stock_entry_type = "Material Transfer"
                         new_stock_doc.custom_total_tax_amount = self.total_vat
                         new_stock_doc.custom_send_stock_info_to_etims = 1
+                        new_stock_doc.from_warehouse = source_store
+                        new_stock_doc.to_warehouse = receipt_store
                         
                         if self.items:
                             for item in self.items:
                                 if not item.get("stock_updated") == 1:
                                     try:
-                                        item_dict = assign_stock_item(item, source_store, receipt_store)
+                                        item_dict = assign_stock_item(item)
                                     
                                         new_stock_doc.append("items", item_dict)
                                     
@@ -80,12 +82,14 @@ class eTIMSStockMovement(Document):
                         new_stock_doc.stock_entry_type = "Material Transfer"
                         new_stock_doc.custom_total_tax_amount = self.total_vat
                         new_stock_doc.custom_send_stock_info_to_etims = 1
+                        new_stock_doc.from_warehouse = source_store
+                        new_stock_doc.to_warehouse = receipt_store
                             
                         if self.items:
                             for item in self.items:
                                 if not item.get("stock_updated") == 1:
                                     try:
-                                        item_dict = assign_stock_item(item, source_store, receipt_store)
+                                        item_dict = assign_stock_item(item)
                                     
                                         new_stock_doc.append("items", item_dict)
                                     
@@ -104,11 +108,9 @@ class eTIMSStockMovement(Document):
                         frappe.throw("Warehouse not found for tax branch!")
                             
 
-def assign_stock_item(item, source_store, receipt_store):  
+def assign_stock_item(item):  
     item_dict =  {
         "item_code": item.get("item_name"),
-        "s_warehouse": source_store,
-        "t_warehouse": receipt_store,
         "qty": item.get("unit_quantity"),
         "custom_tax_code": item.get("taxation_type_code"),
         "custom_tax_amount":item.get("tax_amount")
