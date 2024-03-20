@@ -35,7 +35,7 @@ class eTIMSCodeInformation(Document):
             if not response_json.get("resultCd") == "000":
                 return {"Error": response_json.get("resultMsg")}
 
-            process_item_code_information(response_json)
+            process_code_information(response_json)
             create_quantity_units(response_json)
             create_packing_units(response_json)
             create_country_code(response_json)
@@ -48,17 +48,21 @@ class eTIMSCodeInformation(Document):
             eTIMS.log_errors("Code Search", traceback.format_exc())
             return {"Error":"Oops Bad Request!"}
 
+    #This part describes the Customer API function (url : /selectCustomer) and 
+    # data types for each item. The Customer means the taxpayer. 
+    # API functions are dividedinto 'Request:Argument' and 'Response:Return Object'. 
+    # The CustSearchReq is an Argument Object of Request, The CustSearchRes is a ReturnObjectofResponse. 
+    # Based on the ‘custmTin ‘, the server provides customer information registered to the provided PIN
     @frappe.whitelist()
     def custSearchReq(self):
+        #empty customer details records first
         self.set("customer_details", [])
         self.save()
         
         headers = eTIMS.get_headers()
 
         payload = {
-            # "bhfId": "00",
-            "custmTin": self.customer_tin,
-            # "lastReqDt": "20231203194634"
+            "custmTin": self.customer_tin
             }
 
         try:
@@ -74,13 +78,9 @@ class eTIMSCodeInformation(Document):
             
 
             if not response_json.get("resultCd") == "000":
-                # print("*" * 80)
-                # print(response_json)
                 return {"Error": response_json.get("resultMsg")}
             
             data = response_json.get("data")
-            # print("*" * 80)
-            # print(response_json)
             if data:
                 for cust in data.get("custList"):
                     cust_exists = check_customer_exists(cust.get("tin"))
@@ -92,9 +92,13 @@ class eTIMSCodeInformation(Document):
         except:
             eTIMS.log_errors("Customer Search", traceback.format_exc())
             return {"Error":"Oops Bad Request!"}
-
+    
+    #This part describes the components of Notice API function(url : /selectNoticeList) and data types for each item. 
+    # This API function is divided into 'Request:Argument' and 'Response: Return Object'. 
+    # The NoticeSearchReq is an Argument Object of Request, The NoticeSearchRes is a Return ObjectofResponse
     @frappe.whitelist()
     def noticeSearchReq(self):
+        #empty notice records first
         self.set("notices", [])
         self.save()
         
@@ -151,10 +155,15 @@ class eTIMSCodeInformation(Document):
         return True
 
 
-######################################### Global Methods ##################################################
-def process_item_code_information(response_result):
+######################################### Methods ##################################################
+#process the code data from the CodeSearchReq
+def process_code_information(response_result):
+    """function that get's the responce of CodeSearchReq as a dict for processing
+
+    Args:
+        response_result (_dict_): result from CodeSearchReq
+    """
     data = response_result.get("data")
-    # print(data)
     if data.get("clsList"):
         for item in data.get("clsList"):
             code_exists = check_if_doc_exists(
@@ -193,6 +202,14 @@ def check_customer_exists(cust_pin):
 
 
 def process_notices(response_result):
+    """function to process notices from api
+
+    Args:
+        response_result (_dict_): dict of notices
+
+    Returns:
+        _list_: list of notices
+    """
     notice_list = []
     data = response_result.get("data")
 
@@ -229,7 +246,6 @@ def assign_code_dict(code_detail):
 
 def create_packing_units(response_result):
     data = response_result.get("data")
-    # print(data)
     if data.get("clsList"):
         for item in data.get("clsList"):
             if item.get("cdClsNm") == "Packing Unit":
@@ -253,7 +269,6 @@ def create_packing_units(response_result):
 
 def create_quantity_units(response_result):
     data = response_result.get("data")
-    # print(data)
     if data.get("clsList"):
         for item in data.get("clsList"):
             if item.get("cdClsNm") == "Quantity Unit":
@@ -274,10 +289,9 @@ def create_quantity_units(response_result):
                         new_doc.insert()
 
                         frappe.db.commit()
-                        
+#method to create etims country codes and contry names, to keep consistency                    
 def create_country_code(response_result):
     data = response_result.get("data")
-    # print(data)
     if data.get("clsList"):
         for item in data.get("clsList"):
             if item.get("cdClsNm") == "Country":

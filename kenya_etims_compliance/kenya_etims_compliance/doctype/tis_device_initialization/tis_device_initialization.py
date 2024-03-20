@@ -47,8 +47,14 @@ class TISDeviceInitialization(Document):
             eTIMS.log_errors("TIS Device Verification", traceback.format_exc())
             return {"Error":"Oops Bad Request!"}
         
-        
+#Method to create communication key and stores it in communication key doctype       
 def save_communication_key(comKey, branch_id):
+    """_summary_
+
+    Args:
+        comKey (_str_): _TIS communication key_
+        branch_id (_str_): _branch id_
+    """
     doc_exits = frappe.db.exists("TIS Communication Key", {"branch_id": branch_id})
 
     if not doc_exits:

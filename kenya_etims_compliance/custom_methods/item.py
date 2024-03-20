@@ -3,7 +3,10 @@ from datetime import datetime
 
 import frappe
 from kenya_etims_compliance.utils.etims_utils import eTIMS
-    
+
+#This part describes the components of SaveItem API function (url : /saveItem) and data types for each item. 
+# This API function is divided into 'Request: Argument' and 'Response: Return Object'. 
+# The ItemSaveReq is an Argument Object of Request, The ItemSaveRes is a Return Object of Response
 @frappe.whitelist()
 def itemSaveReq(doc_name):
     response = eTIMS.itemSaveReq(doc_name)

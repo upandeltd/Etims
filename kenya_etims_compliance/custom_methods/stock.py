@@ -7,12 +7,16 @@ def update_stock_to_etims(doc, method):
     item_count = 0
     request_date = doc.posting_date
     request_time = doc.posting_time
+    s_warehouse_id = ""
+    t_warehouse_id = ""
     
     date_str = eTIMS.strf_date_object(request_date)
     time_str = eTIMS.strf_time(request_time)
     
-    s_warehouse_id = get_warehouse_branch(doc.from_warehouse)
-    t_warehouse_id = get_warehouse_branch(doc.to_warehouse)
+    if doc.from_warehouse:
+        s_warehouse_id = get_warehouse_branch(doc.from_warehouse)
+    if doc.to_warehouse:
+        t_warehouse_id = get_warehouse_branch(doc.to_warehouse)
     
     for item in doc.items:
             item_count += 1
@@ -24,11 +28,11 @@ def update_stock_to_etims(doc, method):
             stockIOSaveReq(doc, date_str, item_count, "06", t_warehouse_id)
             
     if doc.stock_entry_type == "Material Transfer":
-        is_inter_branch = check_if_interbranch()
+        is_inter_branch = check_if_interbranch(doc)
         
         if is_inter_branch:
-            stockIOSaveReq(doc, date_str, item_count, "16", s_warehouse_id)
-            stockIOSaveReq(doc, date_str, item_count, "06", t_warehouse_id)
+            stockIOSaveReq(doc, date_str, item_count, "13", s_warehouse_id)
+            stockIOSaveReq(doc, date_str, item_count, "04", t_warehouse_id)
         #get warehouse branch if intrbranch is true
         #logic fot transfer within branches
     
@@ -74,7 +78,7 @@ def stockIOSaveReq(doc, date_str, item_count, sar_type, branch_id):
                     frappe.throw(response_json.get("resultMsg"))
                     print(response_json)
                 
-                doc.updated_in_etims = 1   
+                doc.custom_updated_in_etims = 1   
                 frappe.msgprint(response_json.get("resultMsg"))
 
             except:
@@ -125,8 +129,8 @@ def get_etims_sar_no(doc):
 def check_if_interbranch(item):
     interbranch_transfer = False
     
-    s_warehouse = item.get("s_warehouse")
-    t_warehouse = item.get("t_warehouse")
+    s_warehouse = item.get("from_warehouse")
+    t_warehouse = item.get("to_warehouse")
     
     s_warehouse_doc = frappe.get_doc("Warehouse", s_warehouse)
     t_warehouse_doc = frappe.get_doc("Warehouse", t_warehouse)
@@ -145,7 +149,7 @@ def get_warehouse_branch(warehouse_name):
     try:
         warehouse_doc = frappe.get_doc("Warehouse", warehouse_name)
         
-        return warehouse_name.get("custom_tax_branch_office")
+        return warehouse_doc.get("custom_tax_branch_office")
     except:
         frappe.throw("No tax branch id")
     
