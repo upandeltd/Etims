@@ -13,7 +13,13 @@
   "column_break_manu",
   "search_item_classification",
   "view_itemcls_search_response",
-  "2_item_search_section",
+  "2_item_compostion_section",
+  "item",
+  "etims_item_code",
+  "consolidate_bom_items",
+  "bom_items",
+  "save_item_composition",
+  "3_item_search_section",
   "item_last_search_date_and_time",
   "item_request_datetime",
   "request_items",
@@ -51,11 +57,6 @@
    "label": "View Response"
   },
   {
-   "fieldname": "2_item_search_section",
-   "fieldtype": "Section Break",
-   "label": "2. Item Search"
-  },
-  {
    "fieldname": "item_last_search_date_and_time",
    "fieldtype": "Datetime",
    "label": "Last Search Date and Time",
@@ -76,12 +77,51 @@
    "fieldtype": "Table",
    "label": "Registered Items",
    "options": "eTIMS Registered Items"
+  },
+  {
+   "fieldname": "2_item_compostion_section",
+   "fieldtype": "Section Break",
+   "label": "2. Item Compostion"
+  },
+  {
+   "fieldname": "3_item_search_section",
+   "fieldtype": "Section Break",
+   "label": "3. Item Search"
+  },
+  {
+   "fieldname": "item",
+   "fieldtype": "Link",
+   "label": "Item Name",
+   "options": "Item"
+  },
+  {
+   "fieldname": "bom_items",
+   "fieldtype": "Table",
+   "label": "BOM Items",
+   "options": "eTIMS BOM Item"
+  },
+  {
+   "fieldname": "consolidate_bom_items",
+   "fieldtype": "Button",
+   "label": "Consolidate BOM Items"
+  },
+  {
+   "fieldname": "save_item_composition",
+   "fieldtype": "Button",
+   "label": "Save Item Composition"
+  },
+  {
+   "fetch_from": "item.custom_item_code",
+   "fetch_if_empty": 1,
+   "fieldname": "etims_item_code",
+   "fieldtype": "Data",
+   "label": "eTIMS Item Code"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-02-17 06:58:22.640821",
+ "modified": "2024-03-20 16:24:37.956621",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Item Information",

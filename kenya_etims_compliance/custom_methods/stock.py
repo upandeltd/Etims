@@ -23,9 +23,11 @@ def update_stock_to_etims(doc, method):
     
     # if doc.custom_send_stock_info_to_tims:
     if doc.stock_entry_type == "Material Receipt":
-
-            #logic for stock in
-            stockIOSaveReq(doc, date_str, item_count, "06", t_warehouse_id)
+            if doc.custom_is_import_item == 1:
+                stockIOSaveReq(doc, date_str, item_count, "01", t_warehouse_id)
+            else:
+                #logic for stock in
+                stockIOSaveReq(doc, date_str, item_count, "06", t_warehouse_id)
             
     if doc.stock_entry_type == "Material Transfer":
         is_inter_branch = check_if_interbranch(doc)

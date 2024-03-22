@@ -29,6 +29,7 @@ doctype_js = {
 	# "doctype" : "public/js/doctype.js"
 	"Item" : "custom_methods/item.js",
     "Customer" : "custom_methods/customer.js",
+    "BOM" : "custom_methods/bom.js",
     "Sales Invoice": "custom_methods/sales_invoice.js",
     "Purchase Invoice": "custom_methods/purchase_invoice.js"
 }

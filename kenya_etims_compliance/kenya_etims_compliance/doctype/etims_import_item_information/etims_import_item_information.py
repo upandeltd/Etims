@@ -63,7 +63,8 @@ class eTIMSImportItemInformation(Document):
                 if not item.stock_updated:                
                     new_item_doc = frappe.new_doc("Stock Entry")
                     new_item_doc.stock_entry_type = "Material Receipt"
-                    # new_item_doc.custom_send_to_tims = 1
+                    new_item_doc.custom_is_import_item = 1
+                    new_item_doc.custom_send_stock_info_to_etims = 1
                     new_item_doc.append("items", {
                         "item_code": import_item.get("item_name"),
                         "t_warehouse": receipt_store,
@@ -76,41 +77,6 @@ class eTIMSImportItemInformation(Document):
                     self.save()    
         else:
             frappe.throw("Warehouse not found for tax branch!")
-            
-    
-    # @frappe.whitelist()#custom_is_import_item
-    # def importItemUpdateReq(self):
-    #     headers = eTIMS.get_headers()
-
-    #     for import_item in self.import_items_for_update:
-    #         if not import_item.get("saved") == 1:
-    #             payload = {
-    #                 "taskCd": import_item.get("task_code"),
-    #                 "dclDe": import_item.get("declaration_date"),
-    #                 "itemSeq": import_item.get("item_sequence"),
-    #                 "hsCd": import_item.get("hs_code"),
-    #                 "itemClsCd": import_item.get("item_classification_code"),
-    #                 "itemCd": import_item.get("item_code"),
-    #                 "imptItemSttsCd": import_item.get("import_item_status_code"),
-    #                 "remark": import_item.get("remark"),
-    #                 "modrId": import_item.get("modifier_id"),
-    #                 "modrNm": import_item.get("modifier_name")
-    #             }
-    
-    #             try:
-    #                 response = requests.request("POST", 'https://etims-api-sbx.kra.go.ke/etims-api/updateImportItem', json = payload, headers=headers)
-    #                 response_json = response.json()
-     
-    #                 if not response_json.get("resultCd") == '000':
-    #                     return {"Error":response_json.get("resultMsg")}
-            
-    #                 import_item.saved = 1
-    #                 self.save()
-    #                 return {"Success":response_json.get("resultMsg")}
-
-    #             except:
-    #                 return "Bad Request!"	       	
-
 
     
 #  pkgUnitCd': 'KGM', 'qty': 14, 'qtyUnitCd': 'KGM', 'totWt': 140, 'netWt': 14, 'spplrNm': 'SEITZ GMGH', 'agntNm': 'SCHENKER LIMITED', 'invcFcurAmt': 11817.5, 'invcFcurCd': 'EUR', 'invcFcurExcrt': 135.73}, {'taskCd': '20230209004633', 'dclDe': '01022023', 'itemSeq': 1, 'dclNo': '23NBOIM401167364', 'hsCd': '63079000', 'itemNm': 'N; LIFTING BELTS 2t x 4m,3t x4m,5t x 4m,2t x 1m; L; 1; 1; 1; ', 'imptItemsttsCd': '2', 'orgnNatCd': 'DE', 'exptNatCd': 'DE', 'pkg': 17, 'pkgUnitCd': 'KGM', 'qty': 14, 'qtyUnitCd': 'KGM', 'totWt': 140, 'netWt': 14, 'spplrNm': 'SEITZ GMGH', 'agntNm': 'SCHENKER LIMITED', 'invcFcurAmt': 11817.5, 'invcFcurCd': 'EUR', 'invcFcurExcrt': 135.73}, {'taskCd': '20230209004634', 'dclDe': '01022023', 'itemSeq': 1, 'dclNo': '23NBOIM401167364', 'hsCd': '63079000', 'itemNm': 'N; LIFTING BELTS 2t x 4m,3t x4m,5t x 4m,2t x 1m; L; 1; 1; 1; ', 'imptItemsttsCd': '2', 'orgnNatCd': 'DE', 'exptNatCd': 'DE', 'pkg': 17, 'pkgUnitCd': 'KGM', 'qty': 14, 'qtyUnitCd': 'KGM', 'totWt': 140, 'netWt': 14, 'spplrNm': 'SEITZ GMGH'

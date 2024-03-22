@@ -7,16 +7,15 @@ from frappe.model.document import Document
 
 
 class eTIMSPurchaseInvoice(Document):
-
+    #Method to create an erpnext purchase invoice after new etims sales invoice is inserted
     def after_insert(self):
+        #Create supplier if not exist
         self.create_supplier()
         
         if not self.erpnext_purchase_invoice_updated == 1:
             self.create_and_link_erpnext_purchase_invoice()
-            # self.erpnext_purchase_invoice_updated = 1
-            # self.save()
             
-
+    #Method to create and link etim's and erp's purchase invoices 
     def create_and_link_erpnext_purchase_invoice(self):
         receipt_type_code = "P"
         

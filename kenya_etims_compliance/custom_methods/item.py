@@ -17,42 +17,6 @@ def itemSaveReq(doc_name):
         else:
             eTIMS.log_errors("Item Registration", value)
             return {"Error": value}
-    
-
-@frappe.whitelist()
-def itemSaveComposition(doc_name):
-    headers = eTIMS.get_headers()
-    
-    item = frappe.get_doc("Item", doc_name)
-    payload = {
-        "itemCd" : item.get("custom_item_code"),
-        "cpstItemCd": item.get("custom_item_code"),
-        "cpstQty": get_bin_qty(item.get("item_code")),
-        "regrNm" : item.owner,
-        "regrId" : item.owner
-	}
-
-    try:
-        response = requests.request(
-            "POST",
-            eTIMS.tims_base_url() + 'saveItemComposition', 
-            json = payload, 
-            headers=headers
-        )
-
-        response_json = response.json()
-
-        if not response_json.get("resultCd") == '000':
-            return {"Error":response_json.get("resultMsg")}
-        
-        item.custom_composition_saved_in_tims = 1
-        item.save()
-        return {"Success":response_json.get("resultMsg")}
-
-    except:
-        eTIMS.log_errors("Item Save Composition", traceback.format_exc())
-        return {"Error":"Oops Bad Request!"}	
-
 
 @frappe.whitelist()
 def importItemUpdateReq(doc_name):

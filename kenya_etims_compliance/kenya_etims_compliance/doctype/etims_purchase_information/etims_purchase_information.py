@@ -94,6 +94,7 @@ def process_purchases(response_json):
                 
                 for item_detail in invoice.get("itemList"):
                     try:
+                        #Method to create new item if not exists and register it to etims
                         eTIMS.map_new_item(item_detail)
                         item_dict = assign_purchase_item(item_detail)
                     

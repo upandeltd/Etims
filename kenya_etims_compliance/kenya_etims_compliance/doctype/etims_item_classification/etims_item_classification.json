@@ -20,7 +20,7 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": " Item Class Code",
+   "label": " Item Classification Code",
    "length": 10
   },
   {
@@ -28,14 +28,14 @@
    "fieldtype": "Small Text",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Item Class Name",
+   "label": "Item Classification Name",
    "length": 200
   },
   {
    "fieldname": "item_class_level",
    "fieldtype": "Data",
    "in_standard_filter": 1,
-   "label": "Item Class Level"
+   "label": "Item Classification Level"
   },
   {
    "fieldname": "taxation_type_code",
@@ -63,7 +63,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-02-24 11:33:47.040388",
+ "modified": "2024-03-20 14:17:26.770560",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Item Classification",
