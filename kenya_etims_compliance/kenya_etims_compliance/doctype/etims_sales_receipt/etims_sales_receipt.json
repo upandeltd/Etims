@@ -1,0 +1,87 @@
+{
+ "actions": [],
+ "autoname": "format:{receipt_number}",
+ "creation": "2024-03-23 06:51:35.405432",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "receipt_number",
+  "total_receipt_number",
+  "internal_data",
+  "receipt_signature",
+  "control_unit_date_time",
+  "reference_doctype",
+  "reference"
+ ],
+ "fields": [
+  {
+   "fieldname": "receipt_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Receipt Number"
+  },
+  {
+   "fieldname": "total_receipt_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Total Receipt Number"
+  },
+  {
+   "fieldname": "internal_data",
+   "fieldtype": "Data",
+   "label": "Internal Data"
+  },
+  {
+   "fieldname": "receipt_signature",
+   "fieldtype": "Data",
+   "label": "Receipt Signature"
+  },
+  {
+   "fieldname": "control_unit_date_time",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Control Unit Date Time"
+  },
+  {
+   "default": "Sales Invoice",
+   "fieldname": "reference_doctype",
+   "fieldtype": "Link",
+   "label": "Reference Doctype",
+   "options": "DocType"
+  },
+  {
+   "fieldname": "reference",
+   "fieldtype": "Dynamic Link",
+   "in_list_view": 1,
+   "label": "Reference",
+   "options": "reference_doctype"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-03-23 07:07:47.164104",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS Sales Receipt",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

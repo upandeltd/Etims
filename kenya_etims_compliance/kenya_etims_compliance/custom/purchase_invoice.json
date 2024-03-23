@@ -624,7 +624,7 @@
    "creation": "2024-01-07 18:13:18.923451",
    "default": "N",
    "depends_on": null,
-   "description": "C- Copy, N- Normal, P- Purchase, T- Training",
+   "description": "C- Copy, N- Normal, P- Profoma, T- Training",
    "docstatus": 0,
    "dt": "Purchase Invoice",
    "fetch_from": null,

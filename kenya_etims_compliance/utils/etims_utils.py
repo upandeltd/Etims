@@ -22,16 +22,37 @@ class eTIMS():
         base_url = frappe.utils.get_url()
         
         return base_url
-    
+
     def strf_datetime_object(datetime_data):
         datetime_object = datetime.strptime(datetime_data, '%Y-%m-%d %H:%M:%S')
         date_time_str = datetime_object.strftime("%Y%m%d%H%M%S")
         
         return date_time_str
     
+    def strf_datetime_format(datetime_data):
+        date_time_str  = ""
+        if type(datetime_data) == str:
+            try:
+                datetime_object = datetime.strptime(datetime_data, '%Y-%m-%d %H:%M:%S.%f')
+                date_time_str = datetime_object.strftime("%Y%m%d%H%M%S")
+          
+            except:
+                datetime_object = datetime.strptime(datetime_data, '%Y-%m-%d %H:%M:%S')
+                date_time_str = datetime_object.strftime("%Y%m%d%H%M%S")
+      
+        else:     
+            date_time_str = datetime_data.strftime("%Y%m%d%H%M%S")
+        
+        return date_time_str
+    
     def strf_date_object(date_data):
-        date_object = datetime.strptime(date_data, '%Y-%m-%d')
-        date_str = date_object.strftime("%Y%m%d")
+        date_str = ""
+        try:
+            date_object = datetime.strptime(date_data, '%Y-%m-%d')
+            date_str = date_object.strftime("%Y%m%d")
+                    
+        except:
+            date_str = date_data.strftime("%Y%m%d")
         
         return date_str
     
