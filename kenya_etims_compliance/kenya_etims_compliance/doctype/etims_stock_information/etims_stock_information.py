@@ -24,8 +24,8 @@ class eTIMSStockInformation(Document):
         try:
             response = requests.request(
                 "POST", 
-                # eTIMS.tims_base_url() + 'selectStockMoveList', 
-                eTIMS.get_base_url() + '/api/method/kenya_etims_compliance.utils.etims_response.' + 'selectStockMoveList',
+                eTIMS.tims_base_url() + 'selectStockMoveList', 
+                # eTIMS.get_base_url() + 'selectStockMoveList',
                 json = payload, 
                 headers=headers
             )

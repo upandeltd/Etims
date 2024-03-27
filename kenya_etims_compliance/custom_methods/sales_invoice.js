@@ -12,19 +12,5 @@ frappe.ui.form.on("Sales Invoice",{
         refresh_field("custom_receipt_type_code")
         refresh_field("custom_invoice_status_code")
         refresh_field("custom_credit_note_reason_code")
-    },
-
-    custom_send_invoice_to_etims: function(frm) {
-        console.log("hello")
-        if(!frm.doc.custom_update_sales_to_etims == 1){
-            frappe.call({
-                "method": "kenya_etims_compliance.custom_methods.sales_invoice.trnsSalesSave?doc_name=" + frm.doc.name,
-                freeze: true,
-                callback: function(r)   {
-                   return
-                }		
-            })
-        }
-        
     }
 })
