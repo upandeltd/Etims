@@ -61,12 +61,12 @@ def selectImportItemList():
         "data":{
             "itemList":[
                 {
-                    "taskCd":"2239088",
-                    "dclDe":"01022023",
+                    "taskCd":"12998099",
+                    "dclDe":"01042023",
                     "itemSeq":1,
-                    "dclNo":"C3460-2019- TZDL",
-                    "hsCd":"20055900000",
-                    "itemNm":"Yellow Beans",
+                    "dclNo":"C3460-2019- TZDN",
+                    "hsCd":"20055200000",
+                    "itemNm":"Bikini Top",
                     "imptItemsttsCd":"2",
                     "orgnNatCd":"BR",
                     "exptNatCd":"BR",

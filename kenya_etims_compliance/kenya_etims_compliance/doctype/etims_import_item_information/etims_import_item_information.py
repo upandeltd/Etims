@@ -40,43 +40,85 @@ class eTIMSImportItemInformation(Document):
             
             for item in item_list:
                 item_exists = check_import_item_exits(item.get("task_code"))
+    
                 if not item_exists == True:
                     map_import_item(item)
                     self.append("import_items", item)
 
                     self.save()
-                self.create_import_stock_entry(item)
+            
+            for import_item in self.import_items:
+                self.create_and_link_erpnext_purchase_invoice(import_item)
+                
             return {"Success": response_json.get("resultMsg")}
 
         except:
             eTIMS.log_errors("Search Import Item", traceback.format_exc())
             return {"Error":"Oops Bad Request!"}
         
-    def create_import_stock_entry(self, import_item):
-        tax_branch = eTIMS.get_user_branch_id()
+            
+    def create_and_link_erpnext_purchase_invoice(self, item):
+        create_supplier(item.get("supplier_name"))
         
-        store_warehouse = frappe.db.get_all("Warehouse", filters={"warehouse_type": "Stores", "is_group": 0, "custom_tax_branch_office": tax_branch}, fields=["warehouse_name", "name"])
+        new_purchase_doc = frappe.new_doc("Purchase Invoice")
+        new_purchase_doc.supplier = item.get("supplier_name")
+        new_purchase_doc.custom_purchase_type_code = "N"
+        new_purchase_doc.custom_update_purchase_in_tims = 1
+        new_purchase_doc.update_stock = 1
         
-        if store_warehouse:
-            receipt_store = store_warehouse[0].get("name")
-            for item in self.import_items:
-                if not item.stock_updated:                
-                    new_item_doc = frappe.new_doc("Stock Entry")
-                    new_item_doc.stock_entry_type = "Material Receipt"
-                    new_item_doc.custom_is_import_item = 1
-                    new_item_doc.custom_send_stock_info_to_etims = 1
-                    new_item_doc.append("items", {
-                        "item_code": import_item.get("item_name"),
-                        "t_warehouse": receipt_store,
-                        "qty": import_item.get("quantity")
-                    })
-                    
-                    new_item_doc.insert()
-                    # new_item_doc.submit()
-                    item.stock_updated = 1
-                    self.save()    
-        else:
-            frappe.throw("Warehouse not found for tax branch!")
+        create_buying_price_list(item)
+
+        if not item.get("purchase_invoice_created") == 1:
+            
+            try:
+                item_dict = assign_purchase_item(item)
+            
+                new_purchase_doc.append("items", item_dict)
+                
+                new_purchase_doc.save()
+
+                # update etims purchase item
+                frappe.db.set_value('eTIMS Import Item', item.name, {'purchase_invoice_created': 1, 'invoice': new_purchase_doc.name}, update_modified=True)
+                
+                frappe.db.commit()
+            except:
+                frappe.throw(traceback.format_exc())
+        
+def create_supplier(supplier_name):
+    supplier_exists = frappe.db.exists("Supplier", {"supplier_name": supplier_name})
+    
+    if not supplier_exists:
+        new_supplier = frappe.new_doc("Supplier")
+        new_supplier.supplier_name = supplier_name
+        # new_supplier.supplier_group = "All Suppliers Group"
+    
+        new_supplier.insert()
+        frappe.db.commit()
+            
+def create_buying_price_list(item):
+    item_price_ksh = (item.get("invoice_foreign_currency_amount")/item.get("package"))*item.get("invoice_foreign_currency_crt")
+    
+    price_list_exists = frappe.db.exists("Item Price", {"item_code": item.item_name, "price_list": "Standard Buying"})
+    
+    if not price_list_exists:
+        new_price_list = frappe.new_doc("Item Price")
+        new_price_list.item_code = item.get("item_name")
+        new_price_list.price_list = "Standard Buying"
+        new_price_list.price_list_rate = item_price_ksh
+        new_price_list.insert()
+        
+        frappe.db.commit()
+        
+            
+def assign_purchase_item(item_detail):        
+    item_dict = {
+        "item_code": item_detail.get("item_name"),
+        "item_name": item_detail.get("item_name"),
+        "rate": item_detail.get("tax_rate"),
+        "qty": item_detail.get("package"),
+    }
+
+    return item_dict
 
     
 #  pkgUnitCd': 'KGM', 'qty': 14, 'qtyUnitCd': 'KGM', 'totWt': 140, 'netWt': 14, 'spplrNm': 'SEITZ GMGH', 'agntNm': 'SCHENKER LIMITED', 'invcFcurAmt': 11817.5, 'invcFcurCd': 'EUR', 'invcFcurExcrt': 135.73}, {'taskCd': '20230209004633', 'dclDe': '01022023', 'itemSeq': 1, 'dclNo': '23NBOIM401167364', 'hsCd': '63079000', 'itemNm': 'N; LIFTING BELTS 2t x 4m,3t x4m,5t x 4m,2t x 1m; L; 1; 1; 1; ', 'imptItemsttsCd': '2', 'orgnNatCd': 'DE', 'exptNatCd': 'DE', 'pkg': 17, 'pkgUnitCd': 'KGM', 'qty': 14, 'qtyUnitCd': 'KGM', 'totWt': 140, 'netWt': 14, 'spplrNm': 'SEITZ GMGH', 'agntNm': 'SCHENKER LIMITED', 'invcFcurAmt': 11817.5, 'invcFcurCd': 'EUR', 'invcFcurExcrt': 135.73}, {'taskCd': '20230209004634', 'dclDe': '01022023', 'itemSeq': 1, 'dclNo': '23NBOIM401167364', 'hsCd': '63079000', 'itemNm': 'N; LIFTING BELTS 2t x 4m,3t x4m,5t x 4m,2t x 1m; L; 1; 1; 1; ', 'imptItemsttsCd': '2', 'orgnNatCd': 'DE', 'exptNatCd': 'DE', 'pkg': 17, 'pkgUnitCd': 'KGM', 'qty': 14, 'qtyUnitCd': 'KGM', 'totWt': 140, 'netWt': 14, 'spplrNm': 'SEITZ GMGH'
@@ -151,7 +193,7 @@ def check_if_item_exits(item_code):
 def create_import_item_doctype(item):
     date_str = item.get("declaration_date")
     date_obj = datetime.strptime(date_str, "%d%m%Y").date()
-    item_price_ksh = (item.get("invoice_foreign_currency_amount")/item.get("quantity"))/item.get("invoice_foreign_currency_crt")
+    item_price_ksh = (item.get("invoice_foreign_currency_amount")/item.get("package"))*item.get("invoice_foreign_currency_crt")
     
     new_item_doc = frappe.new_doc("Item")
     new_item_doc.item_code = item.get("item_name")
@@ -163,6 +205,7 @@ def create_import_item_doctype(item):
     new_item_doc.custom_declaration_date = date_obj
     new_item_doc.custom_hs_code = item.get("hs_code")
     new_item_doc.custom_remark = item.get("remark")
+    new_item_doc.custom_country_of_origin = get_etims_country(item.get("origin_nation_code"))
     
     if item.get("import_item_status_code") == "1":
         new_item_doc.custom_import_item_status_code = "Unsent"
@@ -178,3 +221,10 @@ def create_import_item_doctype(item):
     
     new_item_doc.insert()
 
+def get_etims_country(country_code):
+    country_code_list = frappe.db.get_all("eTIMS Country", filters={"code_name": country_code}, fields=["country_name"])
+    
+    if country_code_list:
+        country_name = country_code_list[0].get("country_name")
+        
+        return country_name

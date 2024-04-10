@@ -33,7 +33,7 @@ class eTIMSStockInformation(Document):
             response_data = response.json()
             
             response_json = eTIMS.get_response_data(response_data)
-            
+            print(response_json)
             if not response_json.get("resultCd") == '000':
             
                 return {"Oops!":response_json.get("resultMsg")}
