@@ -1,4 +1,4 @@
-import requests
+import requests, pyqrcode
 from datetime import datetime, timedelta, time
 
 import frappe
@@ -23,17 +23,23 @@ def insert_invoice_number(doc,method):
     Method sets increment for invoice number and orginal invoice number before submitting invoice
     '''
     scu = ""
+    item_count = 0
     
     branch_id = eTIMS.get_user_branch_id()
     init_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id}, fields=["*"])
     if init_docs:
         scu = init_docs[0].get("sales_control_unit_id")
-        
+    
+    if doc.items:
+        item_count = len(doc.items) 
+    
+  
     if doc.name:
         last_inv_number = get_last_inv_number(doc)
         frappe.db.set_value('Sales Invoice', doc.name, {
             'custom_invoice_number': last_inv_number,
-            'custom_sales_control_unit': scu
+            'custom_sales_control_unit': scu,
+            'custom_item_count': item_count
         }, update_modified=True)
 
         insert_tax_amounts(doc)
@@ -47,7 +53,15 @@ def insert_tax_amounts(doc):
             if doc.taxes:
                 for item in doc.taxes:
                     if item.get("custom_code") == key:
-                        frappe.db.set_value('Sales Taxes and Charges', item.get("name"), 'custom_total_taxable_amount', round(value, 2), update_modified=True)
+                        tax_templates = frappe.db.get_all("Item Tax Template", filters={"custom_code": key}, fields=["custom_code_name"])
+                        
+                        if len(tax_templates):
+                            frappe.db.set_value('Sales Taxes and Charges', 
+                                                item.get("name"),
+                                                {
+                                                    'custom_total_taxable_amount': round(value, 2),
+                                                    'custom_code_name': tax_templates[0].get("custom_code_name")
+                                                }, update_modified=True)
         except:
             frappe.throw(Exception)
         
@@ -209,6 +223,14 @@ def trnsSalesSaveWrReq(doc, method):
             doc.custom_internal_data = data.get("intrlData")
             doc.custom_receipt_signature = data.get("rcptSign")
             doc.custom_control_unit_date_time = control_unit_date_time
+            
+            file_name = create_qr_code(data.get("rcptSign"))
+            
+            attachment_url = create_attachment(file_name, doc.name)
+
+            doc.custom_receipt_qr_code = attachment_url
+            # doc.save()
+            # frappe.db.commit()
             
             create_sales_receipt(data, doc.name)
                 
@@ -446,3 +468,37 @@ def create_sales_receipt(data, doc_name):
     new_rcpt_doc.insert()
     
     frappe.db.commit()
+    
+def create_qr_code(rcpt_signature):
+    settings_doc = frappe.get_doc("TIS Settings", "TIS Settings")
+    
+    url = ""
+    file_name = rcpt_signature + ".png"
+    
+    file_path = frappe.get_site_path('private', 'files', file_name)
+    
+    if settings_doc.get("is_sandbox") == 1:
+        url = "https://etims-sbx.kra.go.ke/common/link/etims/receipt/indexEtimsReceiptData?Data=P051304671B00" + rcpt_signature
+
+    try:
+        big_code = pyqrcode.create(url, error='L', version=27, mode='binary')
+        big_code.png(file_path, scale=6, module_color=[0, 0, 0, 128], background=[255, 255, 255])
+        # big_code.show()
+        
+        return file_name
+        
+    except:
+        frappe.throw("QR Code Not Generated!")
+
+def create_attachment(file_name, inv_name):
+    new_attachment = frappe.new_doc("File")
+    new_attachment.file_name = file_name
+    new_attachment.file_url = "/private/files/" + file_name
+    new_attachment.attached_to_doctype = "Sales Invoice"
+    new_attachment.attached_to_name = inv_name
+    new_attachment.is_private = 1
+    
+    new_attachment.save()
+    frappe.db.commit()
+    
+    return new_attachment.get("file_url")
