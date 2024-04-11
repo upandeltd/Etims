@@ -91,6 +91,7 @@ def assign_purchase_item(item_detail):
         # "rate": item_detail.get("prc"),
         "qty": item_detail.get("package"),
         "discount_rate": item_detail.get("discount_percentage"),
+        "item_tax_template": get_tax_template_details(item_detail.get("item_name"))
         # "discount_amount": item_detail.get("discount_amount"),
         # "taxation_type_code": item_detail.get("taxTyCd"),
         # "taxable_amount": item_detail.get("taxblAmt"),
@@ -99,3 +100,13 @@ def assign_purchase_item(item_detail):
     }
 
     return item_dict
+
+def get_tax_template_details(item_code):
+    tax_name = ""
+    item_doc = frappe.get_doc("Item", item_code)
+    if item_doc:
+        if item_doc.taxes:
+            tax_list = item_doc.taxes
+            tax_name = tax_list[0].get("item_tax_template")
+
+    return tax_name

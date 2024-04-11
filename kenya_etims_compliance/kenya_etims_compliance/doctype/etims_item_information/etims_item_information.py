@@ -242,6 +242,7 @@ def process_registered_items(response_result):
    
     if data.get("itemList"):
         for item in data.get("itemList"):
+            eTIMS.map_new_item(item)
             data = {
                 "pin": item.get("tin"),
                 "item_classification_code": item.get("itemClsCd"),

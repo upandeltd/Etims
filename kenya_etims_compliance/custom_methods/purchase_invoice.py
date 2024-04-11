@@ -27,7 +27,7 @@ def insert_invoice_number(doc,method):
         insert_tax_amounts(doc)
         
         doc.reload()
-        
+    
 def insert_tax_amounts(doc):
     taxable_amounts = get_taxable_amounts(doc)
     for key, value in taxable_amounts.items():
@@ -215,7 +215,8 @@ def stockIOSaveReq(doc, date_str, item_count):
     
     if doc.custom_original_invoice_number != 0 or doc.is_return == 1: 
         payload["sarTyCd"] = "12"
-    
+    elif doc.custom_import_purchase == 1:
+        payload["sarTyCd"] = "01"
     else:
         payload["sarTyCd"] = "02"
     
@@ -382,11 +383,12 @@ def etims_sale_item_list(doc):
 def get_tax_template_details(item_code):
     item_doc = frappe.get_doc("Item", item_code)
     if item_doc:
-        for tax_item in item_doc.taxes:
-            tax_code = frappe.get_doc("Item Tax Template", tax_item.get("item_tax_template"))
-            
-            if tax_code:
-                return tax_code.get("custom_code")
+        if item_doc.taxes:
+            for tax_item in item_doc.taxes:
+                tax_code = frappe.get_doc("Item Tax Template", tax_item.get("item_tax_template"))
+                
+                if tax_code:
+                    return tax_code.get("custom_code")
     else:
         return "D"
     

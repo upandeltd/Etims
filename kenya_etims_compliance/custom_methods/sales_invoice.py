@@ -22,10 +22,20 @@ def insert_invoice_number(doc,method):
     '''
     Method sets increment for invoice number and orginal invoice number before submitting invoice
     '''
+    scu = ""
+    
+    branch_id = eTIMS.get_user_branch_id()
+    init_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id}, fields=["*"])
+    if init_docs:
+        scu = init_docs[0].get("sales_control_unit_id")
+        
     if doc.name:
         last_inv_number = get_last_inv_number(doc)
-        
-        frappe.db.set_value('Sales Invoice', doc.name, 'custom_invoice_number', last_inv_number, update_modified=True)
+        frappe.db.set_value('Sales Invoice', doc.name, {
+            'custom_invoice_number': last_inv_number,
+            'custom_sales_control_unit': scu
+        }, update_modified=True)
+
         insert_tax_amounts(doc)
         
         doc.reload()
