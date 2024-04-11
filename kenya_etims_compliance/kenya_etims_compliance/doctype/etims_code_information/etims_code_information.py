@@ -84,6 +84,9 @@ class eTIMSCodeInformation(Document):
             if data:
                 for cust in data.get("custList"):
                     cust_exists = check_customer_exists(cust.get("tin"))
+                    
+                    self.create_erp_customer(cust.get("taxprNm"), cust.get("tin"))
+                    
                     if not cust_exists == True:
                         self.create_customer(cust)
 
@@ -153,6 +156,22 @@ class eTIMSCodeInformation(Document):
         self.append("customer_details", customer_dict)
         self.save()
         return True
+    
+    def create_erp_customer(self, customer_name, pin):
+        customer_exists = frappe.db.exists("Customer", {"customer_name": customer_name})
+        
+        if not customer_exists:
+            new_customer = frappe.new_doc("Customer")
+            new_customer.customer_name = customer_name
+            new_customer.custom_customer_pin = pin
+            new_customer.custom_used_yn = "Y"
+            new_customer.custom_customer_name = customer_name
+            new_customer.customer_type = "Company"
+            new_customer.customer_group = "Individual"
+        
+            new_customer.insert()
+            frappe.db.commit()
+        
 
 
 ######################################### Methods ##################################################

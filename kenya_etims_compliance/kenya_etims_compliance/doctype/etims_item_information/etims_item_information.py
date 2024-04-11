@@ -5,7 +5,7 @@ import requests, traceback
 
 import frappe
 from frappe.model.document import Document
-from kenya_etims_compliance.utils.etims_utils import eTIMS
+from kenya_etims_compliance.utils.etims_utils import eTIMS, get_country_of_origin, get_packing_and_quantity_unit, get_item_type, get_item_tax_template
 
 
 class eTIMSItemInformation(Document):
@@ -242,7 +242,7 @@ def process_registered_items(response_result):
    
     if data.get("itemList"):
         for item in data.get("itemList"):
-            eTIMS.map_new_item(item)
+            create_new_item_doctype(item)
             data = {
                 "pin": item.get("tin"),
                 "item_classification_code": item.get("itemClsCd"),
@@ -338,4 +338,56 @@ def get_exploded_items(bom_name):
             bom_details_list.append(bom_item_details)
             
     return bom_details_list
-            
+        
+        
+def create_new_item_doctype(item):
+    current_user = frappe.session.user
+    
+    pkgUnitNm, qtyUnitNm = get_packing_and_quantity_unit(item.get("pkgUnitCd"), item.get("qtyUnitCd"))
+    nat_of_origin = get_country_of_origin(item.get("itemCd"))
+    
+    new_item_doc = frappe.new_doc("Item")
+    new_item_doc.item_code = item.get("itemNm")
+    new_item_doc.custom_item_code = item.get("itemCd")
+    new_item_doc.custom_item_name = item.get("itemNm")
+    new_item_doc.item_group = get_item_type(item.get("itemCd"))
+    new_item_doc.stock_uom = "Nos"
+    new_item_doc.custom_country_of_origin = nat_of_origin
+    new_item_doc.custom_item_classification_code = item.get("itemClsCd")
+    new_item_doc.custom_packaging_unit_code = item.get("pkgUnitCd")
+    new_item_doc.custom_quantity_unit_code = item.get("qtyUnitCd")
+    new_item_doc.custom_default_packing_unit = pkgUnitNm
+    new_item_doc.custom_default_quantity_unit = qtyUnitNm
+    new_item_doc.custom_used__unused = "Y"
+    new_item_doc.custom_taxation_type_code = item.get("taxTyCd")
+    new_item_doc.custom_registration_id = current_user
+    new_item_doc.custom_registration_name =current_user
+    new_item_doc.custom_modifier_name = current_user
+    new_item_doc.custom_modifier_id = current_user
+    
+    if item.get("taxTyCd"):
+        tax_template = get_item_tax_template(item.get("taxTyCd"))
+        new_item_doc.append("taxes",{
+            "item_tax_template": tax_template
+        })
+        
+    
+    new_item_doc.insert()
+    
+    create_selling_price(item.get("itemNm"), item.get("dftPrc"))
+    
+    new_item_doc.save()
+    frappe.db.commit()
+    
+def create_selling_price(item_code, prc):
+    prc_list = frappe.db.get_all("Item Price", filters={"item_code": item_code, "selling":1}, fields=["name"])
+    
+    if not prc_list:
+        new_item_prc = frappe.new_doc("Item Price")
+        new_item_prc.item_code = item_code
+        new_item_prc.price_list = "Standard Selling"
+        new_item_prc.price_list_rate = prc
+        
+        new_item_prc.insert()
+        frappe.db.commit()
+    
