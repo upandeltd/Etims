@@ -26,7 +26,7 @@ def selectInitOsdcInfo():
                     "mgrTelNo":"0789001130",
                     "mgrEmail":"manage113000@test.com",
                     "dvcId":"9999911300000001",
-                    "sdcId":"KRACU013000001",
+                    "sdcId":"KRACU0300000222",
                     "mrcNo":"WIS01000150",
                     "cmcKey":"F7EAB71D774C40B5A954F8FF2B9408B10D6CBFA336FB429AB666"
                     }

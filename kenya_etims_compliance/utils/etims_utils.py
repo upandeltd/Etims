@@ -56,16 +56,16 @@ class eTIMS():
         
         return date_str
     
-    def strf_date(date_data):
-        date_str = date_data.strftime("%Y%m%d")
+    # def strf_date(date_data):
+    #     date_str = date_data.strftime("%Y%m%d")
         
-        return date_str
+    #     return date_str
     
-    def strf_time_object(time_data):
-        time_object = datetime.strptime(time_data, '%H:%M:%S.%f')
-        time_str = time_object.strftime("%H%M%S")
+    # def strf_time_object(time_data):
+    #     time_object = datetime.strptime(time_data, '%H:%M:%S.%f')
+    #     time_str = time_object.strftime("%H%M%S")
         
-        return time_str
+    #     return time_str
     
     def strf_time(time_data):
         time_str = ""
@@ -139,10 +139,20 @@ class eTIMS():
         
         return datetime_object
     
+    # def strp_date_and_time_object(date_time_str):#20210502115145
+    #     datetime_object = datetime.strptime(date_time_str, '%Y%m%d%H%M%S')
+        
+    #     return datetime_object
+    
     def strp_date_object(date_str):
         date_object = datetime.strptime(date_str, '%Y%m%d')
         
         return date_object.date()
+    
+    def strp_time_object(time_str):
+        time_object = datetime.strptime(time_str, '%H%M%S')
+        
+        return time_object.time()
     
     def get_item_barcode(item_code, uom):
         item_barcodes = frappe.db.get_all("Item Barcode", filters={"parent": item_code, "uom": uom}, fields=["barcode"])

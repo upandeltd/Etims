@@ -32,39 +32,60 @@ def insert_invoice_number(doc,method):
     
     if doc.items:
         item_count = len(doc.items) 
-    
-  
+        insert_tax_amounts(doc)
+
     if doc.name:
+        total_discount_amount = get_total_discount(doc)
+        
+        total_vat_amount = fetch_total_vat(doc)
+        total_non_vat_amount = fetch_total_non_vat(doc)
+        
         last_inv_number = get_last_inv_number(doc)
         frappe.db.set_value('Sales Invoice', doc.name, {
-            'custom_invoice_number': last_inv_number,
-            'custom_sales_control_unit': scu,
-            'custom_item_count': item_count
+            "custom_invoice_number": last_inv_number,
+            "custom_sales_control_unit": scu,
+            "custom_total_taxable_amount": total_vat_amount,
+            "custom_total_nontaxable_amount": total_non_vat_amount,
+            "custom_item_count": item_count,
+            "custom_total_discount_amount": total_discount_amount,
+            "custom_total_before_discount": total_discount_amount + doc.rounded_total
         }, update_modified=True)
-
-        insert_tax_amounts(doc)
         
         doc.reload()
         
 def insert_tax_amounts(doc):
-    taxable_amounts = get_taxable_amounts(doc)
-    for key, value in taxable_amounts.items():
-        try:
-            if doc.taxes:
-                for item in doc.taxes:
-                    if item.get("custom_code") == key:
-                        tax_templates = frappe.db.get_all("Item Tax Template", filters={"custom_code": key}, fields=["custom_code_name"])
-                        
-                        if len(tax_templates):
-                            frappe.db.set_value('Sales Taxes and Charges', 
-                                                item.get("name"),
-                                                {
-                                                    'custom_total_taxable_amount': round(value, 2),
-                                                    'custom_code_name': tax_templates[0].get("custom_code_name")
-                                                }, update_modified=True)
-        except:
-            frappe.throw(Exception)
-        
+    if doc.items:
+        taxable_amounts = get_taxable_amounts(doc)
+        for key, value in taxable_amounts.items():
+            try:
+                if doc.taxes:
+                    for item in doc.taxes:
+                        if item.get("custom_code") == key:
+                            tax_templates = frappe.db.get_all("Item Tax Template", filters={"custom_code": key}, fields=["custom_code_name"])
+                            
+                            if len(tax_templates):
+                                frappe.db.set_value('Sales Taxes and Charges', 
+                                                    item.get("name"),
+                                                    {
+                                                        'custom_total_taxable_amount': round(value, 2),
+                                                        'custom_code_name': tax_templates[0].get("custom_code_name")
+                                                    }, update_modified=True)
+                                frappe.db.commit()
+                                doc.reload()
+            except:
+                frappe.throw(Exception)
+            
+def get_total_discount(doc):
+    discount_amount = 0
+    
+    if doc.items:
+        for item in doc.items:
+            if item.get("discount_percentage") > 0:
+                total_dsc = item.get("discount_amount") * item.get("qty")
+                discount_amount +=  total_dsc
+                
+    return discount_amount
+
 def get_taxable_amounts(doc):
     taxable_amounts_dict = {}
     
@@ -78,8 +99,26 @@ def get_taxable_amounts(doc):
     except:
         frappe.throw(Exception)
         
-    return taxable_amounts_dict       
-        
+    return taxable_amounts_dict      
+
+def fetch_total_vat(doc):
+    taxable_amount = 0
+    if doc.taxes:
+        for item in doc.taxes:
+            if item.get("base_tax_amount_after_discount_amount") > 0:
+                taxable_amount += item.get("custom_total_taxable_amount")
+                
+    return taxable_amount
+    
+def fetch_total_non_vat(doc):
+    taxable_non_vat_amount = 0
+    if doc.taxes:
+        for item in doc.taxes:
+            if item.get("base_tax_amount_after_discount_amount") == 0:
+                taxable_non_vat_amount += item.get("custom_total_taxable_amount")
+                
+    return taxable_non_vat_amount
+                
 @frappe.whitelist()
 def trnsSalesSaveWrReq(doc, method):
     '''
@@ -99,9 +138,7 @@ def trnsSalesSaveWrReq(doc, method):
     request_date = doc.posting_date
     date_str = eTIMS.strf_date_object(request_date)
         
-    count = 0
-    for item in doc.items:
-        count += 1   
+    count = doc.custom_item_count   
                 
     payload = {
         "trdInvcNo": doc.name,
@@ -117,9 +154,9 @@ def trnsSalesSaveWrReq(doc, method):
         "salesDt": date_str,
         "stockRlsDt": date_time_str,
         "totItemCnt": count,
-        "totTaxblAmt":doc.grand_total,
-        "totTaxAmt":doc.base_total_taxes_and_charges,
-        "totAmt":doc.grand_total,
+        "totTaxblAmt": doc.custom_total_taxable_amount,
+        "totTaxAmt": doc.base_total_taxes_and_charges,
+        "totAmt": doc.grand_total,
         "prchrAcptcYn":"N",
         "remark": doc.remarks,
         "regrId": doc.owner,
@@ -218,11 +255,16 @@ def trnsSalesSaveWrReq(doc, method):
                             
             data = response_json.get("data")
             control_unit_date_time = eTIMS.strp_datetime_object(data.get("sdcDateTime"))
+            control_unit_date = eTIMS.strp_date_object(data.get("sdcDateTime")[0:8])
+            control_unit_time = eTIMS.strp_time_object(data.get("sdcDateTime")[8:14])
+            
             doc.custom_current_receipt_number = data.get("curRcptNo")
             doc.custom_total_receipt_number = data.get("totRcptNo")
             doc.custom_internal_data = data.get("intrlData")
             doc.custom_receipt_signature = data.get("rcptSign")
             doc.custom_control_unit_date_time = control_unit_date_time
+            doc.custom_control_unit_date = control_unit_date
+            doc.custom_control_unit_time = control_unit_time
             
             file_name = create_qr_code(data.get("rcptSign"))
             
@@ -259,7 +301,7 @@ def stockIOSaveReq(doc, date_str, item_count):
         "custBhfId": doc.tax_id,
         "ocrnDt": date_str,
         "totItemCnt": item_count,
-        "totTaxblAmt": doc.grand_total,
+        "totTaxblAmt": doc.custom_total_taxable_amount,
         "totTaxAmt": doc.base_total_taxes_and_charges,
         "totAmt": doc.grand_total,
         "remark": doc.remarks,
@@ -419,14 +461,14 @@ def etims_sale_item_list(doc):
 					"prc": item.get("rate"),
 					"splyAmt": item.get("amount"),
 					"dcRt": item.get("discount_percentage"),
-					"dcAmt": item.get("discount_amount"),
+					"dcAmt": round((item.get("discount_amount") * item.get("qty")), 2),
 					# "isrccCd":null,
 					# "isrccNm":null,
 					# "isrcRt":null,
 					# "isrcAmt":null,
-                    "totDcAmt": item.get("discount_amount"),
+                    "totDcAmt": round((item.get("discount_amount") * item.get("qty")), 2),
 					"taxTyCd": item_tax_code,
-					"taxblAmt": item.get("amount"),
+					"taxblAmt": round(item.get("net_amount"), 2),
 					"taxAmt": round((item.get("amount") - item.get("net_amount")), 2),
 					"totAmt": item.get("amount")
 				}
