@@ -25,31 +25,31 @@ def update_stock_to_etims(doc, method):
     
     # if doc.custom_send_stock_info_to_tims:
     if doc.stock_entry_type == "Material Receipt":
-            if doc.custom_is_import_item == 1:
-                stockIOSaveReq(doc, date_str, item_count, "01", t_warehouse_id)
-            else:
+            # if doc.custom_is_import_item == 1:
+            #     stockIOSaveReq(doc, date_str, item_count, "01", t_warehouse_id)
+            # else:
                 #logic for stock in
-                stockIOSaveReq(doc, date_str, item_count, "06", t_warehouse_id)
+        stockIOSaveReq(doc, date_str, item_count, "06", t_warehouse_id)
             
     if doc.stock_entry_type == "Material Transfer":
         is_inter_branch = check_if_interbranch(doc)
         
         if is_inter_branch:
             stockIOSaveReq(doc, date_str, item_count, "13", s_warehouse_id)
-            stockIOSaveReq(doc, date_str, item_count, "04", t_warehouse_id)
+            # stockIOSaveReq(doc, date_str, item_count, "04", t_warehouse_id)
         #get warehouse branch if intrbranch is true
         #logic fot transfer within branches
     
         
 def stockIOSaveReq(doc, date_str, item_count, sar_type, branch_id):    
-    headers = eTIMS.get_headers()
+    headers = get_headers(branch_id)
     payload = {
         "sarNo": get_etims_sar_no(doc),
         "orgSarNo": 0,
         "regTyCd": "A",
         "custTin": headers.get("tin"),
         # "custNm": doc.customer,
-        "custBhfId": branch_id,
+        # "custBhfId": "00",33333333333333333333333333333333333333333333
         "ocrnDt": date_str,
         "totItemCnt": item_count,
         "totTaxblAmt": doc.total_incoming_value,
@@ -204,3 +204,15 @@ def get_tax_template_details(item_code):
                 return tax_code.get("custom_code")
     else:
         return "D"
+    
+def get_headers(branch_id):
+    header_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id}, fields=["*"])
+        
+    if header_docs:
+        headers = {
+            "tin":header_docs[0].get("pin"),
+            "bhfId":header_docs[0].get("branch_id"),
+            "cmcKey":header_docs[0].get("communication_key"),
+        }
+        
+        return headers

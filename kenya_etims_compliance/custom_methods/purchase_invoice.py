@@ -25,6 +25,15 @@ def insert_invoice_number(doc,method):
         
         frappe.db.set_value('Purchase Invoice', doc.name, 'custom_invoice_number', last_inv_number, update_modified=True)
         insert_tax_amounts(doc)
+        total_vat_amount = fetch_total_vat(doc)
+        total_non_vat_amount = fetch_total_non_vat(doc)
+        
+        frappe.db.set_value('Purchase Invoice', doc.name,
+                            { 
+                                "custom_total_taxable_amount": total_vat_amount,
+                                "custom_total_nontaxable_amount": total_non_vat_amount
+                            },
+                            update_modified=True)
         
         doc.reload()
     
@@ -53,6 +62,24 @@ def get_taxable_amounts(doc):
         frappe.throw(Exception)
         
     return taxable_amounts_dict
+
+def fetch_total_vat(doc):
+    taxable_amount = 0
+    if doc.taxes:
+        for item in doc.taxes:
+            if item.get("base_tax_amount_after_discount_amount") > 0:
+                taxable_amount += item.get("custom_total_taxable_amount")
+                
+    return taxable_amount
+    
+def fetch_total_non_vat(doc):
+    taxable_non_vat_amount = 0
+    if doc.taxes:
+        for item in doc.taxes:
+            if item.get("base_tax_amount_after_discount_amount") == 0:
+                taxable_non_vat_amount += item.get("custom_total_taxable_amount")
+                
+    return taxable_non_vat_amount
 
 @frappe.whitelist()
 def trnsPurchaseSaveReq(doc, method):
@@ -93,7 +120,7 @@ def trnsPurchaseSaveReq(doc, method):
         "cfmDt": date_time_str,
         "pchsDt": date_str,
         "totItemCnt": count,
-        "totTaxblAmt":doc.grand_total,
+        "totTaxblAmt":doc.custom_total_taxable_amount,
         "totTaxAmt":doc.base_total_taxes_and_charges,
         "totAmt":doc.grand_total,
         "remark": doc.remarks,
@@ -202,7 +229,7 @@ def stockIOSaveReq(doc, date_str, item_count):
         "custBhfId": eTIMS.get_user_branch_id(),
         "ocrnDt": date_str,
         "totItemCnt": item_count,
-        "totTaxblAmt": doc.grand_total,
+        "totTaxblAmt": doc.custom_total_taxable_amount,
         "totTaxAmt": doc.base_total_taxes_and_charges,
         "totAmt": doc.grand_total,
         "remark": doc.remarks,
