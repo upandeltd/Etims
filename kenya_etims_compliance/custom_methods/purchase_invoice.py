@@ -185,7 +185,7 @@ def trnsPurchaseSaveReq(doc, method):
             frappe.msgprint(response_json.get("resultMsg"))
 
         except:
-            frappe.throw(response_json.get("resultMsg"))
+            frappe.throw("Error")
     else:
         print(payload)
         stockIOSaveReq(doc, date_str, count)

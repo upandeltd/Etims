@@ -12,12 +12,12 @@ def update_stock_to_etims(doc, method):
     
     date_str = eTIMS.strf_date_object(request_date)
     time_str = eTIMS.strf_time(request_time)
-    print("*"*80)
+
     if doc.from_warehouse:
-        print(doc.from_warehouse)
+        
         s_warehouse_id = get_warehouse_branch(doc.from_warehouse)
     if doc.to_warehouse:
-        print(doc.to_warehouse)
+        
         t_warehouse_id = get_warehouse_branch(doc.to_warehouse)
     
     for item in doc.items:
