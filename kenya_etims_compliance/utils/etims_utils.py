@@ -173,7 +173,7 @@ class eTIMS():
         
         if "TIS Admin" not in frappe.get_roles(current_user):
             
-            tax_branch_perms = frappe.db.get_all("User Permission", filters={"user":current_user, "allow": "Tax Branch Office"}, fields =["for_value"])
+            tax_branch_perms = frappe.db.get_all("User Permission", filters={"user":current_user, "allow": "Tax Branch Office", "is_default": 1}, fields =["for_value"])
             
             if tax_branch_perms:
                 tax_branch_id_current_user = tax_branch_perms[0].get("for_value")

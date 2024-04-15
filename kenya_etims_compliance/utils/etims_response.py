@@ -194,7 +194,7 @@ def selectTrnsPurchaseSalesList():
                         "spplrTin":"A123456789Z",
                         "spplrNm":"Taxpayer1111",
                         "spplrBhfId":"00",
-                        "spplrInvcNo":29,
+                        "spplrInvcNo":39,
                         "rcptTyCd":"S",
                         "pmtTyCd":"01",
                         "cfmDt":"2020-01-27 21:03:00",

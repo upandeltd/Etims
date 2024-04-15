@@ -136,7 +136,8 @@ doc_events = {
             "on_update": "kenya_etims_compliance.custom_methods.sales_invoice.insert_invoice_number"
         },
         "Stock Entry": {
-            "before_submit": "kenya_etims_compliance.custom_methods.stock.update_stock_to_etims"
+            "before_submit": "kenya_etims_compliance.custom_methods.stock.update_stock_to_etims",
+            "before_validate": "kenya_etims_compliance.custom_methods.stock.insert_tax_rate_and_amount",
         },
         "Item": {
             "before_save": "kenya_etims_compliance.custom_methods.item.autofill_tims_info"

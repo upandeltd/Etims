@@ -56,6 +56,21 @@ class eTIMSPurchaseInvoice(Document):
                     frappe.db.set_value('eTIMS Purchase Item', item.name, {'purchase_invoice_created': 1}, update_modified=True)
                     frappe.db.set_value('eTIMS Purchase Invoice', self.name, {'erpnext_purchase_invoice_updated': 1, "erpnext_purchase_invoice": new_purchase_doc.name}, update_modified=True)
                     
+                    # for pur_item in new_purchase_doc.items:
+                    #     print("8"*80)
+                    #     print(pur_item.get("item_tax_template"))
+                    #     if pur_item.get("item_tax_template"):
+                    #         item_tax_temp = pur_item.get("item_tax_template")
+                    #         pur_item.item_tax_template = ""
+                    #         # frappe.db.set_value('Purchase Item', pur_item.name, {'item_tax_template': ""}, update_modified=True)
+                    #         print("7"*80)
+                    #         print(pur_item.get("item_tax_template"))
+                    #         pur_item.item_tax_template = item_tax_temp
+                    #         print("8"*80)
+                    #         print(pur_item.get("item_tax_template"))
+                            
+                    # new_purchase_doc.save()
+                    
                     frappe.db.commit()
                 except:
                     frappe.throw(traceback.format_exc())

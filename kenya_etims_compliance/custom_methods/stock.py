@@ -3,6 +3,33 @@ import requests
 import frappe
 from kenya_etims_compliance.utils.etims_utils import eTIMS
 
+def insert_tax_rate_and_amount(doc, method):
+    total_taxable_amount = 0
+    total_amount = 0
+    main_tax_amount = 0
+    
+    if doc.items:
+        for item in doc.items:
+            if item.get("custom_tax_code"):
+                account_head_list = frappe.db.get_all("Account", filters={"account_type": "Tax", "custom_tax_code": item.get("custom_tax_code")}, fields=["tax_rate"])
+              
+                if account_head_list:
+                    item.custom_rate = account_head_list[0].get("tax_rate")
+
+                if account_head_list[0].get("tax_rate") > 0:
+                    if item.get("basic_amount"):
+                        tax_rate = account_head_list[0].get("tax_rate")/100
+                        taxable_amount = item.get("basic_amount")/(1+tax_rate)
+                        tax_amount = item.get("basic_amount") - taxable_amount
+                        
+                        item.custom_tax_amount = round(tax_amount, 2)
+                        main_tax_amount += tax_amount
+                        total_amount += item.get("basic_amount")
+                        total_taxable_amount = round((total_amount - main_tax_amount), 2)
+                    
+        doc.custom_total_tax_amount = round(main_tax_amount, 2)
+        doc.custom_total_taxable_amount = total_taxable_amount
+
 def update_stock_to_etims(doc, method):
     item_count = 0
     request_date = doc.posting_date
@@ -35,26 +62,27 @@ def update_stock_to_etims(doc, method):
         is_inter_branch = check_if_interbranch(doc)
         
         if is_inter_branch:
-            stockIOSaveReq(doc, date_str, item_count, "13", s_warehouse_id)
-            # stockIOSaveReq(doc, date_str, item_count, "04", t_warehouse_id)
+            stockIOSaveReq(doc, date_str, item_count, "13", t_warehouse_id)
+            stockIOSaveReq(doc, date_str, item_count, "04", t_warehouse_id)
         #get warehouse branch if intrbranch is true
         #logic fot transfer within branches
     
         
 def stockIOSaveReq(doc, date_str, item_count, sar_type, branch_id):    
-    headers = get_headers(branch_id)
+    # headers = get_headers(branch_id)
+    headers = eTIMS.get_headers()
     payload = {
         "sarNo": get_etims_sar_no(doc),
         "orgSarNo": 0,
         "regTyCd": "A",
         "custTin": headers.get("tin"),
         # "custNm": doc.customer,
-        # "custBhfId": "00",33333333333333333333333333333333333333333333
+        "custBhfId": branch_id,
         "ocrnDt": date_str,
         "totItemCnt": item_count,
-        "totTaxblAmt": doc.total_incoming_value,
+        "totTaxblAmt": doc.custom_total_taxable_amount,
         "totTaxAmt": doc.custom_total_tax_amount,
-        "totAmt": doc.total_incoming_value,
+        "totAmt": round(doc.total_incoming_value, 2),
         "remark": doc.remarks,
         "regrId": doc.owner,
         "regrNm": doc.owner,
@@ -78,15 +106,17 @@ def stockIOSaveReq(doc, date_str, item_count, sar_type, branch_id):
                 response_json = response.json()
 
                 if not response_json.get("resultCd") == '000':
-                    print(response_json)
+                    print(response_json.get("resultMsg"))
+                    # eTIMS.log_errors("Stock Entry", response_json.get("resultMsg"))
                     frappe.throw(response_json.get("resultMsg"))
-                    print(response_json)
+                   
                 
                 doc.custom_updated_in_etims = 1   
                 frappe.msgprint(response_json.get("resultMsg"))
 
             except:
-                return {"Error":"Oops Bad Request!"}
+                
+                frappe.throw("Error: Oops Bad Request!")
     else:
         print(payload)
 
@@ -174,7 +204,7 @@ def etims_stock_item_list(doc):
 					"pkg": item.get("qty"),
 					"qtyUnitCd": item_detail[0].get("custom_quantity_unit_code"),
 					"qty": item.get("qty"),
-					"prc": item.get("basic_rate"),
+					"prc": round(item.get("basic_rate"), 2),
 					"splyAmt": item.get("basic_amount"),
 					"dcRt": 0.0,
 					"dcAmt": 0.0,
@@ -184,9 +214,9 @@ def etims_stock_item_list(doc):
 					# "isrcAmt":null,
                     "totDcAmt": 0.0,
 					"taxTyCd": item_tax_code,
-					"taxblAmt": item.get("amount"),
+					"taxblAmt": round((item.get("amount") - item.get("custom_tax_amount")), 2),
 					"taxAmt": item.get("custom_tax_amount"),
-					"totAmt": item.get("amount")
+					"totAmt": round(item.get("amount"), 2)
 				}
 
         if not item_etims_data in stock_item_list:

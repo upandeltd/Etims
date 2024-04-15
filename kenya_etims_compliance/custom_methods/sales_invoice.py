@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, time
 import frappe
 from kenya_etims_compliance.utils.etims_utils import eTIMS
 
+
 def validate(doc, method):
     '''
     Method validate invoice number before submitting invoice
