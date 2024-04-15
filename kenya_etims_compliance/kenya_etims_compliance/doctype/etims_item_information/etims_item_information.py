@@ -293,6 +293,7 @@ def get_exploded_items(bom_name):
         
         
 def create_new_item_doctype(item):
+    current_user = frappe.session.user
     item_exists = check_if_item_exits(item.get("itemNm"))
     
     if item_exists == False:
@@ -313,6 +314,9 @@ def create_new_item_doctype(item):
         new_item_doc.custom_default_quantity_unit = qtyUnitNm
         new_item_doc.custom_used__unused = "Y"
         new_item_doc.custom_taxation_type_code = item.get("taxTyCd")
+        new_item_doc.custom_registration_id = current_user
+        new_item_doc.custom_modifier_id = current_user
+        new_item_doc.custom_registered_in_tims = 1
         
         if item.get("taxTyCd"):
             tax_template = get_item_tax_template(item.get("taxTyCd"))
