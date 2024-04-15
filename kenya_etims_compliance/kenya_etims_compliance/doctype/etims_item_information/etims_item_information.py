@@ -310,6 +310,7 @@ def create_new_item_doctype(item):
         new_item_doc.custom_item_classification_code = item.get("itemClsCd")
         new_item_doc.custom_packaging_unit_code = item.get("pkgUnitCd")
         new_item_doc.custom_quantity_unit_code = item.get("qtyUnitCd")
+        new_item_doc.custom_default_unit_price = item.get("dftPrc")
         new_item_doc.custom_default_packing_unit = pkgUnitNm
         new_item_doc.custom_default_quantity_unit = qtyUnitNm
         new_item_doc.custom_used__unused = "Y"
