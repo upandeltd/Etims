@@ -517,7 +517,7 @@ def create_qr_code(pin, branch_id, rcpt_signature):
     file_path = frappe.get_site_path('private', 'files', file_name)
     
     if settings_doc.get("is_production") == 1:
-        url = "https://etims-api.kra.go.ke/common/link/etims/receipt/indexEtimsReceiptData?Data=" + pin+ branch_id + rcpt_signature
+        url = "https://etims.kra.go.ke/common/link/etims/receipt/indexEtimsReceiptData?Data=" + pin+ branch_id + rcpt_signature
     else:
         url = "https://etims-sbx.kra.go.ke/common/link/etims/receipt/indexEtimsReceiptData?Data=" + pin+ branch_id + rcpt_signature
         
