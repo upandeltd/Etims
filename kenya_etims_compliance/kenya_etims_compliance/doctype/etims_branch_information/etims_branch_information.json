@@ -14,7 +14,7 @@
   "branch_details_tab",
   "3_save_branch_user_section",
   "branch_user_list",
-  "save_branch_user",
+  "save_branch_users",
   "4_save_insurance_information_section",
   "insurance_item_list",
   "save_insurance_information"
@@ -59,11 +59,6 @@
    "options": "eTIMS Branch User"
   },
   {
-   "fieldname": "save_branch_user",
-   "fieldtype": "Button",
-   "label": "Save Branch User"
-  },
-  {
    "fieldname": "4_save_insurance_information_section",
    "fieldtype": "Section Break",
    "label": "3. Save Insurance Information"
@@ -78,12 +73,17 @@
    "fieldname": "save_insurance_information",
    "fieldtype": "Button",
    "label": "Save Insurance Information"
+  },
+  {
+   "fieldname": "save_branch_users",
+   "fieldtype": "Button",
+   "label": "Save Branch Users"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-02-17 07:17:36.540565",
+ "modified": "2024-04-15 17:13:30.157428",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Branch Information",

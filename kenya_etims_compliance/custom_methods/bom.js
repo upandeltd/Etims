@@ -15,7 +15,7 @@ frappe.ui.form.on('BOM',{
                 frappe.msgprint({
                     title: __('Notification'),
                     indicator: 'red',
-                    message: __('Customer Is Already Registered!')
+                    message: __('BOM Is Already Registered!')
                 });
         }
         

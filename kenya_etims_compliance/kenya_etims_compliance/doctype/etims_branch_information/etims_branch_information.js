@@ -50,7 +50,7 @@ frappe.ui.form.on("eTIMS Branch Information", {
         })
     },
 
-    save_branch_user: function(frm){
+    save_branch_users: function(frm){
         // call with all options
         frappe.call({
             method: 'bhfUserSaveReq',
