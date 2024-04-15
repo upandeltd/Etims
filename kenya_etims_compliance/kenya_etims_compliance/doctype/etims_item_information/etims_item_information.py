@@ -187,54 +187,6 @@ def check_if_doc_exists(item_code):
     
     return cdcls_exists
 
-# def get_tims_items():
-#     item_tims_info_list = []
-#     item_list = frappe.db.get_all("Item", filters={"disabled": 0, "custom_registered_in_tims":0}, fields=["*"])
-    
-#     if item_list:
-#         for item in item_list:
-#             payload = {
-#                         "itemCd":item.get("custom_item_code"),
-#                         "itemClsCd":item.get("custom_item_classification_code"),
-#                         "itemClsNm":item.get("custom_item_classification_name"),
-#                         "itemTyCd":item.get("custom_item_type_code"),
-#                         "itemNm":item.get("custom_item_name"),
-#                         "itemStdNm":item.get("custom_item_standard_name"),
-#                         "orgnNatCd":item.get("custom_origin_place_code_nation"),
-#                         "pkgUnitCd":item.get("custom_packaging_unit_code"),
-#                         "qtyUnitCd":item.get("custom_quantity_unit_code"),
-#                         "taxTyCd":item.get("custom_taxation_type_code"),
-#                         "btchNo":item.get("custom_batch_number"),
-#                         "bcd":item.get("custom_barcode"),
-#                         "dftPrc":item.get("custom_default_unit_price"),
-#                         "grpPrcL1":item.get("custom_group1_unit_price"),
-#                         "grpPrcL2":item.get("custom_group2_unit_price"),
-#                         "grpPrcL3": item.get("custom_group3_unit_price"),
-#                         "grpPrcL4":item.get("custom_group4_unit_price"),
-#                         "grpPrcL5":item.get("custom_group5_unit_price"),
-#                         "addInfo":item.get("custom_additional_information"),
-#                         "sftyQty":item.get("custom_safety_quantity"),
-#                         "isrcAplcbYn":item.get("custom_insurance_appicableyn"),
-#                         "useYn":item.get("custom_used__unused"),
-#                         "regrId":item.get("custom_registration_id"),
-#                         "regrNm":item.get("custom_registration_name"), 
-#                         "modrId":item.get("custom_modifier_id"), 
-#                         "modrNm":item.get("custom_modifier_name")
-#                     }
-#             if not payload in item_tims_info_list:
-#                 item_tims_info_list.append(payload)
-                
-                
-#     return item_tims_info_list
-        
-# def etim_item_save(tims_item_code):
-#     item_list = frappe.db.get_all("Item", filters={"disabled": 0, "custom_item_code": tims_item_code}, fields=["name", "custom_registered_in_tims"])
-    
-#     if len(item_list) == 1:
-#         item_name = item_list[0].get("name")
-#         frappe.db.set_value('Item', item_name, 'custom_registered_in_tims', 1, update_modified=True)
-    
-#     return True
 
 def process_registered_items(response_result):
     item_list = []
@@ -341,43 +293,40 @@ def get_exploded_items(bom_name):
         
         
 def create_new_item_doctype(item):
-    current_user = frappe.session.user
+    item_exists = check_if_item_exits(item.get("itemNm"))
     
-    pkgUnitNm, qtyUnitNm = get_packing_and_quantity_unit(item.get("pkgUnitCd"), item.get("qtyUnitCd"))
-    nat_of_origin = get_country_of_origin(item.get("itemCd"))
-    
-    new_item_doc = frappe.new_doc("Item")
-    new_item_doc.item_code = item.get("itemNm")
-    new_item_doc.custom_item_code = item.get("itemCd")
-    new_item_doc.custom_item_name = item.get("itemNm")
-    new_item_doc.item_group = get_item_type(item.get("itemCd"))
-    new_item_doc.stock_uom = "Nos"
-    new_item_doc.custom_country_of_origin = nat_of_origin
-    new_item_doc.custom_item_classification_code = item.get("itemClsCd")
-    new_item_doc.custom_packaging_unit_code = item.get("pkgUnitCd")
-    new_item_doc.custom_quantity_unit_code = item.get("qtyUnitCd")
-    new_item_doc.custom_default_packing_unit = pkgUnitNm
-    new_item_doc.custom_default_quantity_unit = qtyUnitNm
-    new_item_doc.custom_used__unused = "Y"
-    new_item_doc.custom_taxation_type_code = item.get("taxTyCd")
-    new_item_doc.custom_registration_id = current_user
-    new_item_doc.custom_registration_name =current_user
-    new_item_doc.custom_modifier_name = current_user
-    new_item_doc.custom_modifier_id = current_user
-    
-    if item.get("taxTyCd"):
-        tax_template = get_item_tax_template(item.get("taxTyCd"))
-        new_item_doc.append("taxes",{
-            "item_tax_template": tax_template
-        })
+    if item_exists == False:
+        pkgUnitNm, qtyUnitNm = get_packing_and_quantity_unit(item.get("pkgUnitCd"), item.get("qtyUnitCd"))
+        nat_of_origin = get_country_of_origin(item.get("itemCd"))
         
-    
-    new_item_doc.insert()
-    
-    create_selling_price(item.get("itemNm"), item.get("dftPrc"))
-    
-    new_item_doc.save()
-    frappe.db.commit()
+        new_item_doc = frappe.new_doc("Item")
+        new_item_doc.item_code = item.get("itemNm")
+        new_item_doc.custom_item_code = item.get("itemCd")
+        new_item_doc.custom_item_name = item.get("itemNm")
+        new_item_doc.item_group = get_item_type(item.get("itemCd"))
+        new_item_doc.stock_uom = "Nos"
+        new_item_doc.custom_country_of_origin = nat_of_origin
+        new_item_doc.custom_item_classification_code = item.get("itemClsCd")
+        new_item_doc.custom_packaging_unit_code = item.get("pkgUnitCd")
+        new_item_doc.custom_quantity_unit_code = item.get("qtyUnitCd")
+        new_item_doc.custom_default_packing_unit = pkgUnitNm
+        new_item_doc.custom_default_quantity_unit = qtyUnitNm
+        new_item_doc.custom_used__unused = "Y"
+        new_item_doc.custom_taxation_type_code = item.get("taxTyCd")
+        
+        if item.get("taxTyCd"):
+            tax_template = get_item_tax_template(item.get("taxTyCd"))
+            new_item_doc.append("taxes",{
+                "item_tax_template": tax_template
+            })
+            
+        
+        new_item_doc.insert()
+        
+        create_selling_price(item.get("itemNm"), item.get("dftPrc"))
+        
+        new_item_doc.save()
+        frappe.db.commit()
     
 def create_selling_price(item_code, prc):
     prc_list = frappe.db.get_all("Item Price", filters={"item_code": item_code, "selling":1}, fields=["name"])
@@ -391,3 +340,11 @@ def create_selling_price(item_code, prc):
         new_item_prc.insert()
         frappe.db.commit()
     
+def check_if_item_exits(item_code):
+    item_exists = frappe.db.exists({"doctype": "Item", "item_code": item_code})
+    
+    if item_exists:
+        
+        return True
+    else:
+        return False
