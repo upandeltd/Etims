@@ -69,7 +69,9 @@ def fetch_total_vat(doc):
         for item in doc.taxes:
             if item.get("base_tax_amount_after_discount_amount") > 0:
                 taxable_amount += item.get("custom_total_taxable_amount")
-                
+            if item.get("base_tax_amount_after_discount_amount") < 0 and doc.is_return:
+                taxable_amount += item.get("custom_total_taxable_amount")
+
     return taxable_amount
     
 def fetch_total_non_vat(doc):
@@ -184,14 +186,18 @@ def trnsPurchaseSaveReq(doc, method):
             payload["taxblAmtE"] = 0
             payload["taxRtE"] =  0
             payload["taxAmtE"] = 0
-            
-    if doc.custom_original_invoice_number:
-        payload["wrhsDt"] = date_time_str
-        payload["cnclReqDt"] = conc_datetime_str
-        payload["cnclDt"] = conc_datetime_str
         
-    if doc.is_return:
-        payload["rfdDt"] = conc_datetime_str
+    if doc.is_return == 1:
+        return_status = purchase_return_information(doc)
+  
+        if return_status == "partial":
+            payload["rfdDt"] = conc_datetime_str
+        elif return_status == "full":
+            payload["wrhsDt"] = date_time_str
+            payload["cnclReqDt"] = conc_datetime_str
+            payload["cnclDt"] = conc_datetime_str
+        elif return_status == "null":
+            frappe.throw("Invalid, return amount is greater than original amount!")
 
     if doc.custom_update_purchase_in_tims:
         try:
@@ -240,8 +246,15 @@ def stockIOSaveReq(doc, date_str, item_count):
         "itemList": etims_sale_item_list(doc)
         }
     
-    if doc.custom_original_invoice_number != 0 or doc.is_return == 1: 
-        payload["sarTyCd"] = "12"
+    if doc.is_return == 1: 
+        return_status = purchase_return_information(doc)
+        
+        if return_status == "partial" or return_status == "full":
+            payload["sarTyCd"] = "12"
+        
+        elif return_status == "null":
+            frappe.throw("Invalid, return amount is greater than original amount!") 
+     
     elif doc.custom_import_purchase == 1:
         payload["sarTyCd"] = "01"
     else:
@@ -301,7 +314,7 @@ def get_org_etims_sar_no(doc):
     org_etims_sar_no = 0
     
     if doc.custom_original_invoice_number:
-        prev_doc  = frappe.db.get_all("eTIMS Stock Release Number", filters={"reference": doc.amended_from}, fields=["sr_number"])
+        prev_doc  = frappe.db.get_all("eTIMS Stock Release Number", filters={"reference": doc.return_against}, fields=["sr_number"])
         
         org_etims_sar_no = prev_doc[0].get("sr_number")
     
@@ -426,3 +439,24 @@ def get_tax_account_rate(account_head):
         tax_rate = tax_acc_docs[0].get("tax_rate")
         
         return tax_rate
+    
+def purchase_return_information(doc):
+    diff_amount = 0
+    return_status = ""
+    
+    if doc.is_return:
+        if doc.return_against:
+            return_amount = doc.grand_total
+            return_against = frappe.get_doc("Purchase Invoice", doc.return_against)
+            prev_return_amount = return_against.grand_total
+            
+            diff_amount = prev_return_amount + return_amount
+            
+        if diff_amount > 0:
+            return_status = "partial"
+        elif diff_amount == 0:
+            return_status = "full"
+        elif diff_amount < 0:
+            return_status = "null"
+        
+    return return_status

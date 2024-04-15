@@ -292,8 +292,8 @@ def create_new_item_doctype(item):
     new_item_doc.custom_used__unused = "Y"
     new_item_doc.custom_taxation_type_code = item.get("taxTyCd")
     new_item_doc.custom_registration_id = current_user
-    new_item_doc.custom_registration_name =current_user
-    new_item_doc.custom_modifier_name = current_user
+    # new_item_doc.custom_registration_name =current_user
+    # new_item_doc.custom_modifier_name = current_user
     new_item_doc.custom_modifier_id = current_user
     
     if item.get("taxTyCd"):
@@ -308,8 +308,8 @@ def create_new_item_doctype(item):
     
     new_item_doc.save()
     # frappe.db.commit()
-    print("*"*90)
-    print(new_item_doc.name)
+    # print("*"*90)
+    # print(new_item_doc.name)
     eTIMS.itemSaveReq(new_item_doc.name)
 
 def get_packing_and_quantity_unit(pkgUnitCd, qtyUnitCd):

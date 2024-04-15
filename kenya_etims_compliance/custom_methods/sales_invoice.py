@@ -107,6 +107,8 @@ def fetch_total_vat(doc):
         for item in doc.taxes:
             if item.get("base_tax_amount_after_discount_amount") > 0:
                 taxable_amount += item.get("custom_total_taxable_amount")
+            if item.get("base_tax_amount_after_discount_amount") < 0 and doc.is_return:
+                taxable_amount += item.get("custom_total_taxable_amount")
                 
     return taxable_amount
     
@@ -230,15 +232,20 @@ def trnsSalesSaveWrReq(doc, method):
             payload["taxRtE"] =  0
             payload["taxAmtE"] = 0
                 
-    if int(doc.custom_original_invoice_number) > 0:
-        payload["cnclReqDt"] = conc_datetime_str
-        payload["cnclDt"] = conc_datetime_str
     
     if doc.is_return == 1:
-        payload["cnclReqDt"] = conc_datetime_str
-        payload["cnclDt"] = conc_datetime_str
-        payload["rfdDt"] = date_time_str
-        payload["rfdRsnCd"] = doc.custom_credit_note_reason_code
+        return_status = sales_return_information(doc)
+  
+        if return_status == "partial":
+            payload["rfdDt"] = date_time_str
+            payload["rfdRsnCd"] = doc.custom_credit_note_reason_code
+        elif return_status == "full":
+            payload["cnclReqDt"] = conc_datetime_str
+            payload["cnclDt"] = conc_datetime_str
+            payload["rfdDt"] = date_time_str
+            payload["rfdRsnCd"] = doc.custom_credit_note_reason_code
+        elif return_status == "null":
+            frappe.throw("Invalid, return amount is greater than original amount!")
     
     if doc.custom_update_invoice_in_tims:
         try:
@@ -266,13 +273,11 @@ def trnsSalesSaveWrReq(doc, method):
             doc.custom_control_unit_date = control_unit_date
             doc.custom_control_unit_time = control_unit_time
             
-            file_name = create_qr_code(data.get("rcptSign"))
+            file_name = create_qr_code(headers.get("tin"), headers.get("bhfId"), data.get("rcptSign"))
             
             attachment_url = create_attachment(file_name, doc.name)
 
             doc.custom_receipt_qr_code = attachment_url
-            # doc.save()
-            # frappe.db.commit()
             
             create_sales_receipt(data, doc.name)
                 
@@ -312,9 +317,14 @@ def stockIOSaveReq(doc, date_str, item_count):
         "itemList": etims_sale_item_list(doc)
         }
     
-    # if doc.custom_original_invoice_number != 0:
-    if doc.is_return == 1 or doc.custom_original_invoice_number != 0: 
-        payload["sarTyCd"] = "03"
+    if doc.is_return == 1: 
+        return_status = sales_return_information(doc)
+        
+        if return_status == "partial" or return_status == "full":
+            payload["sarTyCd"] = "03"
+        
+        elif return_status == "null":
+            frappe.throw("Invalid, return amount is greater than original amount!")
     
     else:
         payload["sarTyCd"] = "11"
@@ -373,7 +383,7 @@ def get_org_etims_sar_no(doc):
     org_etims_sar_no = 0
     
     if doc.custom_original_invoice_number:
-        prev_doc  = frappe.db.get_all("eTIMS Stock Release Number", filters={"reference": doc.amended_from}, fields=["sr_number"])
+        prev_doc  = frappe.db.get_all("eTIMS Stock Release Number", filters={"reference": doc.return_against}, fields=["sr_number"])
         
         org_etims_sar_no = prev_doc[0].get("sr_number")
     
@@ -416,20 +426,6 @@ def get_last_inv_number(doc):
     
     return invoice_number
    
-    
-# def get_original_invoice_number(doc):
-#     org_invoice_no = 0
-    
-#     if doc.amended_from:
-#         org_invoice = frappe.get_all("Sales Invoice", filters={"name":doc.amended_from}, fields = ["custom_invoice_number"])
-
-#         org_invoice_no = org_invoice[0].get("custom_invoice_number")
-        
-#         return org_invoice_no
-#     else:
-       
-#         return org_invoice_no
-
 
 def validate_inv_number(doc):
     invoice_numbers = []
@@ -511,17 +507,19 @@ def create_sales_receipt(data, doc_name):
     
     frappe.db.commit()
     
-def create_qr_code(rcpt_signature):
+def create_qr_code(pin, branch_id, rcpt_signature):
     settings_doc = frappe.get_doc("TIS Settings", "TIS Settings")
     
-    url = ""
+    url = "https://etims-sbx.kra.go.ke/common/link/etims/receipt/indexEtimsReceiptData?Data=" + pin+ branch_id + rcpt_signature
     file_name = rcpt_signature + ".png"
     
     file_path = frappe.get_site_path('private', 'files', file_name)
     
-    if settings_doc.get("is_sandbox") == 1:
-        url = "https://etims-sbx.kra.go.ke/common/link/etims/receipt/indexEtimsReceiptData?Data=P051304671B00" + rcpt_signature
-
+    if settings_doc.get("is_production") == 1:
+        url = "https://etims-api.kra.go.ke/common/link/etims/receipt/indexEtimsReceiptData?Data=" + pin+ branch_id + rcpt_signature
+    else:
+        url = "https://etims-sbx.kra.go.ke/common/link/etims/receipt/indexEtimsReceiptData?Data=" + pin+ branch_id + rcpt_signature
+        
     try:
         big_code = pyqrcode.create(url, error='L', version=27, mode='binary')
         big_code.png(file_path, scale=6, module_color=[0, 0, 0, 128], background=[255, 255, 255])
@@ -544,3 +542,25 @@ def create_attachment(file_name, inv_name):
     frappe.db.commit()
     
     return new_attachment.get("file_url")
+
+def sales_return_information(doc):
+    diff_amount = 0
+    return_status = ""
+    
+    if doc.is_return:
+        if doc.return_against:
+            return_amount = doc.grand_total
+            return_against = frappe.get_doc("Sales Invoice", doc.return_against)
+            prev_return_amount = return_against.grand_total
+            
+            diff_amount = prev_return_amount + return_amount
+            
+        if diff_amount > 0:
+            return_status = "partial"
+        elif diff_amount == 0:
+            return_status = "full"
+        elif diff_amount < 0:
+            return_status = "null"
+        
+    return return_status
+        
