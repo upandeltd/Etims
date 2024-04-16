@@ -62,8 +62,13 @@ def update_stock_to_etims(doc, method):
         is_inter_branch = check_if_interbranch(doc)
         
         if is_inter_branch:
-            stockIOSaveReq(doc, date_str, item_count, "13", t_warehouse_id)
-            stockIOSaveReq(doc, date_str, item_count, "04", t_warehouse_id)
+            if doc.custom_update_both_branches:
+                stockIOSaveReq(doc, date_str, item_count, "13", t_warehouse_id)
+                stockIOSaveReq(doc, date_str, item_count, "04", t_warehouse_id)
+            elif doc.custom_update_from_branch_only:
+                stockIOSaveReq(doc, date_str, item_count, "13", t_warehouse_id)
+            else:
+                stockIOSaveReq(doc, date_str, item_count, "04", t_warehouse_id)
         #get warehouse branch if intrbranch is true
         #logic fot transfer within branches
     
