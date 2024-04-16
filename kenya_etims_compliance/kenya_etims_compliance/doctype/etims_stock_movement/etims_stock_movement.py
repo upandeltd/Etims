@@ -26,7 +26,7 @@ class eTIMSStockMovement(Document):
             new_stock_doc = frappe.new_doc("Stock Entry")
             new_stock_doc.stock_entry_type = "Material Transfer"
             new_stock_doc.custom_total_tax_amount = self.total_vat
-            new_stock_doc.custom_send_stock_info_to_etims = 1
+            # new_stock_doc.custom_send_stock_info_to_etims = 1
             new_stock_doc.from_warehouse = source_warehouse
             new_stock_doc.to_warehouse = target_warehouse
             

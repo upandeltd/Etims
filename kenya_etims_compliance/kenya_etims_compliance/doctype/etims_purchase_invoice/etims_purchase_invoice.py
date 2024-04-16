@@ -34,7 +34,7 @@ class eTIMSPurchaseInvoice(Document):
         new_purchase_doc.bill_no = self.supplier_invoice_number
         new_purchase_doc.bill_date = self.sale_date
         new_purchase_doc.custom_etims_purchase_invoice = self.name
-        new_purchase_doc.custom_update_purchase_in_tims = 1
+        # new_purchase_doc.custom_update_purchase_in_tims = 1
         new_purchase_doc.update_stock = 1
         
         if receipt_type_code == "R":

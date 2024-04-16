@@ -219,11 +219,14 @@ def trnsPurchaseSaveReq(doc, method):
 
         except:
             frappe.throw("Error")
+            
+    elif not doc.custom_update_purchase_in_tims and doc.custom_import_purchase == 1:
+        stockIOSaveReq(doc, date_str, count)
+        
     else:
         print(payload)
         stockIOSaveReq(doc, date_str, count)
         return
-
 def stockIOSaveReq(doc, date_str, item_count):
     headers = eTIMS.get_headers()
     payload = {
@@ -278,7 +281,25 @@ def stockIOSaveReq(doc, date_str, item_count):
 
         except:
                 return {"Error":"Oops Bad Request!"}
-    
+            
+    elif not doc.custom_update_purchase_in_tims and doc.custom_import_purchase == 1:
+        try:
+            response = requests.request(
+                        "POST", 
+                        eTIMS.tims_base_url() + 'insertStockIO',
+                        json = payload, 
+                        headers=headers
+                    )
+        
+            response_json = response.json()
+            # print(response_json)
+            if not response_json.get("resultCd") == '000':
+                return {"Error":response_json.get("resultMsg")}
+                    
+            return {"Success": response_json.get("resultMsg")}
+
+        except:
+                return {"Error":"Oops Bad Request!"}
     else:
         print(payload)
         return

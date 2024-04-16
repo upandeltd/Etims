@@ -63,7 +63,7 @@ class eTIMSImportItemInformation(Document):
         new_purchase_doc = frappe.new_doc("Purchase Invoice")
         new_purchase_doc.supplier = item.get("supplier_name")
         new_purchase_doc.custom_purchase_type_code = "N"
-        new_purchase_doc.custom_update_purchase_in_tims = 1
+        # new_purchase_doc.custom_update_purchase_in_tims = 1
         new_purchase_doc.update_stock = 1
         new_purchase_doc.custom_import_purchase = 1
         
