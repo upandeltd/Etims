@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class eTIMSInsuranceItem(Document):
+class eTIMSNoticeItem(Document):
 	pass

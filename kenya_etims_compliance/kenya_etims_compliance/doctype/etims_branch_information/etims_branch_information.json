@@ -11,13 +11,7 @@
   "tin",
   "data_from_datetime",
   "search_branch_info",
-  "branch_details_tab",
-  "3_save_branch_user_section",
-  "branch_user_list",
-  "save_branch_users",
-  "4_save_insurance_information_section",
-  "insurance_item_list",
-  "save_insurance_information"
+  "branch_details_tab"
  ],
  "fields": [
   {
@@ -46,44 +40,12 @@
    "fieldtype": "Table",
    "label": "Branch Details",
    "options": "eTIMS Branch Item"
-  },
-  {
-   "fieldname": "3_save_branch_user_section",
-   "fieldtype": "Section Break",
-   "label": "2. Save Branch User "
-  },
-  {
-   "fieldname": "branch_user_list",
-   "fieldtype": "Table",
-   "label": "Branch User List",
-   "options": "eTIMS Branch User"
-  },
-  {
-   "fieldname": "4_save_insurance_information_section",
-   "fieldtype": "Section Break",
-   "label": "3. Save Insurance Information"
-  },
-  {
-   "fieldname": "insurance_item_list",
-   "fieldtype": "Table",
-   "label": "Insurance Item List",
-   "options": "eTIMS Insurance Item"
-  },
-  {
-   "fieldname": "save_insurance_information",
-   "fieldtype": "Button",
-   "label": "Save Insurance Information"
-  },
-  {
-   "fieldname": "save_branch_users",
-   "fieldtype": "Button",
-   "label": "Save Branch Users"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-04-15 17:13:30.157428",
+ "modified": "2024-04-18 17:23:18.671194",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Branch Information",

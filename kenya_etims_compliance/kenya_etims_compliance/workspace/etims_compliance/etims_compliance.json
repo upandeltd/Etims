@@ -113,7 +113,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Shortcuts",
-   "link_count": 8,
+   "link_count": 10,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -123,6 +123,26 @@
    "label": "Tax Branch Office",
    "link_count": 0,
    "link_to": "Tax Branch Office",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Branch User",
+   "link_count": 0,
+   "link_to": "eTIMS Branch User",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Insurance",
+   "link_count": 0,
+   "link_to": "eTIMS Insurance",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -198,7 +218,7 @@
    "type": "Link"
   }
  ],
- "modified": "2024-02-17 13:02:07.284952",
+ "modified": "2024-04-18 17:25:09.250390",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Compliance",

@@ -1562,7 +1562,7 @@
    "is_virtual": 0,
    "label": "Default Packing Unit",
    "length": 0,
-   "mandatory_depends_on": "eval:!(doc.__islocal)",
+   "mandatory_depends_on": "",
    "modified": "2023-11-27 13:29:26.300083",
    "modified_by": "Administrator",
    "module": null,

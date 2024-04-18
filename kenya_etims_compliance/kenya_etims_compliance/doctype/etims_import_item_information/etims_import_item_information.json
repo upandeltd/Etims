@@ -10,8 +10,7 @@
   "1_search_import_item_section",
   "last_search_date_and_time",
   "data_from_datetime",
-  "search_import_item",
-  "import_items"
+  "search_import_item"
  ],
  "fields": [
   {
@@ -34,18 +33,12 @@
    "fieldname": "search_import_item",
    "fieldtype": "Button",
    "label": "Search Import Item"
-  },
-  {
-   "fieldname": "import_items",
-   "fieldtype": "Table",
-   "label": "Import Items",
-   "options": "eTIMS Import Item"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-02-17 12:07:31.636745",
+ "modified": "2024-04-18 18:23:26.607280",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Import Item Information",

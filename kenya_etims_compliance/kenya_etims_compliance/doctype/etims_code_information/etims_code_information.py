@@ -131,6 +131,7 @@ class eTIMSCodeInformation(Document):
             self.last_request_date = request_datetime
             
             for notice in notice_list:
+                create_notice_record(notice)
                 notice_exists = check_if_notice_exists(notice.get("notice_number"))
                 if not notice_exists == True:
                     self.append("notices", notice)
@@ -341,7 +342,7 @@ def check_if_doc_exists(doc, doc_filter, doc_value):
 def check_if_notice_exists(notice_no):
     notice_exists = False
     notice_items = frappe.db.get_all(
-        "eTIMS Notice", filters={"notice_number": notice_no}
+        "eTIMS Notice Item", filters={"notice_number": notice_no}
     )
 
     if notice_items:
@@ -349,3 +350,27 @@ def check_if_notice_exists(notice_no):
 
     return notice_exists
 
+def create_notice_record(notice):
+    notice_rec_exists = frappe.db.exists("eTIMS Notice", {"notice_number": notice.get("notice_number")})
+
+    if not notice_rec_exists:
+        new_notice_record = frappe.new_doc("eTIMS Notice")
+        new_notice_record.notice_number = notice.get("notice_number")
+        new_notice_record.title = notice.get("title")
+        new_notice_record.contents = notice.get("contents")
+        new_notice_record.detail_url = notice.get("detail_url")
+        new_notice_record.registration_name = notice.get("registration_name")
+        new_notice_record.registration_date_and_time = notice.get("registration_date_and_time")
+        
+        new_notice_record.insert()
+    if notice_rec_exists:
+        notice_doc = frappe.get_doc("eTIMS Notice", notice_rec_exists)
+        notice_doc.title = notice.get("title")
+        notice_doc.contents = notice.get("contents")
+        notice_doc.detail_url = notice.get("detail_url")
+        notice_doc.registration_name = notice.get("registration_name")
+        notice_doc.registration_date_and_time = notice.get("registration_date_and_time")
+        
+        notice_doc.save()
+        
+    frappe.db.commit()

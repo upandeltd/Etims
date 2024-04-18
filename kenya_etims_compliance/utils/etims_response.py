@@ -61,12 +61,12 @@ def selectImportItemList():
         "data":{
             "itemList":[
                 {
-                    "taskCd":"12998099",
+                    "taskCd":"12998198",
                     "dclDe":"01042023",
                     "itemSeq":1,
                     "dclNo":"C3460-2019- TZDN",
                     "hsCd":"20055200000",
-                    "itemNm":"Trousers",
+                    "itemNm":"Trousers Small",
                     "imptItemsttsCd":"2",
                     "orgnNatCd":"BR",
                     "exptNatCd":"BR",
@@ -83,16 +83,16 @@ def selectImportItemList():
                     "invcFcurExcrt":100.79
                     },
                     {
-                    "taskCd":"2239089",
+                    "taskCd":"2239879",
                     "dclDe":"01022023",
                     "itemSeq":1,
                     "dclNo":"C3460-2019- TZDL",
                     "hsCd":"20055900000",
-                    "itemNm":"Carpet",
+                    "itemNm":"Carpet Large",
                     "imptItemsttsCd":"2",
                     "orgnNatCd":"BR",
                     "exptNatCd":"BR",
-                    "pkg":2922,
+                    "pkg":3500,
                     "pkgUnitCd":"",
                     "qty":19946,
                     "qtyUnitCd":"KGM",
@@ -119,7 +119,7 @@ def selectStockMoveList():
                     {
                         "custTin":"P051304671B",
                         "custBhfId":"00",
-                        "sarNo":9,
+                        "sarNo":199,
                         "ocrnDt":"20200120",
                         "totItemCnt":1,
                         "totTaxblAmt":1800000,
@@ -151,7 +151,7 @@ def selectStockMoveList():
                     {
                         "custTin":"P051304671B",
                         "custBhfId":"01",
-                        "sarNo":59,
+                        "sarNo":89,
                         "ocrnDt":"20200110",
                         "totItemCnt":1,
                         "totTaxblAmt":660000,
@@ -194,7 +194,7 @@ def selectTrnsPurchaseSalesList():
                         "spplrTin":"A123456789Z",
                         "spplrNm":"Taxpayer1111",
                         "spplrBhfId":"00",
-                        "spplrInvcNo":39,
+                        "spplrInvcNo":49,
                         "rcptTyCd":"S",
                         "pmtTyCd":"01",
                         "cfmDt":"2020-01-27 21:03:00",
