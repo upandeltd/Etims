@@ -17,9 +17,6 @@ def get_bom_items(doc_name):
     
     doc = frappe.get_doc("BOM", doc_name)
     
-    if not doc.exploded_items:
-        frappe.throw("No exploded items to register!")
-    
     if not doc.custom_etims_item_code:
         frappe.throw("eTIMS item code is missing!")   
     
