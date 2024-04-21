@@ -145,7 +145,8 @@ doc_events = {
         "Purchase Invoice": {
             "before_save": "kenya_etims_compliance.custom_methods.purchase_invoice.validate",
             "before_submit": "kenya_etims_compliance.custom_methods.purchase_invoice.trnsPurchaseSaveReq",
-            "on_update": "kenya_etims_compliance.custom_methods.purchase_invoice.insert_invoice_number"
+            "on_update": "kenya_etims_compliance.custom_methods.purchase_invoice.insert_invoice_number",
+            "on_change": "kenya_etims_compliance.custom_methods.purchase_invoice.add_taxes",
         },
         # "eTIMS Purchase Invoice": {
         #     "on_update": "kenya_etims_compliance.custom_methods.etims_purchase_invoice.update_stock_to_etims",

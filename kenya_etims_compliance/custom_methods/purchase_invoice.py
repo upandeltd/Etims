@@ -1,21 +1,60 @@
-import requests
+import requests, json
 from datetime import datetime
 
 import frappe
+from frappe.utils import (flt)
 from kenya_etims_compliance.utils.etims_utils import eTIMS
+from erpnext.stock.get_item_details import _get_item_tax_template
+from frappe import _, scrub
+
 def validate(doc, method):
     '''
     Method validate invoice number before submitting invoice
     '''
+
     if doc.custom_invoice_number and doc.name:
         doc_exists = frappe.db.exists("Purchase Invoice", {"name": doc.name})
-
+    
         if doc_exists:
             invoice_numbers = validate_inv_number(doc)
             if doc.custom_invoice_number in invoice_numbers:
                 insert_invoice_number(doc, method)
 
-    
+def add_taxes(doc, method):
+    if doc.items:
+        for item in doc.items:
+            add_taxes_from_tax_template(item, doc, db_insert=True)
+            
+def add_taxes_from_tax_template(child_item, parent_doc, db_insert=True):
+    add_taxes_from_item_tax_template = frappe.db.get_single_value(
+        "Accounts Settings", "add_taxes_from_item_tax_template"
+    )
+
+    if child_item.get("item_tax_rate") and add_taxes_from_item_tax_template:
+        tax_map = json.loads(child_item.get("item_tax_rate"))
+        for tax_type in tax_map:
+            tax_rate = flt(tax_map[tax_type])
+            taxes = parent_doc.get("taxes") or []
+            # add new row for tax head only if missing
+            found = any(tax.account_head == tax_type for tax in taxes)
+            if not found:
+                tax_row = parent_doc.append("taxes", {})
+                tax_row.update(
+                    {
+                        "description": str(tax_type).split(" - ")[0],
+                        "charge_type": "On Net Total",
+                        "account_head": tax_type,
+                        "rate": tax_rate,
+                        "category": "Total", 
+                        "included_in_print_rate": 1,
+                        "add_deduct_tax": "Add" 
+                    }
+                )
+                if parent_doc.doctype == "Purchase Invoice":
+                    tax_row.update({"category": "Total", "add_deduct_tax": "Add"})
+                if db_insert:
+                    tax_row.db_insert()
+
 def insert_invoice_number(doc,method):
     '''
     Method sets increment for invoice number and orginal invoice number before submitting invoice
@@ -67,10 +106,11 @@ def fetch_total_vat(doc):
     taxable_amount = 0
     if doc.taxes:
         for item in doc.taxes:
-            if item.get("base_tax_amount_after_discount_amount") > 0:
-                taxable_amount += item.get("custom_total_taxable_amount")
-            if item.get("base_tax_amount_after_discount_amount") < 0 and doc.is_return:
-                taxable_amount += item.get("custom_total_taxable_amount")
+            if item.get("base_tax_amount_after_discount_amount"):
+                if item.get("base_tax_amount_after_discount_amount") > 0:
+                    taxable_amount += item.get("custom_total_taxable_amount")
+                if item.get("base_tax_amount_after_discount_amount") < 0 and doc.is_return:
+                    taxable_amount += item.get("custom_total_taxable_amount")
 
     return taxable_amount
     
@@ -101,7 +141,7 @@ def trnsPurchaseSaveReq(doc, method):
     
     request_date = doc.posting_date
     date_str = eTIMS.strf_date_object(request_date)
-	
+    
     count = 0
     
     for item in doc.items:
@@ -414,28 +454,28 @@ def etims_sale_item_list(doc):
         
         item_etims_data = {
                     "itemSeq": item.get("idx"),
-					"itemCd": item_detail[0].get("custom_item_code"),
-					"itemClsCd": item_detail[0].get("custom_item_classification_code"),
-					"itemNm": item_detail[0].get("custom_item_name"),
+                    "itemCd": item_detail[0].get("custom_item_code"),
+                    "itemClsCd": item_detail[0].get("custom_item_classification_code"),
+                    "itemNm": item_detail[0].get("custom_item_name"),
                     "bcd": barcode,
                     # "spplrItemClsCd":null,
                     # "spplrItemCd":null,
                     # "spplrItemNm": item.item_code,
                     "pkgUnitCd": item_detail[0].get("custom_packaging_unit_code"),
-					"pkg":item.get("qty"),
-					"qtyUnitCd": item_detail[0].get("custom_quantity_unit_code"),
-					"qty": item.get("qty"),
-					"prc": item.get("rate"),
-					"splyAmt": item.get("amount"),
-					"dcRt": item.get("discount_percentage"),
-					"dcAmt": item.get("discount_amount"),
+                    "pkg":item.get("qty"),
+                    "qtyUnitCd": item_detail[0].get("custom_quantity_unit_code"),
+                    "qty": item.get("qty"),
+                    "prc": item.get("rate"),
+                    "splyAmt": item.get("amount"),
+                    "dcRt": item.get("discount_percentage"),
+                    "dcAmt": item.get("discount_amount"),
                     "taxTyCd": item_tax_details,
-					"taxblAmt": item.get("amount"),
-					"taxAmt": round((item.get("amount") - item.get("net_amount")), 2),
-					"totAmt": item.get("amount"),
+                    "taxblAmt": item.get("amount"),
+                    "taxAmt": round((item.get("amount") - item.get("net_amount")), 2),
+                    "totAmt": item.get("amount"),
                     "totDcAmt": item.get("discount_amount")
                     # "itemExprDt":null
-				}
+                }
         if not item_etims_data in sales_item_list:
             sales_item_list.append(item_etims_data)
             
@@ -481,3 +521,4 @@ def purchase_return_information(doc):
             return_status = "null"
         
     return return_status
+

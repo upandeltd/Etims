@@ -113,7 +113,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Shortcuts",
-   "link_count": 10,
+   "link_count": 11,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -200,6 +200,16 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Import Item",
+   "link_count": 0,
+   "link_to": "eTIMS Import Item",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Stock Movement",
    "link_count": 0,
    "link_to": "eTIMS Stock Movement",
@@ -218,7 +228,7 @@
    "type": "Link"
   }
  ],
- "modified": "2024-04-18 17:25:09.250390",
+ "modified": "2024-04-18 19:06:22.623132",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Compliance",

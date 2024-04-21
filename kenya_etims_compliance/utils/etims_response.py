@@ -61,7 +61,7 @@ def selectImportItemList():
         "data":{
             "itemList":[
                 {
-                    "taskCd":"12998198",
+                    "taskCd":"12778198",
                     "dclDe":"01042023",
                     "itemSeq":1,
                     "dclNo":"C3460-2019- TZDN",
@@ -194,7 +194,7 @@ def selectTrnsPurchaseSalesList():
                         "spplrTin":"A123456789Z",
                         "spplrNm":"Taxpayer1111",
                         "spplrBhfId":"00",
-                        "spplrInvcNo":49,
+                        "spplrInvcNo":729,
                         "rcptTyCd":"S",
                         "pmtTyCd":"01",
                         "cfmDt":"2020-01-27 21:03:00",
@@ -231,14 +231,14 @@ def selectTrnsPurchaseSalesList():
                                 "pkg":2,
                                 "qtyUnitCd":"U",
                                 "qty":2,
-                                "prc":3500,
+                                "prc":1740,
                                 "splyAmt":7000,
                                 "dcRt":0,
                                 "dcAmt":0,
                                 "taxTyCd":"B",
-                                "taxblAmt":7000,
+                                "taxblAmt":0,
                                 "taxAmt":1068,
-                                "totAmt":7000
+                                "totAmt":3480
                             }, 
                             {
                                 "itemSeq":2,

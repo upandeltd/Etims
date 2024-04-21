@@ -9,5 +9,8 @@ frappe.ui.form.on("Purchase Invoice",{
         }
         refresh_field("custom_receipt_type_code")
         refresh_field("custom_purchase_status_code")
-    }
+    },
+    // after_save:function(frm){
+    //     refresh_field("taxes")
+    // }
 })
