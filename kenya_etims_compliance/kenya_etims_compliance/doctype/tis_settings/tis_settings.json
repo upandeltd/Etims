@@ -13,7 +13,12 @@
   "column_break_9nny",
   "last_sales_invoice_number",
   "last_purchase_invoice_number",
-  "last_stock_release_number"
+  "last_stock_release_number",
+  "vat_tax_rate_a",
+  "vat_tax_rate_b",
+  "vat_tax_rate_c",
+  "vat_tax_rate_d",
+  "vat_tax_rate_e"
  ],
  "fields": [
   {
@@ -52,12 +57,37 @@
    "fieldname": "last_stock_release_number",
    "fieldtype": "Int",
    "label": "Last Stock Release Number"
+  },
+  {
+   "fieldname": "vat_tax_rate_a",
+   "fieldtype": "Float",
+   "label": "Vat Tax Rate A"
+  },
+  {
+   "fieldname": "vat_tax_rate_b",
+   "fieldtype": "Float",
+   "label": "Vat Tax Rate B"
+  },
+  {
+   "fieldname": "vat_tax_rate_c",
+   "fieldtype": "Float",
+   "label": "Vat Tax Rate C"
+  },
+  {
+   "fieldname": "vat_tax_rate_d",
+   "fieldtype": "Float",
+   "label": "Vat Tax Rate D"
+  },
+  {
+   "fieldname": "vat_tax_rate_e",
+   "fieldtype": "Float",
+   "label": "Vat Tax Rate E"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-04-21 21:57:17.029707",
+ "modified": "2024-04-26 10:11:31.675424",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "TIS Settings",
