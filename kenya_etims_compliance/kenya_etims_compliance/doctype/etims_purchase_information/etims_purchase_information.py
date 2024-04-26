@@ -127,6 +127,7 @@ def assign_purchase_item(item_detail):
         "packing_unit_code": item_detail.get("pkgUnitCd"),
         "quantity_unit_code": item_detail.get("qtyUnitCd"),
         "package": item_detail.get("pkg"),
+        "quantity": item_detail.get("qty"),
         "unit_price": item_detail.get("prc"),
         "supply_amount": item_detail.get("splyAmt"),
         "discount_rate": item_detail.get("dcRt"),

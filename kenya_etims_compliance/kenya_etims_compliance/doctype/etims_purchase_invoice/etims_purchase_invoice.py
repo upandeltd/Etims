@@ -96,7 +96,7 @@ def assign_purchase_item(item_detail):
         "item_code": item_detail.get("item_name"),
         "item_name": item_detail.get("item_name"),
         # "rate": item_detail.get("prc"),
-        "qty": item_detail.get("package"),
+        "qty": item_detail.get("quantity"),
         "discount_rate": item_detail.get("discount_percentage"),
         "item_tax_template": get_tax_template_details(item_detail.get("item_name"))
         # "discount_amount": item_detail.get("discount_amount"),
