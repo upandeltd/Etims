@@ -6,34 +6,32 @@ import frappe
 from frappe.model.document import Document
 
 class eTIMSImportItem(Document):
-    def on_change(self):
-        create_and_link_erpnext_purchase_invoice(self)
+    def after_insert(self):
+        create_and_link_erpnext_stock_entry(self)
+    
 
-def create_and_link_erpnext_purchase_invoice(item):
-    print(item)
-    create_supplier(item.get("supplier_name"))
-    if not item.get("purchase_invoice_created") == 1:
-        purchase_invoice_exists = frappe.db.exists("Purchase Invoice", {"custom_task_code": item.get("task_code"), "custom_import_purchase":1})
+def create_and_link_erpnext_stock_entry(item):
+    to_warehouse = get_target_warehouse()
+    
+    if not item.get("stock_entry_created") == 1:
+        stk_doc_exists = frappe.db.exists("Stock Entry", {"custom_task_code": item.get("task_code"), "custom_is_import_stock":1})
         
-        if not purchase_invoice_exists:
-            new_purchase_doc = frappe.new_doc("Purchase Invoice")
-            new_purchase_doc.supplier = item.get("supplier_name")
-            new_purchase_doc.custom_purchase_type_code = "N"
-            new_purchase_doc.custom_task_code = item.get("task_code")
-            new_purchase_doc.update_stock = 1
-            new_purchase_doc.custom_import_purchase = 1
-            
-            create_buying_price_list(item)
-        
+        if not stk_doc_exists:
+            new_stk_entry_doc = frappe.new_doc("Stock Entry")
+            new_stk_entry_doc.stock_entry_type = "Material Receipt"
+            new_stk_entry_doc.to_warehouse = to_warehouse
+            new_stk_entry_doc.custom_task_code = item.get("task_code")
+            new_stk_entry_doc.custom_is_import_stock = 1
+                    
             try:
-                item_dict = assign_purchase_item(item)
+                item_dict = assign_stock_item(item)
             
-                new_purchase_doc.append("items", item_dict)
-                
-                new_purchase_doc.save()
+                new_stk_entry_doc.append("items", item_dict)
+
+                new_stk_entry_doc.save()
 
                 # update etims purchase item
-                frappe.db.set_value('eTIMS Import Item', item.name, {'purchase_invoice_created': 1, 'invoice': new_purchase_doc.name}, update_modified=True)
+                frappe.db.set_value('eTIMS Import Item', item.name, {'stock_entry_created': 1, 'stock_entry': new_stk_entry_doc.name}, update_modified=True)
                 
                 frappe.db.commit()
             except:
@@ -65,12 +63,26 @@ def create_buying_price_list(item):
         frappe.db.commit()
         
             
-def assign_purchase_item(item_detail):        
-    item_dict = {
-        "item_code": item_detail.get("item_name"),
-        "item_name": item_detail.get("item_name"),
-        "rate": item_detail.get("tax_rate"),
-        "qty": item_detail.get("package"),
-    }
+def assign_stock_item(item):  
+    item_dict =  {
+        "item_code": item.get("item_name"),
+        "qty": item.get("quantity")
+    } 
 
     return item_dict
+
+def get_target_warehouse():        
+        user_branch = get_user_branch_perms()
+
+        target_warehouse = frappe.db.get_all("Warehouse", filters={"warehouse_type": "Stores", "is_group": 0, "custom_tax_branch_office": user_branch}, fields=["warehouse_name", "name"])
+        
+        return target_warehouse[0].get("name")
+        
+def get_user_branch_perms():
+    cur_user = frappe.session.user
+      
+    user_branch_permissions = frappe.db.get_all("User Permission", filters={"user": cur_user, "allow": "Tax Branch Office", "is_default": 1}, fields=["for_value"])
+    
+    if user_branch_permissions:
+                
+        return user_branch_permissions[0].get("for_value")

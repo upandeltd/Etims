@@ -179,7 +179,7 @@ def trnsPurchaseSaveReq(doc, method):
         
         if "A" in tax_code_list:
             if tax_item.custom_code == "A":
-                payload["taxblAmtA"] = round((tax_item.get("custom_total_taxable_amount") + tax_item.get("tax_amount_after_discount_amount")), 2)
+                payload["taxblAmtA"] = round((tax_item.get("custom_total_taxable_amount")), 2)
                 payload["taxRtA"] =  get_tax_account_rate(tax_item.get("account_head"))
                 payload["taxAmtA"] = tax_item.get("tax_amount_after_discount_amount")
         else:
@@ -189,7 +189,7 @@ def trnsPurchaseSaveReq(doc, method):
         
         if "B" in tax_code_list:
             if tax_item.custom_code == "B":
-                payload["taxblAmtB"] = round((tax_item.get("custom_total_taxable_amount") + tax_item.get("tax_amount_after_discount_amount")), 2)
+                payload["taxblAmtB"] = round((tax_item.get("custom_total_taxable_amount")), 2)
                 payload["taxRtB"] =  get_tax_account_rate(tax_item.get("account_head"))
                 payload["taxAmtB"] = tax_item.get("tax_amount_after_discount_amount")
         else:
@@ -199,7 +199,7 @@ def trnsPurchaseSaveReq(doc, method):
             
         if "C" in tax_code_list:
             if tax_item.custom_code == "C":
-                payload["taxblAmtC"] = round((tax_item.get("custom_total_taxable_amount") + tax_item.get("tax_amount_after_discount_amount")), 2)
+                payload["taxblAmtC"] = round((tax_item.get("custom_total_taxable_amount")), 2)
                 payload["taxRtC"] =  get_tax_account_rate(tax_item.get("account_head"))
                 payload["taxAmtC"] = tax_item.get("tax_amount_after_discount_amount")
         else:
@@ -209,7 +209,7 @@ def trnsPurchaseSaveReq(doc, method):
             
         if "D" in tax_code_list:
             if tax_item.custom_code == "D":
-                payload["taxblAmtD"] = round((tax_item.get("custom_total_taxable_amount") + tax_item.get("tax_amount_after_discount_amount")), 2)
+                payload["taxblAmtD"] = round((tax_item.get("custom_total_taxable_amount")), 2)
                 payload["taxRtD"] =  get_tax_account_rate(tax_item.get("account_head"))
                 payload["taxAmtD"] = tax_item.get("tax_amount_after_discount_amount")
         else:
@@ -219,7 +219,7 @@ def trnsPurchaseSaveReq(doc, method):
             
         if "E" in tax_code_list:
             if tax_item.custom_code == "E":
-                payload["taxblAmtE"] = round((tax_item.get("custom_total_taxable_amount") + tax_item.get("tax_amount_after_discount_amount")), 2)
+                payload["taxblAmtE"] = round((tax_item.get("custom_total_taxable_amount")), 2)
                 payload["taxRtE"] =  get_tax_account_rate(tax_item.get("account_head"))
                 payload["taxAmtE"] = tax_item.get("tax_amount_after_discount_amount")
         else:
@@ -259,14 +259,12 @@ def trnsPurchaseSaveReq(doc, method):
 
         except:
             frappe.throw("Error")
-            
-    elif not doc.custom_update_purchase_in_tims and doc.custom_import_purchase == 1:
-        stockIOSaveReq(doc, date_str, count)
         
     else:
         print(payload)
         stockIOSaveReq(doc, date_str, count)
         return
+    
 def stockIOSaveReq(doc, date_str, item_count):
     headers = eTIMS.get_headers()
     payload = {
@@ -297,32 +295,11 @@ def stockIOSaveReq(doc, date_str, item_count):
         
         elif return_status == "null":
             frappe.throw("Invalid, return amount is greater than original amount!") 
-     
-    elif doc.custom_import_purchase == 1:
-        payload["sarTyCd"] = "01"
+    
     else:
         payload["sarTyCd"] = "02"
     
     if doc.custom_update_purchase_in_tims:
-        try:
-            response = requests.request(
-                        "POST", 
-                        eTIMS.tims_base_url() + 'insertStockIO',
-                        json = payload, 
-                        headers=headers
-                    )
-        
-            response_json = response.json()
-            # print(response_json)
-            if not response_json.get("resultCd") == '000':
-                return {"Error":response_json.get("resultMsg")}
-                    
-            return {"Success": response_json.get("resultMsg")}
-
-        except:
-                return {"Error":"Oops Bad Request!"}
-            
-    elif not doc.custom_update_purchase_in_tims and doc.custom_import_purchase == 1:
         try:
             response = requests.request(
                         "POST", 

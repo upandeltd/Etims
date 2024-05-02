@@ -139,7 +139,7 @@ def map_import_item(item):
     item_price_ksh = 0
     
     try:
-        item_price_ksh = (item.get("invoice_foreign_currency_amount")/item.get("package"))*item.get("invoice_foreign_currency_crt")
+        item_price_ksh = (item.get("invoice_foreign_currency_amount")/item.get("quantity"))*item.get("invoice_foreign_currency_crt")
     except:
         item_price_ksh = 0
         

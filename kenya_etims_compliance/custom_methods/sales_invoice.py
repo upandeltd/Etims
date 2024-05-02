@@ -17,7 +17,11 @@ def validate(doc, method):
         
             if doc.custom_invoice_number in invoice_numbers:
                 insert_invoice_number(doc, method)
-    
+
+# @frappe
+# def check_payload(doc_name):
+#     doc = frappe.get_doc("Sales Invoice", doc_name)
+#     trnsSalesSaveWrReq(doc, method=None)
     
 def insert_invoice_number(doc,method):
     '''
@@ -185,7 +189,7 @@ def trnsSalesSaveWrReq(doc, method):
         
         if "A" in tax_code_list:
             if tax_item.custom_code == "A":
-                payload["taxblAmtA"] = round((tax_item.get("custom_total_taxable_amount") + tax_item.get("tax_amount_after_discount_amount")), 2)
+                payload["taxblAmtA"] = round(tax_item.get("custom_total_taxable_amount"), 2)
                 payload["taxRtA"] =  get_tax_account_rate(tax_item.get("account_head"))
                 payload["taxAmtA"] = tax_item.get("tax_amount_after_discount_amount")
         else:
@@ -195,7 +199,7 @@ def trnsSalesSaveWrReq(doc, method):
         
         if "B" in tax_code_list:
             if tax_item.custom_code == "B":
-                payload["taxblAmtB"] = round((tax_item.get("custom_total_taxable_amount") + tax_item.get("tax_amount_after_discount_amount")), 2)
+                payload["taxblAmtB"] = round(tax_item.get("custom_total_taxable_amount"), 2)
                 payload["taxRtB"] =  get_tax_account_rate(tax_item.get("account_head"))
                 payload["taxAmtB"] = tax_item.get("tax_amount_after_discount_amount")
         else:
@@ -205,7 +209,7 @@ def trnsSalesSaveWrReq(doc, method):
             
         if "C" in tax_code_list:
             if tax_item.custom_code == "C":
-                payload["taxblAmtC"] = round((tax_item.get("custom_total_taxable_amount") + tax_item.get("tax_amount_after_discount_amount")), 2)
+                payload["taxblAmtC"] = round(tax_item.get("custom_total_taxable_amount"), 2)
                 payload["taxRtC"] =  get_tax_account_rate(tax_item.get("account_head"))
                 payload["taxAmtC"] = tax_item.get("tax_amount_after_discount_amount")
         else:
@@ -215,7 +219,7 @@ def trnsSalesSaveWrReq(doc, method):
             
         if "D" in tax_code_list:
             if tax_item.custom_code == "D":
-                payload["taxblAmtD"] = round((tax_item.get("custom_total_taxable_amount") + tax_item.get("tax_amount_after_discount_amount")), 2)
+                payload["taxblAmtD"] = round(tax_item.get("custom_total_taxable_amount"), 2)
                 payload["taxRtD"] =  get_tax_account_rate(tax_item.get("account_head"))
                 payload["taxAmtD"] = tax_item.get("tax_amount_after_discount_amount")
         else:
@@ -225,7 +229,7 @@ def trnsSalesSaveWrReq(doc, method):
             
         if "E" in tax_code_list:
             if tax_item.custom_code == "E":
-                payload["taxblAmtE"] = round((tax_item.get("custom_total_taxable_amount") + tax_item.get("tax_amount_after_discount_amount")), 2)
+                payload["taxblAmtE"] = round(tax_item.get("custom_total_taxable_amount"), 2)
                 payload["taxRtE"] =  get_tax_account_rate(tax_item.get("account_head"))
                 payload["taxAmtE"] = tax_item.get("tax_amount_after_discount_amount")
         else:
@@ -523,7 +527,7 @@ def create_qr_code(pin, branch_id, rcpt_signature):
         
     try:
         big_code = pyqrcode.create(url, error='L', version=27, mode='binary')
-        big_code.png(file_path, scale=6, module_color=[0, 0, 0, 128], background=[255, 255, 255])
+        big_code.png(file_path, scale=10, module_color=[0, 0, 0, 128], background=[255, 255, 255])
         # big_code.show()
         
         return file_name

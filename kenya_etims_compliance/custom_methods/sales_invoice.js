@@ -12,5 +12,14 @@ frappe.ui.form.on("Sales Invoice",{
         refresh_field("custom_receipt_type_code")
         refresh_field("custom_invoice_status_code")
         refresh_field("custom_credit_note_reason_code")
-    }
+    },
+    // custom_check:function(frm){
+    //     frappe.call({
+    //         "method": "kenya_etims_compliance.custom_methods.sales_invoice.trnsSalesSaveWrReq?doc_name=" + frm.doc.name,
+    //         freeze: true,
+    //         callback: function(r)   {
+    //            return
+    //         }		
+    //     })
+    // }
 })

@@ -61,12 +61,12 @@ def selectImportItemList():
         "data":{
             "itemList":[
                 {
-                    "taskCd":"12778198",
+                    "taskCd":"12778189",
                     "dclDe":"01042023",
                     "itemSeq":1,
                     "dclNo":"C3460-2019- TZDN",
                     "hsCd":"20055200000",
-                    "itemNm":"Trousers Small",
+                    "itemNm":"Trousers Large",
                     "imptItemsttsCd":"2",
                     "orgnNatCd":"BR",
                     "exptNatCd":"BR",
@@ -83,12 +83,12 @@ def selectImportItemList():
                     "invcFcurExcrt":100.79
                     },
                     {
-                    "taskCd":"2239879",
+                    "taskCd":"22398999",
                     "dclDe":"01022023",
                     "itemSeq":1,
                     "dclNo":"C3460-2019- TZDL",
                     "hsCd":"20055900000",
-                    "itemNm":"Carpet Large",
+                    "itemNm":"Carpet Small",
                     "imptItemsttsCd":"2",
                     "orgnNatCd":"BR",
                     "exptNatCd":"BR",

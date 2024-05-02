@@ -113,7 +113,7 @@ def get_user_branch_perms():
     cur_user = frappe.session.user
     user_branch_list = []
     
-    user_branch_permissions = frappe.db.get_all("User Permission", filters={"user": cur_user, "allow": "Tax Branch Office"}, fields=["for_value"])
+    user_branch_permissions = frappe.db.get_all("User Permission", filters={"user": cur_user, "allow": "Tax Branch Office", "is_default": 1}, fields=["for_value"])
     
     if user_branch_permissions:
         for item in user_branch_permissions:

@@ -29,8 +29,8 @@
   "invoice_foreign_currency_amount",
   "invoice_foreign_currency",
   "invoice_foreign_currency_crt",
-  "purchase_invoice_created",
-  "invoice"
+  "stock_entry_created",
+  "stock_entry"
  ],
  "fields": [
   {
@@ -159,21 +159,21 @@
   },
   {
    "default": "0",
-   "fieldname": "purchase_invoice_created",
+   "fieldname": "stock_entry_created",
    "fieldtype": "Check",
    "in_list_view": 1,
-   "label": "Purchase Invoice Created"
+   "label": "Stock Entry Created"
   },
   {
-   "fieldname": "invoice",
+   "fieldname": "stock_entry",
    "fieldtype": "Link",
-   "label": "Invoice",
-   "options": "Purchase Invoice"
+   "label": "Stock Entry ",
+   "options": "Stock Entry"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-04-18 18:42:55.491799",
+ "modified": "2024-05-02 03:19:14.969673",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Import Item",
