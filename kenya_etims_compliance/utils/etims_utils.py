@@ -7,7 +7,7 @@ import frappe
 class eTIMS():
     def get_headers():
         branch_id = eTIMS.get_user_branch_id()
-        header_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id}, fields=["*"])
+        header_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id, "active":1}, fields=["*"])
         
         if header_docs:
             headers = {
@@ -73,8 +73,10 @@ class eTIMS():
         else:
             return response
     
-    def tims_base_url(**kwargs):        
-        settings_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id}, fields=["*"])
+    def tims_base_url():
+        branch_id = eTIMS.get_user_branch_id()
+        
+        settings_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id, "active":1}, fields=["*"])
             
         t_base_url = eTIMS.get_base_url() + '/api/method/kenya_etims_compliance.utils.etims_response.'
         
@@ -115,6 +117,77 @@ class eTIMS():
         new_doc.description = description
         
         new_doc.insert()
+        
+    def create_etims_sar_no(doc_type, doc):
+        etims_sar_no_exists = frappe.db.exists("eTIMS Stock Release Number", {"tax_branch_office": doc.custom_tax_branch_office, "sr_number": doc.custom_sr_number})
+        
+        if not etims_sar_no_exists:
+            new_doc = frappe.new_doc("eTIMS Stock Release Number") 
+            new_doc.reference_type = doc_type
+            new_doc.reference = doc.name
+            new_doc.tax_branch_office = doc.custom_tax_branch_office
+            new_doc.sr_number = doc.custom_sr_number
+            new_doc.orginal_sr_number = eTIMS.get_org_etims_sar_no(doc)
+            
+            new_doc.insert()
+            frappe.db.commit()
+
+        else:
+            old_doc = frappe.get_doc("eTIMS Stock Release Number", etims_sar_no_exists) 
+            old_doc.reference_type = doc_type
+            old_doc.reference = doc.name
+            old_doc.tax_branch_office = doc.custom_tax_branch_office
+            old_doc.sr_number = doc.custom_sr_number 
+            old_doc.orginal_sr_number = eTIMS.get_org_etims_sar_no(doc)
+            
+            old_doc.save()
+            frappe.db.commit()
+
+        
+    def get_org_etims_sar_no(doc):
+        org_etims_sar_no = 0
+        
+        if doc.custom_original_invoice_number:
+            prev_doc  = frappe.db.get_all("eTIMS Stock Release Number", filters={"reference": doc.return_against}, fields=["sr_number"])
+            
+            org_etims_sar_no = prev_doc[0].get("sr_number")
+        
+            return org_etims_sar_no
+        else:
+
+            return org_etims_sar_no
+        
+        
+    def get_last_inv_number(doctype, doc, last_set_no, last_no):
+        branch_id = eTIMS.get_user_branch_id()
+        cur_number = 0
+        last_inv_no = 0
+        settings_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id}, fields=["*"])
+        
+        if settings_docs:
+            # last_inv_no = settings_docs[0].get("last_sales_invoice_number")
+            
+            last_inv_no = settings_docs[0].get(last_set_no)
+    
+        try:
+            last_inv = frappe.db.get_all(doctype,
+                                            filters = {'name': ['!=', doc.name], "custom_tax_branch_office": branch_id},
+                                            fields=[last_no],
+                                            order_by='{} desc'.format(last_no),
+                                            page_length = 1
+                                        )
+            
+            if last_inv[0]:
+                # print(last_inv)
+                last_inv_no = last_inv[0].get(last_no)
+                
+            cur_number = last_inv_no + 1
+            
+        except:
+
+            cur_number = last_inv_no + 1
+        
+        return cur_number
         
     def get_user_branch_id():
         current_user = frappe.session.user

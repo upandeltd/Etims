@@ -41,14 +41,18 @@ def insert_invoice_number(doc,method):
 
     if doc.name:
         total_discount_amount = get_total_discount(doc)
-        
+                
         total_vat_amount = fetch_total_vat(doc)
         total_non_vat_amount = fetch_total_non_vat(doc)
         
-        last_inv_number = get_last_inv_number(doc)
+        last_inv_number = eTIMS.get_last_inv_number("Sales Invoice", doc, "last_sales_invoice_number", "custom_invoice_number")
+       
+        sr_number = eTIMS.get_last_inv_number("Sales Invoice", doc, "last_stock_release_number", "custom_sr_number")
+        
         frappe.db.set_value('Sales Invoice', doc.name, {
             "custom_invoice_number": last_inv_number,
             "custom_tax_branch_office": branch_id,
+            "custom_sr_number": sr_number,
             "custom_sales_control_unit": scu,
             "custom_total_taxable_amount": total_vat_amount,
             "custom_total_nontaxable_amount": total_non_vat_amount,
@@ -287,7 +291,7 @@ def trnsSalesSaveWrReq(doc, method):
 
             doc.custom_receipt_qr_code = attachment_url
             
-            create_sales_receipt(data, doc.name)
+            create_sales_receipt(data, doc.name, doc.custom_tax_branch_office)
                 
             stockIOSaveReq(doc, date_str, count, reg_user_name, mod_user_name)
             doc.custom_update_sales_to_etims = 1
@@ -301,17 +305,15 @@ def trnsSalesSaveWrReq(doc, method):
         stockIOSaveReq(doc, date_str, count, reg_user_name, mod_user_name)
         return
         
-def stockIOSaveReq(doc, date_str, item_count, reg_user_name, mod_user_name):
-    # sar_no, org_sar_no = get_etims_sar_no(doc)
-    
+def stockIOSaveReq(doc, date_str, item_count, reg_user_name, mod_user_name):    
     headers = eTIMS.get_headers()
     payload = {
-        "sarNo": get_etims_sar_no(doc),
-        "orgSarNo": get_org_etims_sar_no(doc),
+        "sarNo": doc.custom_sr_number,
+        "orgSarNo": eTIMS.get_org_etims_sar_no(doc),
         "regTyCd": "A",
         "custTin": doc.tax_id,
         "custNm": doc.customer,
-        "custBhfId": doc.tax_id,
+        "custBhfId": "",
         "ocrnDt": date_str,
         "totItemCnt": item_count,
         "totTaxblAmt": abs(doc.custom_total_taxable_amount),
@@ -360,6 +362,8 @@ def stockIOSaveReq(doc, date_str, item_count, reg_user_name, mod_user_name):
                     eTIMS.stockMasterSaveReq(sale_item, doc.owner, reg_user_name, doc.modified_by, mod_user_name)
                     sale_item.custom_stock_master_updated = 1
                     
+                    eTIMS.create_etims_sar_no(doc)
+                    
                     frappe.msgprint("Master Stock updated successfully")
             except:
                 frappe.throw("Error saving Master Stock")
@@ -368,71 +372,6 @@ def stockIOSaveReq(doc, date_str, item_count, reg_user_name, mod_user_name):
             frappe.throw("Oops Bad Request!")
     else:
         print(payload)
-
-def get_etims_sar_no(doc):
-    etims_sar_no = 1
-    try:
-        etims_sar_docs = frappe.get_last_doc("eTIMS Stock Release Number")
-        
-        new_sar_no = etims_sar_docs.get("sr_number") + 1
-        
-        new_doc = frappe.new_doc("eTIMS Stock Release Number") 
-        new_doc.reference_type = "Sales Invoice"
-        new_doc.reference = doc.name
-        new_doc.sr_number = new_sar_no
-        new_doc.orginal_sr_number = get_org_etims_sar_no(doc)
-        new_doc.insert()
-        frappe.db.commit()
-
-        return new_sar_no
-    except:
-        new_doc = frappe.new_doc("eTIMS Stock Release Number") 
-        new_doc.reference_type = "Sales Invoice"
-        new_doc.reference = doc.name
-        new_doc.sr_number = etims_sar_no 
-        new_doc.orginal_sr_number = get_org_etims_sar_no(doc)
-        new_doc.insert()
-        frappe.db.commit()
-
-        return etims_sar_no
-    
-def get_org_etims_sar_no(doc):
-    org_etims_sar_no = 0
-    
-    if doc.custom_original_invoice_number:
-        prev_doc  = frappe.db.get_all("eTIMS Stock Release Number", filters={"reference": doc.return_against}, fields=["sr_number"])
-        
-        org_etims_sar_no = prev_doc[0].get("sr_number")
-    
-        return org_etims_sar_no
-    else:
-
-        return org_etims_sar_no
-    
-    
-def get_last_inv_number(doc):
-    last_invoice_no_doc = frappe.get_doc("TIS Settings")
-    invoice_number = 0
-    last_inv_no = last_invoice_no_doc.get("last_sales_invoice_number")
-    
-    try:
-        last_inv = frappe.db.get_all("Sales Invoice",
-                                        filters = {'name': ['!=', doc.name]},
-                                        fields=['custom_invoice_number'],
-                                        order_by='custom_invoice_number desc',
-                                        page_length = 1
-                                    )
-        
-        if last_inv[0]:
-            # print(last_inv)
-            last_inv_no = last_inv[0].get("custom_invoice_number")
-            
-        invoice_number = last_inv_no + 1
-        
-    except:
-        invoice_number = last_inv_no + 1
-    
-    return invoice_number
    
 
 def validate_inv_number(doc):
@@ -500,11 +439,12 @@ def get_tax_account_rate(account_head):
         
         return tax_rate
     
-def create_sales_receipt(data, doc_name):
+def create_sales_receipt(data, doc_name, tax_br):
     control_unit_date_time = eTIMS.strp_datetime_object(data.get("sdcDateTime"))
     
     new_rcpt_doc = frappe.new_doc("eTIMS Sales Receipt")
     new_rcpt_doc.receipt_number = data.get("curRcptNo")
+    new_rcpt_doc.tax_branch_office = tax_br
     new_rcpt_doc.total_receipt_number = data.get("totRcptNo")
     new_rcpt_doc.internal_data = data.get("intrlData")
     new_rcpt_doc.receipt_signature = data.get("rcptSign")
