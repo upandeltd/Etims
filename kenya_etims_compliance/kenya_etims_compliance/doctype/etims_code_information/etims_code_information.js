@@ -20,7 +20,6 @@ frappe.ui.form.on("eTIMS Code Information", {
                     message: __(values[0])
                 });
 
-                refresh_field("last_search_date_and_time")
             }
         })
     },
@@ -71,7 +70,6 @@ frappe.ui.form.on("eTIMS Code Information", {
                 });
 
                 refresh_field("notices")
-                refresh_field("last_request_date")
             }
         })
 

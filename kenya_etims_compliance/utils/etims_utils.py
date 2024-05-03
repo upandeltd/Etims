@@ -56,17 +56,6 @@ class eTIMS():
         
         return date_str
     
-    # def strf_date(date_data):
-    #     date_str = date_data.strftime("%Y%m%d")
-        
-    #     return date_str
-    
-    # def strf_time_object(time_data):
-    #     time_object = datetime.strptime(time_data, '%H:%M:%S.%f')
-    #     time_str = time_object.strftime("%H%M%S")
-        
-    #     return time_str
-    
     def strf_time(time_data):
         time_str = ""
         try:
@@ -84,65 +73,24 @@ class eTIMS():
         else:
             return response
     
-    def tims_base_url():
-        settings_doc = frappe.get_doc("TIS Settings", "TIS Settings")
-        tims_base_url = eTIMS.get_base_url() + '/api/method/kenya_etims_compliance.utils.etims_response.'
+    def tims_base_url(**kwargs):        
+        settings_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id}, fields=["*"])
+            
+        t_base_url = eTIMS.get_base_url() + '/api/method/kenya_etims_compliance.utils.etims_response.'
         
-        if settings_doc.is_production == 1:
-            tims_base_url = 'https://etims-api.kra.go.ke/etims-api/'
-        elif settings_doc.is_sandbox == 1:
-            tims_base_url = 'https://etims-api-sbx.kra.go.ke/etims-api/'
-        return tims_base_url
-    
-    def get_default_tax_rate_a():
-        tax_rate =0
-        settings_doc = frappe.get_doc("TIS Settings")
-        if settings_doc.vat_tax_rate_a:
-            tax_rate = settings_doc.vat_tax_rate_a
-            
-        return tax_rate
-    
-    def get_default_tax_rate_b():
-        tax_rate =0
-        settings_doc = frappe.get_doc("TIS Settings")
-        if settings_doc.vat_tax_rate_b:
-            tax_rate = settings_doc.vat_tax_rate_b
-            
-        return tax_rate
-        
-    def get_default_tax_rate_c():
-        tax_rate =0
-        settings_doc = frappe.get_doc("TIS Settings")
-        if settings_doc.vat_tax_rate_c:
-            tax_rate = settings_doc.vat_tax_rate_c
-            
-        return tax_rate
-    
-    def get_default_tax_rate_d():
-        tax_rate =0
-        settings_doc = frappe.get_doc("TIS Settings")
-        if settings_doc.vat_tax_rate_d:
-            tax_rate = settings_doc.vat_tax_rate_d
-            
-        return tax_rate
-    
-    def get_default_tax_rate_e():
-        tax_rate =0
-        settings_doc = frappe.get_doc("TIS Settings")
-        if settings_doc.vat_tax_rate_e:
-            tax_rate = settings_doc.vat_tax_rate_e
-            
-        return tax_rate
+        if settings_docs:
+            if settings_docs[0].api_mode == "Production":
+                t_base_url = 'https://etims-api.kra.go.ke/etims-api/'
+            elif settings_docs[0].api_mode == "Sandbox":
+                
+                t_base_url = 'https://etims-api-sbx.kra.go.ke/etims-api/'
+                
+            return t_base_url
         
     def strp_datetime_object(date_time_str):
         datetime_object = datetime.strptime(date_time_str, '%Y%m%d%H%M%S')
         
         return datetime_object
-    
-    # def strp_date_and_time_object(date_time_str):#20210502115145
-    #     datetime_object = datetime.strptime(date_time_str, '%Y%m%d%H%M%S')
-        
-    #     return datetime_object
     
     def strp_date_object(date_str):
         date_object = datetime.strptime(date_str, '%Y%m%d')
@@ -170,19 +118,14 @@ class eTIMS():
         
     def get_user_branch_id():
         current_user = frappe.session.user
-        
-        if "TIS Admin" not in frappe.get_roles(current_user):
             
-            tax_branch_perms = frappe.db.get_all("User Permission", filters={"user":current_user, "allow": "Tax Branch Office", "is_default": 1}, fields =["for_value"])
-            
-            if tax_branch_perms:
-                tax_branch_id_current_user = tax_branch_perms[0].get("for_value")
+        tax_branch_perms = frappe.db.get_all("User Permission", filters={"user":current_user, "allow": "Tax Branch Office", "is_default": 1}, fields =["for_value"])
                 
-                return  tax_branch_id_current_user
-        
-        if "TIS Admin" in frappe.get_roles(current_user):
+        if tax_branch_perms:
+            tax_branch_id_current_user = tax_branch_perms[0].get("for_value")
             
-            return "00"
+            return  tax_branch_id_current_user
+
         
     def itemSaveReq(doc_name):
         headers = eTIMS.get_headers()
@@ -254,12 +197,54 @@ class eTIMS():
             # create item if not exists
             create_new_item_doctype(item)
             
-            # create stock entry for receipt and update stock
         else:
-            #check if item is update
-            
-            # create stock entry for receipt and update stock
             pass
+        
+    def get_name_of_user(user):
+        user_full_name = frappe.db.get_value("User", user, 'full_name')
+        
+        return user_full_name
+        
+    def get_bin_qty(item_code):
+        tax_branch = eTIMS.get_user_branch_id()
+
+        store_warehouse = frappe.db.get_all("Warehouse", filters={"warehouse_type": "Stores", "is_group": 0, "custom_tax_branch_office": tax_branch}, fields=["warehouse_name", "name"])
+            
+        bin_docs = frappe.db.get_all("Bin", filters={"item_code":item_code, "warehouse": store_warehouse[0].get("name")}, fields=["actual_qty"])
+
+        if bin_docs:
+
+            return bin_docs[0].get("actual_qty")
+    
+    def stockMasterSaveReq(item, regId, regName, modId, modName):
+        quantity = eTIMS.get_bin_qty(item.get("item_code"))
+        headers = eTIMS.get_headers()
+        payload = {
+            "itemCd": item.get("etims_code"),
+            "rsdQty": quantity, 
+            "regrId": regId, 
+            "regrNm": regName, 
+            "modrId": modId, 
+            "modrNm": modName
+        }
+        
+        try:
+            response = requests.request(
+                "POST", 
+                eTIMS.tims_base_url() + 'saveStockMaster', 
+                json = payload, 
+                headers=headers
+            )
+            
+            response_json = response.json()
+            if not response_json.get("resultCd") == '000':
+            
+                return {"Oops!":response_json.get("resultMsg")}
+            
+            return {"Success":response_json.get("resultMsg")}
+
+        except:
+            return {"Error":"Oops Bad Request!"}	
 
 def check_if_item_exits(item_code):
     item_exists = frappe.db.exists({"doctype": "Item", "item_code": item_code})
@@ -292,8 +277,7 @@ def create_new_item_doctype(item):
     new_item_doc.custom_used__unused = "Y"
     new_item_doc.custom_taxation_type_code = item.get("taxTyCd")
     new_item_doc.custom_registration_id = current_user
-    # new_item_doc.custom_registration_name =current_user
-    # new_item_doc.custom_modifier_name = current_user
+ 
     new_item_doc.custom_modifier_id = current_user
     
     if item.get("taxTyCd"):
@@ -307,9 +291,7 @@ def create_new_item_doctype(item):
     new_item_doc.custom_update_item_to_tims = 1
     
     new_item_doc.save()
-    # frappe.db.commit()
-    # print("*"*90)
-    # print(new_item_doc.name)
+
     eTIMS.itemSaveReq(new_item_doc.name)
 
 def get_packing_and_quantity_unit(pkgUnitCd, qtyUnitCd):

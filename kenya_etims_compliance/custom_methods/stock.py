@@ -37,6 +37,9 @@ def update_stock_to_etims(doc, method):
     s_warehouse_id = ""
     t_warehouse_id = ""
     
+    mod_user_name = eTIMS.get_name_of_user(doc.modified_by)
+    reg_user_name = eTIMS.get_name_of_user(doc.owner)
+    
     date_str = eTIMS.strf_date_object(request_date)
     time_str = eTIMS.strf_time(request_time)
 
@@ -53,27 +56,27 @@ def update_stock_to_etims(doc, method):
     # if doc.custom_send_stock_info_to_tims:
     if doc.stock_entry_type == "Material Receipt":
         if doc.custom_is_import_stock == 1:
-            stockIOSaveReq(doc, date_str, item_count, "01", t_warehouse_id)
+            stockIOSaveReq(doc, date_str, item_count, "01", t_warehouse_id, reg_user_name, mod_user_name)
         else:
-            stockIOSaveReq(doc, date_str, item_count, "06", t_warehouse_id)
+            stockIOSaveReq(doc, date_str, item_count, "06", t_warehouse_id, reg_user_name, mod_user_name)
 
             
     if doc.stock_entry_type == "Material Transfer":
         is_inter_branch = check_if_interbranch(doc)
         
         if is_inter_branch:
-            if doc.custom_update_both_branches:
-                stockIOSaveReq(doc, date_str, item_count, "13", t_warehouse_id)
-                stockIOSaveReq(doc, date_str, item_count, "04", t_warehouse_id)
+            if doc.custom_update_both_branches:##################################################
+                stockIOSaveReq(doc, date_str, item_count, "13", t_warehouse_id, reg_user_name, mod_user_name)
+                stockIOSaveReq(doc, date_str, item_count, "04", t_warehouse_id, reg_user_name, mod_user_name)
             elif doc.custom_update_from_branch_only:
-                stockIOSaveReq(doc, date_str, item_count, "13", t_warehouse_id)
+                stockIOSaveReq(doc, date_str, item_count, "13", t_warehouse_id, reg_user_name, mod_user_name)
             else:
-                stockIOSaveReq(doc, date_str, item_count, "04", t_warehouse_id)
+                stockIOSaveReq(doc, date_str, item_count, "04", t_warehouse_id, reg_user_name, mod_user_name)
         #get warehouse branch if intrbranch is true
         #logic fot transfer within branches
     
         
-def stockIOSaveReq(doc, date_str, item_count, sar_type, branch_id):    
+def stockIOSaveReq(doc, date_str, item_count, sar_type, branch_id, reg_user_name, mod_user_name):    
     # headers = get_headers(branch_id)
     headers = eTIMS.get_headers()
     payload = {
@@ -90,9 +93,9 @@ def stockIOSaveReq(doc, date_str, item_count, sar_type, branch_id):
         "totAmt": round(doc.total_incoming_value, 2),
         "remark": doc.remarks,
         "regrId": doc.owner,
-        "regrNm": doc.owner,
+        "regrNm": reg_user_name,
         "modrId": doc.modified_by,
-        "modrNm": doc.modified_by,
+        "modrNm": mod_user_name,
         "sarTyCd": sar_type,
         "itemList": etims_stock_item_list(doc)
         }
@@ -118,6 +121,15 @@ def stockIOSaveReq(doc, date_str, item_count, sar_type, branch_id):
                 
                 doc.custom_updated_in_etims = 1   
                 frappe.msgprint(response_json.get("resultMsg"))
+                
+                try:
+                    for stock_item in doc.items:
+                        eTIMS.stockMasterSaveReq(stock_item, doc.owner, reg_user_name, doc.modified_by, mod_user_name)
+                        stock_item.custom_stock_master_updated = 1
+                        
+                        frappe.msgprint("Master Stock updated successfully")
+                except:
+                    frappe.throw("Error saving Master Stock")
 
             except:
                 

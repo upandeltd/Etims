@@ -13,16 +13,23 @@
   "branch_id",
   "column_break_uu1j",
   "device_serial_number",
+  "api_mode",
   "verify_device",
   "section_break_xcij",
   "communication_key",
   "device_id",
   "column_break_iy7d",
   "sales_control_unit_id",
-  "mrc_no"
+  "mrc_no",
+  "other_settings_section",
+  "last_sales_invoice_number",
+  "last_purchase_invoice_number",
+  "last_stock_release_number"
  ],
  "fields": [
   {
+   "fetch_from": "company.tax_id",
+   "fetch_if_empty": 1,
    "fieldname": "pin",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -50,7 +57,6 @@
    "in_list_view": 1,
    "label": "Device Serial Number",
    "length": 100,
-   "read_only": 1,
    "reqd": 1
   },
   {
@@ -99,11 +105,37 @@
    "label": "Company",
    "options": "Company",
    "reqd": 1
+  },
+  {
+   "fieldname": "api_mode",
+   "fieldtype": "Select",
+   "label": "API Mode",
+   "options": "\nSandbox\nProduction"
+  },
+  {
+   "fieldname": "other_settings_section",
+   "fieldtype": "Section Break",
+   "label": "Other Settings"
+  },
+  {
+   "fieldname": "last_sales_invoice_number",
+   "fieldtype": "Int",
+   "label": "Last Sales Invoice Number"
+  },
+  {
+   "fieldname": "last_purchase_invoice_number",
+   "fieldtype": "Int",
+   "label": "Last Purchase Invoice Number"
+  },
+  {
+   "fieldname": "last_stock_release_number",
+   "fieldtype": "Int",
+   "label": "Last Stock Release Number"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-04-26 14:13:06.307500",
+ "modified": "2024-05-03 22:25:35.021029",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "TIS Device Initialization",
