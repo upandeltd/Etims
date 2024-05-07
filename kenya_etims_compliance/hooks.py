@@ -133,12 +133,14 @@ doc_events = {
         "Sales Invoice": {
             "before_save": "kenya_etims_compliance.custom_methods.sales_invoice.validate",
             "before_submit": "kenya_etims_compliance.custom_methods.sales_invoice.trnsSalesSaveWrReq",
-            "on_update": "kenya_etims_compliance.custom_methods.sales_invoice.insert_invoice_number"
+            "on_update": "kenya_etims_compliance.custom_methods.sales_invoice.insert_invoice_number",
+            "on_submit": "kenya_etims_compliance.custom_methods.bin.on_submit"
         },
         "Stock Entry": {
             "before_submit": "kenya_etims_compliance.custom_methods.stock.update_stock_to_etims",
             "before_validate": "kenya_etims_compliance.custom_methods.stock.insert_tax_rate_and_amount",
-        },
+            "on_submit": "kenya_etims_compliance.custom_methods.bin.on_submit"
+        },  
         "Item": {
             "before_save": "kenya_etims_compliance.custom_methods.item.autofill_tims_info"
         },
@@ -147,7 +149,8 @@ doc_events = {
             "before_submit": "kenya_etims_compliance.custom_methods.purchase_invoice.trnsPurchaseSaveReq",
             "on_update": "kenya_etims_compliance.custom_methods.purchase_invoice.insert_invoice_number",
             "on_change": "kenya_etims_compliance.custom_methods.purchase_invoice.add_taxes",
-        },
+            "on_submit": "kenya_etims_compliance.custom_methods.bin.on_submit"
+        }
         # "eTIMS Purchase Invoice": {
         #     "on_update": "kenya_etims_compliance.custom_methods.etims_purchase_invoice.update_stock_to_etims",
         # },

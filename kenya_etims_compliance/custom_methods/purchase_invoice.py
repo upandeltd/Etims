@@ -447,7 +447,7 @@ def etims_sale_item_list(doc):
                     "dcRt": item.get("discount_percentage"),
                     "dcAmt": item.get("discount_amount"),
                     "taxTyCd": item_tax_details,
-                    "taxblAmt": item.get("amount"),
+                    "taxblAmt": abs(round(item.get("net_amount"), 2)),
                     "taxAmt": round((item.get("amount") - item.get("net_amount")), 2),
                     "totAmt": item.get("amount"),
                     "totDcAmt": item.get("discount_amount")
