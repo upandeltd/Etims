@@ -24,39 +24,39 @@ def insert_invoice_number(doc,method):
     '''
     scu = ""
     item_count = 0
-    if doc.custom_update_invoice_in_tims == 1:
-        branch_id = eTIMS.get_user_branch_id()
-        init_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id}, fields=["*"])
-        if init_docs:
-            scu = init_docs[0].get("sales_control_unit_id")
-            sales_warehouse = init_docs[0].get("default_sales_warehouse")
+    # if doc.custom_update_invoice_in_tims == 1:
+    branch_id = eTIMS.get_user_branch_id()
+    init_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id}, fields=["*"])
+    if init_docs:
+        scu = init_docs[0].get("sales_control_unit_id")
+        sales_warehouse = init_docs[0].get("default_sales_warehouse")
+    
+    if doc.items:
+        item_count = len(doc.items) 
+        insert_tax_amounts(doc)
+    
+    if doc.name:
+        total_discount_amount = get_total_discount(doc)
         
-        if doc.items:
-            item_count = len(doc.items) 
-            insert_tax_amounts(doc)
+        total_vat_amount = fetch_total_vat(doc)
+        total_non_vat_amount = fetch_total_non_vat(doc)
         
-        if doc.name:
-            total_discount_amount = get_total_discount(doc)
-            
-            total_vat_amount = fetch_total_vat(doc)
-            total_non_vat_amount = fetch_total_non_vat(doc)
-            
-            last_inv_number = get_last_inv_number(doc, branch_id)
-            
-            frappe.db.set_value('Sales Invoice', doc.name, {
-                "custom_invoice_number": last_inv_number,
-                "custom_sales_control_unit": scu,
-                "update_stock": 1,
-                "set_warehouse": sales_warehouse,
-                "custom_tax_branch_office": branch_id,
-                "custom_total_taxable_amount": total_vat_amount,
-                "custom_total_nontaxable_amount": total_non_vat_amount,
-                "custom_item_count": item_count,
-                "custom_total_discount_amount": total_discount_amount,
-                "custom_total_before_discount": total_discount_amount + doc.rounded_total
-            }, update_modified=True)
-            
-            doc.reload()
+        last_inv_number = get_last_inv_number(doc, branch_id)
+        
+        frappe.db.set_value('Sales Invoice', doc.name, {
+            "custom_invoice_number": last_inv_number,
+            "custom_sales_control_unit": scu,
+            "update_stock": 1,
+            "set_warehouse": sales_warehouse,
+            "custom_tax_branch_office": branch_id,
+            "custom_total_taxable_amount": total_vat_amount,
+            "custom_total_nontaxable_amount": total_non_vat_amount,
+            "custom_item_count": item_count,
+            "custom_total_discount_amount": total_discount_amount,
+            "custom_total_before_discount": total_discount_amount + doc.rounded_total
+        }, update_modified=True)
+        
+        doc.reload()
         
 def insert_tax_amounts(doc):
     if doc.items:
