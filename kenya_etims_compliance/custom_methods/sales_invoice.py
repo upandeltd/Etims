@@ -25,17 +25,17 @@ def insert_invoice_number(doc,method):
     scu = ""
     item_count = 0
     # if doc.custom_update_invoice_in_tims == 1:
-    branch_id = eTIMS.get_user_branch_id()
-    init_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id}, fields=["*"])
-    if init_docs:
-        scu = init_docs[0].get("sales_control_unit_id")
-        sales_warehouse = init_docs[0].get("default_sales_warehouse")
-    
-    if doc.items:
-        item_count = len(doc.items) 
-        insert_tax_amounts(doc)
-    
     if doc.name:
+        branch_id = eTIMS.get_user_branch_id()
+        init_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id}, fields=["sales_control_unit_id", "default_sales_warehouse"])
+        if init_docs:
+            scu = init_docs[0].get("sales_control_unit_id")
+            sales_warehouse = init_docs[0].get("default_sales_warehouse")
+        
+        if doc.items:
+            item_count = len(doc.items) 
+            insert_tax_amounts(doc)
+
         total_discount_amount = get_total_discount(doc)
         
         total_vat_amount = fetch_total_vat(doc)
@@ -303,7 +303,6 @@ def stockIOSaveReq(doc, date_str):
     # sar_no, org_sar_no = get_etims_sar_no(doc)
     taxAmt = 0
     taxblAmt = 0
-    totAmt = 0
     
     headers = eTIMS.get_headers()
     stock_list = etims_sale_item_list_stock(doc)
@@ -312,7 +311,6 @@ def stockIOSaveReq(doc, date_str):
         if item.get("custom_maintain_stock") == 1 and item.get("custom_tax_code") in ["B", "E"]:
             taxblAmt += item.get("net_amount")
             taxAmt +=  (item.get("amount") - item.get("net_amount"))
-            totAmt += item.get("amount")
             
             # if not item.get("")
     
@@ -327,7 +325,7 @@ def stockIOSaveReq(doc, date_str):
         "totItemCnt": len(stock_list),
         "totTaxblAmt": abs(round(taxblAmt, 2)),
         "totTaxAmt": abs(round(taxAmt, 2)),
-        "totAmt": abs(round(totAmt, 2)),
+        "totAmt": abs(doc.grand_total),
         "remark": doc.remarks,
         "regrId": doc.owner,
         "regrNm": doc.owner,
@@ -383,7 +381,7 @@ def get_etims_sar_no(doc):
         new_doc.reference = doc.name
         new_doc.tax_branch_office = doc.custom_tax_branch_office
         new_doc.sr_number = new_sar_no
-        new_doc.orginal_sr_number = eTIMS.get_org_etims_sar_no(doc)
+        new_doc.orginal_sr_number = get_org_etims_sar_no(doc)
         new_doc.insert()
         frappe.db.commit()
 
@@ -394,7 +392,7 @@ def get_etims_sar_no(doc):
         new_doc.reference = doc.name
         new_doc.tax_branch_office = doc.custom_tax_branch_office
         new_doc.sr_number = etims_sar_no 
-        new_doc.orginal_sr_number = eTIMS.get_org_etims_sar_no(doc)
+        new_doc.orginal_sr_number = get_org_etims_sar_no(doc)
         
         new_doc.insert()
         frappe.db.commit()
@@ -480,7 +478,7 @@ def etims_sale_item_list_sales(doc):
 					"itemNm": item_detail[0].get("custom_item_name"),
 					# "bcd":null,
 					"pkgUnitCd": item_detail[0].get("custom_packaging_unit_code"),
-					"pkg": item.get("qty"),
+					"pkg": abs(item.get("qty")),
 					"qtyUnitCd": item_detail[0].get("custom_quantity_unit_code"),
 					"qty": abs(item.get("qty")),
 					"prc": abs(item.get("rate")),

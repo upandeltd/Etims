@@ -60,15 +60,25 @@ def insert_invoice_number(doc,method):
     Method sets increment for invoice number and orginal invoice number before submitting invoice
     '''
     if doc.name:
-        last_inv_number = get_last_inv_number(doc)
+        branch_id = eTIMS.get_user_branch_id()
+        init_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id}, fields=["default_stores_warehouse"])
+        if init_docs:
+            pur_warehouse = init_docs[0].get("default_stores_warehouse")
+            
+        last_inv_number = get_last_inv_number(doc, branch_id)
         
-        frappe.db.set_value('Purchase Invoice', doc.name, 'custom_invoice_number', last_inv_number, update_modified=True)
-        insert_tax_amounts(doc)
+        # frappe.db.set_value('Purchase Invoice', doc.name, 'custom_invoice_number', last_inv_number, update_modified=True)
+        if doc.items:
+            insert_tax_amounts(doc)
+        
         total_vat_amount = fetch_total_vat(doc)
         total_non_vat_amount = fetch_total_non_vat(doc)
         
         frappe.db.set_value('Purchase Invoice', doc.name,
-                            { 
+                            {   "custom_invoice_number": last_inv_number,
+                                "update_stock": 1,
+                                "custom_tax_branch_office": branch_id,
+                                "set_warehouse": pur_warehouse,
                                 "custom_total_taxable_amount": total_vat_amount,
                                 "custom_total_nontaxable_amount": total_non_vat_amount
                             },
@@ -162,15 +172,15 @@ def trnsPurchaseSaveReq(doc, method):
         "cfmDt": date_time_str,
         "pchsDt": date_str,
         "totItemCnt": count,
-        "totTaxblAmt":doc.custom_total_taxable_amount,
-        "totTaxAmt":doc.base_total_taxes_and_charges,
-        "totAmt":doc.grand_total,
+        "totTaxblAmt": abs(doc.custom_total_taxable_amount),
+        "totTaxAmt": abs(doc.base_total_taxes_and_charges),
+        "totAmt": abs(doc.grand_total),
         "remark": doc.remarks,
         "regrId": doc.owner,
         "regrNm": doc.owner,
         "modrId": doc.modified_by,
         "modrNm": doc.modified_by,
-        "itemList":etims_sale_item_list(doc)
+        "itemList":etims_pur_item_list(doc)
     }
     
     for tax_item in doc.taxes:
@@ -179,9 +189,9 @@ def trnsPurchaseSaveReq(doc, method):
         
         if "A" in tax_code_list:
             if tax_item.custom_code == "A":
-                payload["taxblAmtA"] = round((tax_item.get("custom_total_taxable_amount")), 2)
-                payload["taxRtA"] =  get_tax_account_rate(tax_item.get("account_head"))
-                payload["taxAmtA"] = tax_item.get("tax_amount_after_discount_amount")
+                payload["taxblAmtA"] = abs(round((tax_item.get("custom_total_taxable_amount")), 2))
+                payload["taxRtA"] =  abs(get_tax_account_rate(tax_item.get("account_head")))
+                payload["taxAmtA"] = abs(tax_item.get("tax_amount_after_discount_amount"))
         else:
             payload["taxblAmtA"] = 0
             payload["taxRtA"] =  0
@@ -189,9 +199,9 @@ def trnsPurchaseSaveReq(doc, method):
         
         if "B" in tax_code_list:
             if tax_item.custom_code == "B":
-                payload["taxblAmtB"] = round((tax_item.get("custom_total_taxable_amount")), 2)
-                payload["taxRtB"] =  get_tax_account_rate(tax_item.get("account_head"))
-                payload["taxAmtB"] = tax_item.get("tax_amount_after_discount_amount")
+                payload["taxblAmtB"] = abs(round((tax_item.get("custom_total_taxable_amount")), 2))
+                payload["taxRtB"] =  abs(get_tax_account_rate(tax_item.get("account_head")))
+                payload["taxAmtB"] = abs(tax_item.get("tax_amount_after_discount_amount"))
         else:
             payload["taxblAmtB"] = 0
             payload["taxRtB"] =  0
@@ -199,9 +209,9 @@ def trnsPurchaseSaveReq(doc, method):
             
         if "C" in tax_code_list:
             if tax_item.custom_code == "C":
-                payload["taxblAmtC"] = round((tax_item.get("custom_total_taxable_amount")), 2)
-                payload["taxRtC"] =  get_tax_account_rate(tax_item.get("account_head"))
-                payload["taxAmtC"] = tax_item.get("tax_amount_after_discount_amount")
+                payload["taxblAmtC"] = abs(round((tax_item.get("custom_total_taxable_amount")), 2))
+                payload["taxRtC"] =  abs(get_tax_account_rate(tax_item.get("account_head")))
+                payload["taxAmtC"] = abs(tax_item.get("tax_amount_after_discount_amount"))
         else:
             payload["taxblAmtC"] = 0
             payload["taxRtC"] =  0
@@ -209,9 +219,9 @@ def trnsPurchaseSaveReq(doc, method):
             
         if "D" in tax_code_list:
             if tax_item.custom_code == "D":
-                payload["taxblAmtD"] = round((tax_item.get("custom_total_taxable_amount")), 2)
-                payload["taxRtD"] =  get_tax_account_rate(tax_item.get("account_head"))
-                payload["taxAmtD"] = tax_item.get("tax_amount_after_discount_amount")
+                payload["taxblAmtD"] = abs(round((tax_item.get("custom_total_taxable_amount")), 2))
+                payload["taxRtD"] =  abs(get_tax_account_rate(tax_item.get("account_head")))
+                payload["taxAmtD"] = abs(tax_item.get("tax_amount_after_discount_amount"))
         else:
             payload["taxblAmtD"] = 0
             payload["taxRtD"] =  0
@@ -219,9 +229,9 @@ def trnsPurchaseSaveReq(doc, method):
             
         if "E" in tax_code_list:
             if tax_item.custom_code == "E":
-                payload["taxblAmtE"] = round((tax_item.get("custom_total_taxable_amount")), 2)
-                payload["taxRtE"] =  get_tax_account_rate(tax_item.get("account_head"))
-                payload["taxAmtE"] = tax_item.get("tax_amount_after_discount_amount")
+                payload["taxblAmtE"] = abs(round((tax_item.get("custom_total_taxable_amount")), 2))
+                payload["taxRtE"] =  abs(get_tax_account_rate(tax_item.get("account_head")))
+                payload["taxAmtE"] = abs(tax_item.get("tax_amount_after_discount_amount"))
         else:
             payload["taxblAmtE"] = 0
             payload["taxRtE"] =  0
@@ -252,7 +262,7 @@ def trnsPurchaseSaveReq(doc, method):
             if not response_json.get("resultCd") == '000':
                 return {"Error":response_json.get("resultMsg")}
             
-            stockIOSaveReq(doc, date_str, count)
+            stockIOSaveReq(doc, date_str)
             doc.custom_item_updated_in_tims = 1
             
             frappe.msgprint(response_json.get("resultMsg"))
@@ -262,10 +272,22 @@ def trnsPurchaseSaveReq(doc, method):
         
     else:
         print(payload)
-        stockIOSaveReq(doc, date_str, count)
+        stockIOSaveReq(doc, date_str)
         return
     
-def stockIOSaveReq(doc, date_str, item_count):
+def stockIOSaveReq(doc, date_str):
+    taxAmt = 0
+    taxblAmt = 0
+    
+    headers = eTIMS.get_headers()
+    stock_list = etims_stock_item_list(doc)
+    
+    for item in doc.items:
+        if item.get("custom_maintain_stock") == 1 and item.get("custom_tax_code") in ["B", "E"]:
+            taxblAmt += item.get("net_amount")
+            taxAmt +=  (item.get("amount") - item.get("net_amount"))
+            
+            
     headers = eTIMS.get_headers()
     payload = {
         "sarNo": get_etims_sar_no(doc),
@@ -275,16 +297,16 @@ def stockIOSaveReq(doc, date_str, item_count):
         # "custNm":null,
         "custBhfId": eTIMS.get_user_branch_id(),
         "ocrnDt": date_str,
-        "totItemCnt": item_count,
-        "totTaxblAmt": doc.custom_total_taxable_amount,
-        "totTaxAmt": doc.base_total_taxes_and_charges,
-        "totAmt": doc.grand_total,
+        "totItemCnt": len(stock_list),
+        "totTaxblAmt": abs(round(taxblAmt, 2)),
+        "totTaxAmt": abs(round(taxAmt, 2)),
+        "totAmt": abs(doc.grand_total),
         "remark": doc.remarks,
         "regrId": doc.owner,
         "regrNm": doc.owner,
         "modrId": doc.modified_by,
         "modrNm": doc.modified_by,
-        "itemList": etims_sale_item_list(doc)
+        "itemList": etims_stock_item_list(doc)
         }
     
     if doc.is_return == 1: 
@@ -324,13 +346,14 @@ def stockIOSaveReq(doc, date_str, item_count):
 def get_etims_sar_no(doc):
     etims_sar_no = 1
     try:
-        etims_sar_docs = frappe.get_last_doc("eTIMS Stock Release Number")
+        etims_sar_docs = frappe.get_last_doc("eTIMS Stock Release Number", filters={"tax_branch_office": doc.custom_tax_branch_office})
         
         new_sar_no = etims_sar_docs.get("sr_number") + 1
         
         new_doc = frappe.new_doc("eTIMS Stock Release Number") 
-        new_doc.reference_type = "Purchase Invoice"
+        new_doc.reference_type = doc.doctype
         new_doc.reference = doc.name
+        new_doc.tax_branch_office = doc.custom_tax_branch_office
         new_doc.sr_number = new_sar_no
         new_doc.orginal_sr_number = get_org_etims_sar_no(doc)
         new_doc.insert()
@@ -339,10 +362,12 @@ def get_etims_sar_no(doc):
         return new_sar_no
     except:
         new_doc = frappe.new_doc("eTIMS Stock Release Number") 
-        new_doc.reference_type = "Purchase Invoice"
+        new_doc.reference_type = doc.doctype
         new_doc.reference = doc.name
+        new_doc.tax_branch_office = doc.custom_tax_branch_office
         new_doc.sr_number = etims_sar_no 
         new_doc.orginal_sr_number = get_org_etims_sar_no(doc)
+        
         new_doc.insert()
         frappe.db.commit()
 
@@ -371,15 +396,21 @@ def get_supplier_details(supplier):
     
     return supp_dict
     
-def get_last_inv_number(doc):
-    last_invoice_no_doc = frappe.get_doc("TIS Settings")
-    invoice_number = 0
-    last_inv_no = last_invoice_no_doc.get("last_purchase_invoice_number")
+def get_last_inv_number(doc, branch_id):
+   
+    cur_number = 0
+    last_inv_no = 0
+
+    settings_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id}, fields=["last_purchase_invoice_number"])
     
+    if settings_docs:
+        last_inv_no = settings_docs[0].get("last_purchase_invoice_number")
+        
+
     try:
-        last_inv = frappe.db.get_all("Purchase Invoice",
-                                        filters = {'name': ['!=', doc.name]},
-                                        fields=['custom_invoice_number'],
+        last_inv = frappe.db.get_all(doc.doctype,
+                                        filters = {'name': ['!=', doc.name], "custom_tax_branch_office": branch_id},
+                                        fields=["custom_invoice_number"],
                                         order_by='custom_invoice_number desc',
                                         page_length = 1
                                     )
@@ -388,12 +419,13 @@ def get_last_inv_number(doc):
             # print(last_inv)
             last_inv_no = last_inv[0].get("custom_invoice_number")
             
-        invoice_number = last_inv_no + 1
+        cur_number = last_inv_no + 1
         
     except:
-        invoice_number = last_inv_no + 1
+
+        cur_number = last_inv_no + 1
     
-    return invoice_number
+    return cur_number
    
     
 def get_original_invoice_number(doc):
@@ -420,12 +452,11 @@ def validate_inv_number(doc):
                 
     return invoice_numbers
 
-def etims_sale_item_list(doc):
-    sales_item_list = []
+def etims_pur_item_list(doc):
+    pur_item_list = []
     for item in doc.items:
         item_tax_details = get_tax_template_details(item.get("item_code"))
         item_detail = frappe.db.get_all("Item", filters={"disabled": 0, "item_code": item.get("item_code")}, fields = ["*"])
-        item_tax_amount = format(item.get("amount") * (eTIMS.get_default_tax_rate_b()/100), ".2f")
         
         barcode = eTIMS.get_item_barcode(item.item_code, item.uom)
         
@@ -434,29 +465,63 @@ def etims_sale_item_list(doc):
                     "itemCd": item_detail[0].get("custom_item_code"),
                     "itemClsCd": item_detail[0].get("custom_item_classification_code"),
                     "itemNm": item_detail[0].get("custom_item_name"),
-                    "bcd": barcode,
+                    "bcd": barcode if barcode else "",
                     # "spplrItemClsCd":null,
                     # "spplrItemCd":null,
                     # "spplrItemNm": item.item_code,
                     "pkgUnitCd": item_detail[0].get("custom_packaging_unit_code"),
-                    "pkg":item.get("qty"),
+                    "pkg": abs(item.get("qty")),
                     "qtyUnitCd": item_detail[0].get("custom_quantity_unit_code"),
-                    "qty": item.get("qty"),
-                    "prc": item.get("rate"),
-                    "splyAmt": item.get("amount"),
-                    "dcRt": item.get("discount_percentage"),
-                    "dcAmt": item.get("discount_amount"),
+                    "qty": abs(item.get("qty")),
+                    "prc": abs(item.get("rate")),
+                    "splyAmt": abs(item.get("amount")),
+                    "dcRt": abs(item.get("discount_percentage")),
+                    "dcAmt": abs(item.get("discount_amount")),
                     "taxTyCd": item_tax_details,
                     "taxblAmt": abs(round(item.get("net_amount"), 2)),
-                    "taxAmt": round((item.get("amount") - item.get("net_amount")), 2),
-                    "totAmt": item.get("amount"),
-                    "totDcAmt": item.get("discount_amount")
+                    "taxAmt": abs(round((item.get("amount") - item.get("net_amount")), 2)),
+                    "totAmt": abs(item.get("amount")),
+                    "totDcAmt": abs(item.get("discount_amount"))
                     # "itemExprDt":null
                 }
-        if not item_etims_data in sales_item_list:
-            sales_item_list.append(item_etims_data)
+        if not item_etims_data in pur_item_list:
+            pur_item_list.append(item_etims_data)
             
-    return sales_item_list
+    return pur_item_list
+
+def etims_stock_item_list(doc):
+    stock_item_list = []
+    for item in doc.items:
+        if item.custom_maintain_stock:
+            item_tax_details = get_tax_template_details(item.get("item_code"))
+            item_detail = frappe.db.get_all("Item", filters={"disabled": 0, "item_code": item.get("item_code")}, fields = ["*"])
+            
+            barcode = eTIMS.get_item_barcode(item.item_code, item.uom)
+            
+            item_etims_data = {
+                        "itemSeq": item.get("idx"),
+                        "itemCd": item_detail[0].get("custom_item_code"),
+                        "itemClsCd": item_detail[0].get("custom_item_classification_code"),
+                        "itemNm": item_detail[0].get("custom_item_name"),
+                        "bcd": barcode if barcode else "",
+                        "pkgUnitCd": item_detail[0].get("custom_packaging_unit_code"),
+                        "pkg": abs(item.get("qty")),
+                        "qtyUnitCd": item_detail[0].get("custom_quantity_unit_code"),
+                        "qty": abs(item.get("qty")),
+                        "prc": abs(item.get("rate")),
+                        "splyAmt": abs(item.get("amount")),
+                        "dcRt": abs(item.get("discount_percentage")),
+                        "dcAmt": abs(item.get("discount_amount")),
+                        "taxTyCd": item_tax_details,
+                        "taxblAmt": abs(round(item.get("net_amount"), 2)),
+                        "taxAmt": abs(round((item.get("amount") - item.get("net_amount")), 2)),
+                        "totAmt": abs(item.get("amount")),
+                        "totDcAmt": abs(round((item.get("discount_amount") * item.get("qty")), 2))
+                    }
+            if not item_etims_data in stock_item_list:
+                stock_item_list.append(item_etims_data)
+                
+    return stock_item_list
 
 def get_tax_template_details(item_code):
     item_doc = frappe.get_doc("Item", item_code)

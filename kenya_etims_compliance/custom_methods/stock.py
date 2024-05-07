@@ -34,18 +34,9 @@ def update_stock_to_etims(doc, method):
     item_count = 0
     request_date = doc.posting_date
     request_time = doc.posting_time
-    s_warehouse_id = ""
-    t_warehouse_id = ""
     
     date_str = eTIMS.strf_date_object(request_date)
     time_str = eTIMS.strf_time(request_time)
-
-    if doc.from_warehouse:
-        
-        s_warehouse_id = get_warehouse_branch(doc.from_warehouse)
-    if doc.to_warehouse:
-        
-        t_warehouse_id = get_warehouse_branch(doc.to_warehouse)
     
     for item in doc.items:
             item_count += 1
@@ -53,9 +44,9 @@ def update_stock_to_etims(doc, method):
     # if doc.custom_send_stock_info_to_tims:
     if doc.stock_entry_type == "Material Receipt":
         if doc.custom_is_import_stock == 1:
-            stockIOSaveReq(doc, date_str, item_count, "01", t_warehouse_id)
+            stockIOSaveReq(doc, date_str, item_count, "01", doc.custom_target_tax_branch_office)
         else:
-            stockIOSaveReq(doc, date_str, item_count, "06", t_warehouse_id)
+            stockIOSaveReq(doc, date_str, item_count, "06", doc.custom_target_tax_branch_office)
 
             
     if doc.stock_entry_type == "Material Transfer":
@@ -63,26 +54,30 @@ def update_stock_to_etims(doc, method):
         
         if is_inter_branch:
             if doc.custom_update_both_branches:
-                stockIOSaveReq(doc, date_str, item_count, "13", t_warehouse_id)
-                stockIOSaveReq(doc, date_str, item_count, "04", t_warehouse_id)
-            elif doc.custom_update_from_branch_only:
-                stockIOSaveReq(doc, date_str, item_count, "13", t_warehouse_id)
-            else:
-                stockIOSaveReq(doc, date_str, item_count, "04", t_warehouse_id)
+                stockIOSaveReq(doc, date_str, item_count, "13", doc.custom_source_tax_branch_office)
+               
+                stockIOSaveReq(doc, date_str, item_count, "04", doc.custom_target_tax_branch_office)
+                
+                
+            # elif doc.custom_update_from_branch_only:
+            #     stockIOSaveReq(doc, date_str, item_count, "13", t_warehouse_id)
+            # else:
+            #     stockIOSaveReq(doc, date_str, item_count, "04", t_warehouse_id)
         #get warehouse branch if intrbranch is true
         #logic fot transfer within branches
     
         
 def stockIOSaveReq(doc, date_str, item_count, sar_type, branch_id):    
     # headers = get_headers(branch_id)
-    headers = eTIMS.get_headers()
+    headers = get_headers(branch_id)
+   
     payload = {
-        "sarNo": get_etims_sar_no(doc),
+        "sarNo": get_etims_sar_no(doc, branch_id),
         "orgSarNo": 0,
         "regTyCd": "A",
-        "custTin": headers.get("tin"),
+        # "custTin": headers.get("tin"),
         # "custNm": doc.customer,
-        "custBhfId": branch_id,
+        # "custBhfId": branch_id,
         "ocrnDt": date_str,
         "totItemCnt": item_count,
         "totTaxblAmt": doc.custom_total_taxable_amount,
@@ -125,28 +120,39 @@ def stockIOSaveReq(doc, date_str, item_count, sar_type, branch_id):
     else:
         print(payload)
 
-def get_etims_sar_no(doc):
+def get_etims_sar_no(doc, branch_id):
+    print("&"*80)
+    print(branch_id)
     etims_sar_no = 1
-    try:
-        etims_sar_docs = frappe.get_last_doc("eTIMS Stock Release Number")
-        
-        new_sar_no = etims_sar_docs.get("sr_number") + 1
+    etims_sar_docs = frappe.db.get_all(
+                                        "eTIMS Stock Release Number", 
+                                        filters={"tax_branch_office": branch_id}, 
+                                        fields=["sr_number"],
+                                        order_by='sr_number desc',
+                                        page_length = 1
+                                    )
+    if etims_sar_docs:
+        new_sar_no = etims_sar_docs[0].get("sr_number") + 1
         
         new_doc = frappe.new_doc("eTIMS Stock Release Number") 
-        new_doc.reference_type = "Stock Entry"
+        new_doc.reference_type = doc.doctype
         new_doc.reference = doc.name
+        new_doc.tax_branch_office = branch_id
         new_doc.sr_number = new_sar_no
         # new_doc.orginal_sr_number = get_org_etims_sar_no(doc)
         new_doc.insert()
         frappe.db.commit()
 
         return new_sar_no
-    except:
+    
+    else:
         new_doc = frappe.new_doc("eTIMS Stock Release Number") 
-        new_doc.reference_type = "Stock Entry"
+        new_doc.reference_type = doc.doctype
         new_doc.reference = doc.name
+        new_doc.tax_branch_office = branch_id
         new_doc.sr_number = etims_sar_no 
-        # new_doc.orginal_sr_number = get_org_etims_sar_no(doc)
+        # new_doc.orginal_sr_number = eTIMS.get_org_etims_sar_no(doc)
+        
         new_doc.insert()
         frappe.db.commit()
 
@@ -213,10 +219,6 @@ def etims_stock_item_list(doc):
 					"splyAmt": item.get("basic_amount"),
 					"dcRt": 0.0,
 					"dcAmt": 0.0,
-					# "isrccCd":null,
-					# "isrccNm":null,
-					# "isrcRt":null,
-					# "isrcAmt":null,
                     "totDcAmt": 0.0,
 					"taxTyCd": item_tax_code,
 					"taxblAmt": round((item.get("amount") - item.get("custom_tax_amount")), 2),
@@ -241,8 +243,8 @@ def get_tax_template_details(item_code):
         return "D"
     
 def get_headers(branch_id):
-    header_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id}, fields=["*"])
-        
+    header_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id, "active":1}, fields=["pin", "branch_id", "communication_key"])
+    print(header_docs)
     if header_docs:
         headers = {
             "tin":header_docs[0].get("pin"),

@@ -6,7 +6,7 @@ def on_submit(doc, method):
     mod_user_name = eTIMS.get_name_of_user(doc.modified_by)
     reg_user_name = eTIMS.get_name_of_user(doc.owner)
     
-    try:
+    try: 
         for item in doc.items:
             if item.get("custom_maintain_stock") == 1:
                 stockMasterSaveReq(item, doc, reg_user_name, mod_user_name)
@@ -53,12 +53,6 @@ def stockMasterSaveReq(item, doc, regName, modName):
             save_stock_master(payload)	
         else:
             print("**Stock Master - Pur***")
-            print(payload)
-    if doc.doctype == "Stock Entry":
-        if doc.custom_send_stock_info_to_etims:
-            save_stock_master(payload)	
-        else:
-            print("**Stock Master - Stock***")
             print(payload)
         
 def save_stock_master(payload):
