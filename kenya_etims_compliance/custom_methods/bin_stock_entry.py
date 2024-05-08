@@ -11,26 +11,28 @@ def on_submit(doc, method):
             t_warehouse_id = doc.custom_target_tax_branch_office
             s_warehouse_id = doc.custom_source_tax_branch_office
             
-            if doc.stock_entry_type == "Material Receipt" and t_warehouse_id:
-                for item in doc.items:
-                    stockMasterSaveReq(item, doc, reg_user_name, mod_user_name, t_warehouse_id)
-                    item.custom_stock_master_updated = 1
-                                
-                    frappe.msgprint("Master Stock updated successfully")
+            if doc.stock_entry_type == "Material Receipt":
+                if t_warehouse_id:
+                    for item in doc.items:
+                        stockMasterSaveReq(item, doc, reg_user_name, mod_user_name, t_warehouse_id)
+                        item.custom_stock_master_updated = 1
+                                    
+                        frappe.msgprint("Master Stock updated successfully")
 
-            else:
-                frappe.throw("Missing Value For Warehouse Id")
+                else:
+                    frappe.throw("Missing Value For Warehouse Id")
                     
-            if doc.stock_entry_type == "Material Transfer" and t_warehouse_id and s_warehouse_id:
-                for item in doc.items:
-                    stockMasterSaveReq(item, doc, reg_user_name, mod_user_name, s_warehouse_id)
-                    stockMasterSaveReq(item, doc, reg_user_name, mod_user_name, t_warehouse_id)
-                    item.custom_stock_master_updated = 1
-                                
-                    frappe.msgprint("Master Stock updated successfully")
+            elif doc.stock_entry_type == "Material Transfer":
+                if t_warehouse_id and s_warehouse_id:
+                    for item in doc.items:
+                        stockMasterSaveReq(item, doc, reg_user_name, mod_user_name, s_warehouse_id)
+                        stockMasterSaveReq(item, doc, reg_user_name, mod_user_name, t_warehouse_id)
+                        item.custom_stock_master_updated = 1
+                                    
+                        frappe.msgprint("Master Stock updated successfully")
 
-            else:
-                frappe.throw("Missing Value For Warehouse Id")
+                else:
+                    frappe.throw("Missing Value For Warehouse Id")
         except:
             frappe.throw("Error saving Master Stock")        
     
@@ -48,7 +50,6 @@ def stockMasterSaveReq(item, doc, regName, modName, branch_id):
     
     quantity = get_bin_qty(item.get("item_code"), branch_id)
     
-    print(item.get("item_code"))
     payload = {
         "itemCd": item_code,
         "rsdQty": quantity, 
@@ -86,7 +87,7 @@ def save_stock_master(doc, payload, branch_id):
         
 def get_headers(branch_id):
     header_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id, "active":1}, fields=["pin", "branch_id", "communication_key"])
-    print(header_docs)
+
     if header_docs:
         headers = {
             "tin":header_docs[0].get("pin"),

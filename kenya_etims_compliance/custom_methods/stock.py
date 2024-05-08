@@ -54,10 +54,14 @@ def update_stock_to_etims(doc, method):
         
         if is_inter_branch:
             if doc.custom_update_both_branches:
-                stockIOSaveReq(doc, date_str, item_count, "13", doc.custom_source_tax_branch_office)
-               
-                stockIOSaveReq(doc, date_str, item_count, "04", doc.custom_target_tax_branch_office)
+                if not doc.custom_is_return:
+                    stockIOSaveReq(doc, date_str, item_count, "13", doc.custom_source_tax_branch_office)
                 
+                    stockIOSaveReq(doc, date_str, item_count, "04", doc.custom_target_tax_branch_office)
+                else:
+                    stockIOSaveReq(doc, date_str, item_count, "12", doc.custom_source_tax_branch_office)
+                
+                    stockIOSaveReq(doc, date_str, item_count, "03", doc.custom_target_tax_branch_office)
                 
             # elif doc.custom_update_from_branch_only:
             #     stockIOSaveReq(doc, date_str, item_count, "13", t_warehouse_id)
@@ -121,8 +125,6 @@ def stockIOSaveReq(doc, date_str, item_count, sar_type, branch_id):
         print(payload)
 
 def get_etims_sar_no(doc, branch_id):
-    print("&"*80)
-    print(branch_id)
     etims_sar_no = 1
     etims_sar_docs = frappe.db.get_all(
                                         "eTIMS Stock Release Number", 
@@ -244,7 +246,7 @@ def get_tax_template_details(item_code):
     
 def get_headers(branch_id):
     header_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id, "active":1}, fields=["pin", "branch_id", "communication_key"])
-    print(header_docs)
+
     if header_docs:
         headers = {
             "tin":header_docs[0].get("pin"),
