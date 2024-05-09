@@ -75,7 +75,7 @@
    "label": "Credentials"
   },
   {
-   "depends_on": "eval:!(doc.sales_control_unit_id)",
+   "depends_on": "eval:(doc.sales_control_unit_id)",
    "fieldname": "communication_key",
    "fieldtype": "Data",
    "label": "Communication Key",
@@ -162,7 +162,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-05-07 20:11:01.506044",
+ "modified": "2024-05-09 01:59:54.466060",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "TIS Device Initialization",

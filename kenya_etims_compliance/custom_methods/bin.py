@@ -32,7 +32,6 @@ def stockMasterSaveReq(item, doc, regName, modName):
     
     quantity = get_bin_qty(item.get("item_code"))
     
-    print(item.get("item_code"))
     payload = {
         "itemCd": item_code,
         "rsdQty": quantity, 

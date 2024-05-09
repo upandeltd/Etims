@@ -10,7 +10,7 @@ def bhfCustSaveReq(doc_name):
 
     customer = {
         "custNo": item.get("custom_customer_number"),
-        "custTin": item.get("custom_customer_pin"),
+        "custTin": item.get("tax_id"),
         "custNm": item.get("custom_customer_name"),
         "adrs": item.get("custom_address"),
         "telNo": item.get("custom_contact"),
@@ -35,6 +35,7 @@ def bhfCustSaveReq(doc_name):
         response_json = response.json()
 
         if not response_json.get("resultCd") == '000':
+            print(response_json.get("resultMsg"))
             return {"Error":response_json.get("resultMsg")}
 
         item.custom_is_registered = 1

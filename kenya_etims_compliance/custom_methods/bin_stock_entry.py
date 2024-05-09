@@ -3,7 +3,7 @@ import frappe
 from kenya_etims_compliance.utils.etims_utils import eTIMS
 
 def on_submit(doc, method):
-    if not doc.custom_send_stock_info_to_etims: #*******Change condition
+    if doc.custom_send_stock_info_to_etims: #*******Change condition
         mod_user_name = eTIMS.get_name_of_user(doc.modified_by)
         reg_user_name = eTIMS.get_name_of_user(doc.owner)
         

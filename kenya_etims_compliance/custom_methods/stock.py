@@ -54,21 +54,17 @@ def update_stock_to_etims(doc, method):
         
         if is_inter_branch:
             if doc.custom_update_both_branches:
-                if not doc.custom_is_return:
-                    stockIOSaveReq(doc, date_str, item_count, "13", doc.custom_source_tax_branch_office)
+                stockIOSaveReq(doc, date_str, item_count, "13", doc.custom_source_tax_branch_office)
                 
-                    stockIOSaveReq(doc, date_str, item_count, "04", doc.custom_target_tax_branch_office)
-                else:
-                    stockIOSaveReq(doc, date_str, item_count, "12", doc.custom_source_tax_branch_office)
+                stockIOSaveReq(doc, date_str, item_count, "04", doc.custom_target_tax_branch_office)
+                # if not doc.custom_is_return:
+                #     stockIOSaveReq(doc, date_str, item_count, "13", doc.custom_source_tax_branch_office)
                 
-                    stockIOSaveReq(doc, date_str, item_count, "03", doc.custom_target_tax_branch_office)
+                #     stockIOSaveReq(doc, date_str, item_count, "04", doc.custom_target_tax_branch_office)
+                # else:
+                #     stockIOSaveReq(doc, date_str, item_count, "12", doc.custom_source_tax_branch_office)
                 
-            # elif doc.custom_update_from_branch_only:
-            #     stockIOSaveReq(doc, date_str, item_count, "13", t_warehouse_id)
-            # else:
-            #     stockIOSaveReq(doc, date_str, item_count, "04", t_warehouse_id)
-        #get warehouse branch if intrbranch is true
-        #logic fot transfer within branches
+                #     stockIOSaveReq(doc, date_str, item_count, "03", doc.custom_target_tax_branch_office)
     
         
 def stockIOSaveReq(doc, date_str, item_count, sar_type, branch_id):    
@@ -81,13 +77,13 @@ def stockIOSaveReq(doc, date_str, item_count, sar_type, branch_id):
         "regTyCd": "A",
         # "custTin": headers.get("tin"),
         # "custNm": doc.customer,
-        # "custBhfId": branch_id,
+        "custBhfId": "01",
         "ocrnDt": date_str,
         "totItemCnt": item_count,
         "totTaxblAmt": doc.custom_total_taxable_amount,
         "totTaxAmt": doc.custom_total_tax_amount,
         "totAmt": round(doc.total_incoming_value, 2),
-        "remark": doc.remarks,
+        "remark": doc.remarks if doc.remarks else '',
         "regrId": doc.owner,
         "regrNm": doc.owner,
         "modrId": doc.modified_by,
@@ -98,30 +94,30 @@ def stockIOSaveReq(doc, date_str, item_count, sar_type, branch_id):
     
         
     if doc.custom_send_stock_info_to_etims == 1:
-        if not doc.custom_updated_in_etims == 1:
-            try:
-                response = requests.request(
-                            "POST", 
-                            eTIMS.tims_base_url() + 'insertStockIO',
-                            json = payload, 
-                            headers=headers
-                        )
+        try:
+            response = requests.request(
+                        "POST", 
+                        eTIMS.tims_base_url() + 'insertStockIO',
+                        json = payload, 
+                        headers=headers
+                    )
+        
+            response_json = response.json()
+
+            if not response_json.get("resultCd") == '000':
+                print(response_json.get("resultMsg"))
+                # eTIMS.log_errors("Stock Entry", response_json.get("resultMsg"))
+                frappe.throw(response_json.get("resultMsg"))
+                
             
-                response_json = response.json()
+            doc.custom_updated_in_etims = 1   
+            frappe.msgprint(response_json.get("resultMsg"))
 
-                if not response_json.get("resultCd") == '000':
-                    print(response_json.get("resultMsg"))
-                    # eTIMS.log_errors("Stock Entry", response_json.get("resultMsg"))
-                    frappe.throw(response_json.get("resultMsg"))
-                   
-                
-                doc.custom_updated_in_etims = 1   
-                frappe.msgprint(response_json.get("resultMsg"))
-
-            except:
-                
-                frappe.throw("Error: Oops Bad Request!")
+        except:
+            
+            frappe.throw("Error: Oops Bad Request!")
     else:
+        print(branch_id)
         print(payload)
 
 def get_etims_sar_no(doc, branch_id):

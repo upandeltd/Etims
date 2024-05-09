@@ -10,9 +10,9 @@ class eTIMSStockMovement(Document):
     
     def after_insert(self):
         if not self.stock_updated == 1:
-            self.create_stock_trns_entry()
-            # print(")"*70)
-            # print(response)
+            # self.create_stock_trns_entry()
+            print(")"*70)
+            print(self.stock_updated)
             # if response == True:
             #     print("True")
             #     self.stock_updated = 1
