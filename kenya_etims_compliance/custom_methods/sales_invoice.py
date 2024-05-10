@@ -1,4 +1,4 @@
-import requests, pyqrcode
+import requests, pyqrcode, segno
 from datetime import datetime, timedelta, time
 
 import frappe
@@ -565,7 +565,34 @@ def create_sales_receipt(data, doc_name):
     
     frappe.db.commit()
     
-def create_qr_code(pin, branch_id, rcpt_signature):
+# def create_qr_codedd(pin, branch_id, rcpt_signature):
+#     header_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id, "active":1}, fields=["api_mode"])
+
+#     if rcpt_signature:
+#         if header_docs:
+#             settings_doc = header_docs[0]
+            
+#             url = "https://etims-sbx.kra.go.ke/common/link/etims/receipt/indexEtimsReceiptData?Data=" + pin+ branch_id + rcpt_signature
+#             file_name = rcpt_signature + ".png"
+            
+#             file_path = frappe.get_site_path('private', 'files', file_name)
+            
+#             if settings_doc.get("api_mode") == "Production":
+#                 url = "https://etims.kra.go.ke/common/link/etims/receipt/indexEtimsReceiptData?Data=" + pin+ branch_id + rcpt_signature
+#             else:
+#                 url = "https://etims-sbx.kra.go.ke/common/link/etims/receipt/indexEtimsReceiptData?Data=" + pin+ branch_id + rcpt_signature
+                
+#             try:
+#                 big_code = pyqrcode.create(url, error='L', version=27, mode='binary')
+#                 big_code.png(file_path, scale=10, module_color=[0, 0, 0, 128], background=[255, 255, 255])
+#                 # big_code.show()
+                
+#                 return file_name
+                
+#             except:
+#                 frappe.throw("QR Code Not Generated!")
+
+def create_qr_code(pin, branch_id, rcpt_signature):     
     header_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id, "active":1}, fields=["api_mode"])
 
     if rcpt_signature:
@@ -582,16 +609,18 @@ def create_qr_code(pin, branch_id, rcpt_signature):
             else:
                 url = "https://etims-sbx.kra.go.ke/common/link/etims/receipt/indexEtimsReceiptData?Data=" + pin+ branch_id + rcpt_signature
                 
+            
+            # print(qrcode)
             try:
-                big_code = pyqrcode.create(url, error='L', version=27, mode='binary')
-                big_code.png(file_path, scale=10, module_color=[0, 0, 0, 128], background=[255, 255, 255])
-                # big_code.show()
+                qrcode = segno.make_qr(url)
+                qrcode.save(file_path, scale=5)
                 
                 return file_name
                 
             except:
                 frappe.throw("QR Code Not Generated!")
-
+            
+    
 def create_attachment(file_name, inv_name):
     new_attachment = frappe.new_doc("File")
     new_attachment.file_name = file_name
@@ -625,4 +654,3 @@ def sales_return_information(doc):
             return_status = "null"
         
     return return_status
-        
