@@ -31,50 +31,51 @@ def insert_tax_rate_and_amount(doc, method):
         doc.custom_total_taxable_amount = total_taxable_amount
 
 def update_stock_to_etims(doc, method):
-    item_count = 0
-    request_date = doc.posting_date
-    request_time = doc.posting_time
-    s_warehouse_id = ""
-    t_warehouse_id = ""
-    
-    mod_user_name = eTIMS.get_name_of_user(doc.modified_by)
-    reg_user_name = eTIMS.get_name_of_user(doc.owner)
-    
-    date_str = eTIMS.strf_date_object(request_date)
-    time_str = eTIMS.strf_time(request_time)
-
-    if doc.from_warehouse:
+    if doc.custom_send_stock_info_to_etims == 1:
+        item_count = 0
+        request_date = doc.posting_date
+        request_time = doc.posting_time
+        s_warehouse_id = ""
+        t_warehouse_id = ""
         
-        s_warehouse_id = get_warehouse_branch(doc.from_warehouse)
-    if doc.to_warehouse:
+        mod_user_name = eTIMS.get_name_of_user(doc.modified_by)
+        reg_user_name = eTIMS.get_name_of_user(doc.owner)
         
-        t_warehouse_id = get_warehouse_branch(doc.to_warehouse)
-    
-    for item in doc.items:
-            item_count += 1
-    
-    # if doc.custom_send_stock_info_to_tims:
-    if doc.stock_entry_type == "Material Receipt":
-        if doc.custom_is_import_stock == 1:
-            stockIOSaveReq(doc, date_str, item_count, "01", t_warehouse_id, reg_user_name, mod_user_name)
-        else:
-            stockIOSaveReq(doc, date_str, item_count, "06", t_warehouse_id, reg_user_name, mod_user_name)
+        date_str = eTIMS.strf_date_object(request_date)
+        time_str = eTIMS.strf_time(request_time)
 
+        if doc.from_warehouse:
             
-    if doc.stock_entry_type == "Material Transfer":
-        is_inter_branch = check_if_interbranch(doc)
+            s_warehouse_id = get_warehouse_branch(doc.from_warehouse)
+        if doc.to_warehouse:
+            
+            t_warehouse_id = get_warehouse_branch(doc.to_warehouse)
         
-        if is_inter_branch:
-            if doc.custom_update_both_branches:##################################################
-                stockIOSaveReq(doc, date_str, item_count, "13", t_warehouse_id, reg_user_name, mod_user_name)
-                stockIOSaveReq(doc, date_str, item_count, "04", t_warehouse_id, reg_user_name, mod_user_name)
-            elif doc.custom_update_from_branch_only:
-                stockIOSaveReq(doc, date_str, item_count, "13", t_warehouse_id, reg_user_name, mod_user_name)
+        for item in doc.items:
+                item_count += 1
+        
+        # if doc.custom_send_stock_info_to_tims:
+        if doc.stock_entry_type == "Material Receipt":
+            if doc.custom_is_import_stock == 1:
+                stockIOSaveReq(doc, date_str, item_count, "01", t_warehouse_id, reg_user_name, mod_user_name)
             else:
-                stockIOSaveReq(doc, date_str, item_count, "04", t_warehouse_id, reg_user_name, mod_user_name)
-        #get warehouse branch if intrbranch is true
-        #logic fot transfer within branches
-    
+                stockIOSaveReq(doc, date_str, item_count, "06", t_warehouse_id, reg_user_name, mod_user_name)
+
+                
+        if doc.stock_entry_type == "Material Transfer":
+            is_inter_branch = check_if_interbranch(doc)
+            
+            if is_inter_branch:
+                if doc.custom_update_both_branches:##################################################
+                    stockIOSaveReq(doc, date_str, item_count, "13", t_warehouse_id, reg_user_name, mod_user_name)
+                    stockIOSaveReq(doc, date_str, item_count, "04", t_warehouse_id, reg_user_name, mod_user_name)
+                elif doc.custom_update_from_branch_only:
+                    stockIOSaveReq(doc, date_str, item_count, "13", t_warehouse_id, reg_user_name, mod_user_name)
+                else:
+                    stockIOSaveReq(doc, date_str, item_count, "04", t_warehouse_id, reg_user_name, mod_user_name)
+            #get warehouse branch if intrbranch is true
+            #logic fot transfer within branches
+        
         
 def stockIOSaveReq(doc, date_str, item_count, sar_type, branch_id, reg_user_name, mod_user_name):    
     # headers = get_headers(branch_id)

@@ -136,174 +136,175 @@ def trnsSalesSaveWrReq(doc, method):
     '''
     Method that collects sales information and updates it to tims server
     '''
-    tax_code_list = []
-    
-    headers = eTIMS.get_headers()
-    mod_user_name = eTIMS.get_name_of_user(doc.modified_by)
-    reg_user_name = eTIMS.get_name_of_user(doc.owner)
-    
-    request_date_and_time = doc.creation
-   
-    conc_datetime_str = eTIMS.strf_datetime_format(request_date_and_time)
-       
-    now = datetime.now()
-    date_time_str = now.strftime("%Y%m%d%H%M%S")
-    
-    request_date = doc.posting_date
-    date_str = eTIMS.strf_date_object(request_date)
-        
-    count = doc.custom_item_count   
-                
-    payload = {
-        "trdInvcNo": doc.name,
-        "invcNo": doc.custom_invoice_number,
-        "orgInvcNo": doc.custom_original_invoice_number,
-        "custTin": doc.tax_id,
-        "custNm": doc.customer,
-        "salesTyCd": doc.custom_sales_type_code,
-        "rcptTyCd": doc.custom_receipt_type_code,
-        "pmtTyCd": doc.custom_payment_type_code,
-        "salesSttsCd": doc.custom_invoice_status_code,
-        "cfmDt": conc_datetime_str,
-        "salesDt": date_str,
-        "stockRlsDt": date_time_str,
-        "totItemCnt": count,
-        "totTaxblAmt": abs(doc.custom_total_taxable_amount),
-        "totTaxAmt": abs(doc.base_total_taxes_and_charges),
-        "totAmt": abs(doc.grand_total),
-        "prchrAcptcYn":"N",
-        "remark": doc.remarks,
-        "regrId": doc.owner,
-        "regrNm": reg_user_name,
-        "modrId": doc.modified_by,
-        "modrNm": mod_user_name,
-        "receipt":{
-            "custTin": doc.tax_id,
-            # "custMblNo":null,
-            "rcptPbctDt": date_time_str,
-            # "trdeNm":null,
-            # "adrs":null,
-            # "topMsg":null,
-            # "btmMsg":null,
-            "prchrAcptcYn":"N"
-            },
-        "itemList": etims_sale_item_list(doc)
-    }
-    
-    for tax_item in doc.taxes:
-        if not tax_item.get("custom_code") in tax_code_list:
-            tax_code_list.append(tax_item.get("custom_code")) 
-        
-        if "A" in tax_code_list:
-            if tax_item.custom_code == "A":
-                payload["taxblAmtA"] = abs(round(tax_item.get("custom_total_taxable_amount"), 2))
-                payload["taxRtA"] =  abs(get_tax_account_rate(tax_item.get("account_head")))
-                payload["taxAmtA"] = abs(tax_item.get("tax_amount_after_discount_amount"))
-        else:
-            payload["taxblAmtA"] = 0
-            payload["taxRtA"] =  0
-            payload["taxAmtA"] = 0
-        
-        if "B" in tax_code_list:
-            if tax_item.custom_code == "B":
-                payload["taxblAmtB"] = abs(round(tax_item.get("custom_total_taxable_amount"), 2))
-                payload["taxRtB"] =  abs(get_tax_account_rate(tax_item.get("account_head")))
-                payload["taxAmtB"] = abs(tax_item.get("tax_amount_after_discount_amount"))
-        else:
-            payload["taxblAmtB"] = 0
-            payload["taxRtB"] =  0
-            payload["taxAmtB"] = 0
-            
-        if "C" in tax_code_list:
-            if tax_item.custom_code == "C":
-                payload["taxblAmtC"] = abs(round(tax_item.get("custom_total_taxable_amount"), 2))
-                payload["taxRtC"] =  abs(get_tax_account_rate(tax_item.get("account_head")))
-                payload["taxAmtC"] = abs(tax_item.get("tax_amount_after_discount_amount"))
-        else:
-            payload["taxblAmtC"] = 0
-            payload["taxRtC"] =  0
-            payload["taxAmtC"] = 0
-            
-        if "D" in tax_code_list:
-            if tax_item.custom_code == "D":
-                payload["taxblAmtD"] = abs(round(tax_item.get("custom_total_taxable_amount"), 2))
-                payload["taxRtD"] =  abs(get_tax_account_rate(tax_item.get("account_head")))
-                payload["taxAmtD"] = abs(tax_item.get("tax_amount_after_discount_amount"))
-        else:
-            payload["taxblAmtD"] = 0
-            payload["taxRtD"] =  0
-            payload["taxAmtD"] = 0
-            
-        if "E" in tax_code_list:
-            if tax_item.custom_code == "E":
-                payload["taxblAmtE"] = abs(round(tax_item.get("custom_total_taxable_amount"), 2))
-                payload["taxRtE"] =  abs(get_tax_account_rate(tax_item.get("account_head")))
-                payload["taxAmtE"] = abs(tax_item.get("tax_amount_after_discount_amount"))
-        else:
-            payload["taxblAmtE"] = 0
-            payload["taxRtE"] =  0
-            payload["taxAmtE"] = 0
-                
-    
-    if doc.is_return == 1:
-        return_status = sales_return_information(doc)
-
-        if return_status == "partial":
-            payload["rfdDt"] = date_time_str
-            payload["rfdRsnCd"] = doc.custom_credit_note_reason_code
-        elif return_status == "full":
-            payload["cnclReqDt"] = conc_datetime_str
-            payload["cnclDt"] = conc_datetime_str
-            payload["rfdDt"] = date_time_str
-            payload["rfdRsnCd"] = doc.custom_credit_note_reason_code
-        elif return_status == "null":
-            frappe.throw("Invalid, return amount is greater than original amount!")
-    
     if doc.custom_update_invoice_in_tims:
-        try:
-            response = requests.request(
-                "POST", 
-                eTIMS.tims_base_url() + 'saveTrnsSalesOsdc', 
-                json = payload, 
-                headers=headers)
-            response_json = response.json()
-
-            if not response_json.get("resultCd") == '000':
-                print(response_json.get("resultMsg"))
-                frappe.throw(response_json.get("resultMsg"))
-                            
-            data = response_json.get("data")
-            control_unit_date_time = eTIMS.strp_datetime_object(data.get("sdcDateTime"))
-            control_unit_date = eTIMS.strp_date_object(data.get("sdcDateTime")[0:8])
-            control_unit_time = eTIMS.strp_time_object(data.get("sdcDateTime")[8:14])
+        tax_code_list = []
+        
+        headers = eTIMS.get_headers()
+        mod_user_name = eTIMS.get_name_of_user(doc.modified_by)
+        reg_user_name = eTIMS.get_name_of_user(doc.owner)
+        
+        request_date_and_time = doc.creation
+    
+        conc_datetime_str = eTIMS.strf_datetime_format(request_date_and_time)
+        
+        now = datetime.now()
+        date_time_str = now.strftime("%Y%m%d%H%M%S")
+        
+        request_date = doc.posting_date
+        date_str = eTIMS.strf_date_object(request_date)
             
-            doc.custom_current_receipt_number = data.get("curRcptNo")
-            doc.custom_total_receipt_number = data.get("totRcptNo")
-            doc.custom_internal_data = data.get("intrlData")
-            doc.custom_receipt_signature = data.get("rcptSign")
-            doc.custom_control_unit_date_time = control_unit_date_time
-            doc.custom_control_unit_date = control_unit_date
-            doc.custom_control_unit_time = control_unit_time
+        count = doc.custom_item_count   
+                    
+        payload = {
+            "trdInvcNo": doc.name,
+            "invcNo": doc.custom_invoice_number,
+            "orgInvcNo": doc.custom_original_invoice_number,
+            "custTin": doc.tax_id,
+            "custNm": doc.customer,
+            "salesTyCd": doc.custom_sales_type_code,
+            "rcptTyCd": doc.custom_receipt_type_code,
+            "pmtTyCd": doc.custom_payment_type_code,
+            "salesSttsCd": doc.custom_invoice_status_code,
+            "cfmDt": conc_datetime_str,
+            "salesDt": date_str,
+            "stockRlsDt": date_time_str,
+            "totItemCnt": count,
+            "totTaxblAmt": abs(doc.custom_total_taxable_amount),
+            "totTaxAmt": abs(doc.base_total_taxes_and_charges),
+            "totAmt": abs(doc.grand_total),
+            "prchrAcptcYn":"N",
+            "remark": doc.remarks,
+            "regrId": doc.owner,
+            "regrNm": reg_user_name,
+            "modrId": doc.modified_by,
+            "modrNm": mod_user_name,
+            "receipt":{
+                "custTin": doc.tax_id,
+                # "custMblNo":null,
+                "rcptPbctDt": date_time_str,
+                # "trdeNm":null,
+                # "adrs":null,
+                # "topMsg":null,
+                # "btmMsg":null,
+                "prchrAcptcYn":"N"
+                },
+            "itemList": etims_sale_item_list(doc)
+        }
+        
+        for tax_item in doc.taxes:
+            if not tax_item.get("custom_code") in tax_code_list:
+                tax_code_list.append(tax_item.get("custom_code")) 
             
-            file_name = create_qr_code(headers.get("tin"), headers.get("bhfId"), data.get("rcptSign"))
+            if "A" in tax_code_list:
+                if tax_item.custom_code == "A":
+                    payload["taxblAmtA"] = abs(round(tax_item.get("custom_total_taxable_amount"), 2))
+                    payload["taxRtA"] =  abs(get_tax_account_rate(tax_item.get("account_head")))
+                    payload["taxAmtA"] = abs(tax_item.get("tax_amount_after_discount_amount"))
+            else:
+                payload["taxblAmtA"] = 0
+                payload["taxRtA"] =  0
+                payload["taxAmtA"] = 0
             
-            attachment_url = create_attachment(file_name, doc.name)
-
-            doc.custom_receipt_qr_code = attachment_url
-            
-            create_sales_receipt(data, doc.name, doc.custom_tax_branch_office)
+            if "B" in tax_code_list:
+                if tax_item.custom_code == "B":
+                    payload["taxblAmtB"] = abs(round(tax_item.get("custom_total_taxable_amount"), 2))
+                    payload["taxRtB"] =  abs(get_tax_account_rate(tax_item.get("account_head")))
+                    payload["taxAmtB"] = abs(tax_item.get("tax_amount_after_discount_amount"))
+            else:
+                payload["taxblAmtB"] = 0
+                payload["taxRtB"] =  0
+                payload["taxAmtB"] = 0
                 
-            stockIOSaveReq(doc, date_str, count, reg_user_name, mod_user_name)
-            doc.custom_update_sales_to_etims = 1
-            
-            frappe.msgprint(response_json.get("resultMsg"))
+            if "C" in tax_code_list:
+                if tax_item.custom_code == "C":
+                    payload["taxblAmtC"] = abs(round(tax_item.get("custom_total_taxable_amount"), 2))
+                    payload["taxRtC"] =  abs(get_tax_account_rate(tax_item.get("account_head")))
+                    payload["taxAmtC"] = abs(tax_item.get("tax_amount_after_discount_amount"))
+            else:
+                payload["taxblAmtC"] = 0
+                payload["taxRtC"] =  0
+                payload["taxAmtC"] = 0
+                
+            if "D" in tax_code_list:
+                if tax_item.custom_code == "D":
+                    payload["taxblAmtD"] = abs(round(tax_item.get("custom_total_taxable_amount"), 2))
+                    payload["taxRtD"] =  abs(get_tax_account_rate(tax_item.get("account_head")))
+                    payload["taxAmtD"] = abs(tax_item.get("tax_amount_after_discount_amount"))
+            else:
+                payload["taxblAmtD"] = 0
+                payload["taxRtD"] =  0
+                payload["taxAmtD"] = 0
+                
+            if "E" in tax_code_list:
+                if tax_item.custom_code == "E":
+                    payload["taxblAmtE"] = abs(round(tax_item.get("custom_total_taxable_amount"), 2))
+                    payload["taxRtE"] =  abs(get_tax_account_rate(tax_item.get("account_head")))
+                    payload["taxAmtE"] = abs(tax_item.get("tax_amount_after_discount_amount"))
+            else:
+                payload["taxblAmtE"] = 0
+                payload["taxRtE"] =  0
+                payload["taxAmtE"] = 0
+                    
+        
+        if doc.is_return == 1:
+            return_status = sales_return_information(doc)
 
-        except:
-            frappe.throw("Oops Bad Request!")
-    else:
-        print(payload)
-        stockIOSaveReq(doc, date_str, count, reg_user_name, mod_user_name)
-        return
+            if return_status == "partial":
+                payload["rfdDt"] = date_time_str
+                payload["rfdRsnCd"] = doc.custom_credit_note_reason_code
+            elif return_status == "full":
+                payload["cnclReqDt"] = conc_datetime_str
+                payload["cnclDt"] = conc_datetime_str
+                payload["rfdDt"] = date_time_str
+                payload["rfdRsnCd"] = doc.custom_credit_note_reason_code
+            elif return_status == "null":
+                frappe.throw("Invalid, return amount is greater than original amount!")
+        
+        if doc.custom_update_invoice_in_tims:
+            try:
+                response = requests.request(
+                    "POST", 
+                    eTIMS.tims_base_url() + 'saveTrnsSalesOsdc', 
+                    json = payload, 
+                    headers=headers)
+                response_json = response.json()
+
+                if not response_json.get("resultCd") == '000':
+                    print(response_json.get("resultMsg"))
+                    frappe.throw(response_json.get("resultMsg"))
+                                
+                data = response_json.get("data")
+                control_unit_date_time = eTIMS.strp_datetime_object(data.get("sdcDateTime"))
+                control_unit_date = eTIMS.strp_date_object(data.get("sdcDateTime")[0:8])
+                control_unit_time = eTIMS.strp_time_object(data.get("sdcDateTime")[8:14])
+                
+                doc.custom_current_receipt_number = data.get("curRcptNo")
+                doc.custom_total_receipt_number = data.get("totRcptNo")
+                doc.custom_internal_data = data.get("intrlData")
+                doc.custom_receipt_signature = data.get("rcptSign")
+                doc.custom_control_unit_date_time = control_unit_date_time
+                doc.custom_control_unit_date = control_unit_date
+                doc.custom_control_unit_time = control_unit_time
+                
+                file_name = create_qr_code(headers.get("tin"), headers.get("bhfId"), data.get("rcptSign"))
+                
+                attachment_url = create_attachment(file_name, doc.name)
+
+                doc.custom_receipt_qr_code = attachment_url
+                
+                create_sales_receipt(data, doc.name, doc.custom_tax_branch_office)
+                    
+                stockIOSaveReq(doc, date_str, count, reg_user_name, mod_user_name)
+                doc.custom_update_sales_to_etims = 1
+                
+                frappe.msgprint(response_json.get("resultMsg"))
+
+            except:
+                frappe.throw("Oops Bad Request!")
+        else:
+            print(payload)
+            stockIOSaveReq(doc, date_str, count, reg_user_name, mod_user_name)
+            return
         
 def stockIOSaveReq(doc, date_str, item_count, reg_user_name, mod_user_name):    
     headers = eTIMS.get_headers()
