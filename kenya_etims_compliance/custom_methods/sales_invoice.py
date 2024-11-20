@@ -1,4 +1,4 @@
-import requests, pyqrcode, segno
+import requests, segno  #pyqrcode
 from datetime import datetime, timedelta, time
 
 import frappe
