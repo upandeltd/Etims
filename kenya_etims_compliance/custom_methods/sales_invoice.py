@@ -436,7 +436,7 @@ def get_last_inv_number(doc, branch_id):
 
     try:
         last_inv = frappe.db.get_all(doc.doctype,
-                                        filters = {'name': ['!=', doc.name], "custom_tax_branch_office": branch_id},
+                                        filters = {'name': ['!=', doc.name], 'custom_update_invoice_in_tims': 1, "custom_tax_branch_office": branch_id},
                                         fields=["custom_invoice_number"],
                                         order_by='custom_invoice_number desc',
                                         page_length = 1
