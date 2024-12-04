@@ -133,126 +133,127 @@ def trnsSalesSaveWrReq(doc, method):
     '''
     Method that collects sales information and updates it to tims server
     '''
-    tax_code_list = []
-    
-    headers = eTIMS.get_headers()
-    
-    request_date_and_time = doc.creation
-   
-    conc_datetime_str = eTIMS.strf_datetime_format(request_date_and_time)
-       
-    now = datetime.now()
-    date_time_str = now.strftime("%Y%m%d%H%M%S")
-    
-    request_date = doc.posting_date
-    date_str = eTIMS.strf_date_object(request_date)
+    if doc.custom_update_invoice_in_tims:
+        tax_code_list = []
         
-    count = doc.custom_item_count   
-                
-    payload = {
-        "trdInvcNo": doc.name,
-        "invcNo": doc.custom_invoice_number,
-        "orgInvcNo": doc.custom_original_invoice_number,
-        "custTin": doc.tax_id,
-        "custNm": doc.customer,
-        "salesTyCd": doc.custom_sales_type_code,
-        "rcptTyCd": doc.custom_receipt_type_code,
-        "pmtTyCd": doc.custom_payment_type_code,
-        "salesSttsCd": doc.custom_invoice_status_code,
-        "cfmDt": conc_datetime_str,
-        "salesDt": date_str,
-        "stockRlsDt": date_time_str,
-        "totItemCnt": count,
-        "totTaxblAmt": abs(doc.custom_total_taxable_amount),
-        "totTaxAmt": abs(doc.base_total_taxes_and_charges),
-        "totAmt": abs(doc.grand_total),
-        "prchrAcptcYn":"N",
-        "remark": doc.remarks,
-        "regrId": doc.owner,
-        "regrNm": doc.owner,
-        "modrId": doc.modified_by,
-        "modrNm": doc.modified_by,
-        "receipt":{
+        headers = eTIMS.get_headers()
+        
+        request_date_and_time = doc.creation
+    
+        conc_datetime_str = eTIMS.strf_datetime_format(request_date_and_time)
+        
+        now = datetime.now()
+        date_time_str = now.strftime("%Y%m%d%H%M%S")
+        
+        request_date = doc.posting_date
+        date_str = eTIMS.strf_date_object(request_date)
+            
+        count = doc.custom_item_count   
+                    
+        payload = {
+            "trdInvcNo": doc.name,
+            "invcNo": doc.custom_invoice_number,
+            "orgInvcNo": doc.custom_original_invoice_number,
             "custTin": doc.tax_id,
-            # "custMblNo":null,
-            "rcptPbctDt": date_time_str,
-            # "trdeNm":null,
-            # "adrs":null,
-            # "topMsg":null,
-            # "btmMsg":null,
-            "prchrAcptcYn":"N"
-            },
-        "itemList": etims_sale_item_list_sales(doc)
-    }
-    
-    for tax_item in doc.taxes:
-        if not tax_item.get("custom_code") in tax_code_list:
-            tax_code_list.append(tax_item.get("custom_code")) 
+            "custNm": doc.customer,
+            "salesTyCd": doc.custom_sales_type_code,
+            "rcptTyCd": doc.custom_receipt_type_code,
+            "pmtTyCd": doc.custom_payment_type_code,
+            "salesSttsCd": doc.custom_invoice_status_code,
+            "cfmDt": conc_datetime_str,
+            "salesDt": date_str,
+            "stockRlsDt": date_time_str,
+            "totItemCnt": count,
+            "totTaxblAmt": abs(doc.custom_total_taxable_amount),
+            "totTaxAmt": abs(doc.base_total_taxes_and_charges),
+            "totAmt": abs(doc.grand_total),
+            "prchrAcptcYn":"N",
+            "remark": doc.remarks,
+            "regrId": doc.owner,
+            "regrNm": doc.owner,
+            "modrId": doc.modified_by,
+            "modrNm": doc.modified_by,
+            "receipt":{
+                "custTin": doc.tax_id,
+                # "custMblNo":null,
+                "rcptPbctDt": date_time_str,
+                # "trdeNm":null,
+                # "adrs":null,
+                # "topMsg":null,
+                # "btmMsg":null,
+                "prchrAcptcYn":"N"
+                },
+            "itemList": etims_sale_item_list_sales(doc)
+        }
         
-        if "A" in tax_code_list:
-            if tax_item.custom_code == "A":
-                payload["taxblAmtA"] = abs(round(tax_item.get("custom_total_taxable_amount"), 2))
-                payload["taxRtA"] =  abs(get_tax_account_rate(tax_item.get("account_head")))
-                payload["taxAmtA"] = abs(tax_item.get("tax_amount_after_discount_amount"))
-        else:
-            payload["taxblAmtA"] = 0
-            payload["taxRtA"] =  0
-            payload["taxAmtA"] = 0
-        
-        if "B" in tax_code_list:
-            if tax_item.custom_code == "B":
-                payload["taxblAmtB"] = abs(round(tax_item.get("custom_total_taxable_amount"), 2))
-                payload["taxRtB"] =  abs(get_tax_account_rate(tax_item.get("account_head")))
-                payload["taxAmtB"] = abs(tax_item.get("tax_amount_after_discount_amount"))
-        else:
-            payload["taxblAmtB"] = 0
-            payload["taxRtB"] =  0
-            payload["taxAmtB"] = 0
+        for tax_item in doc.taxes:
+            if not tax_item.get("custom_code") in tax_code_list:
+                tax_code_list.append(tax_item.get("custom_code")) 
             
-        if "C" in tax_code_list:
-            if tax_item.custom_code == "C":
-                payload["taxblAmtC"] = abs(round(tax_item.get("custom_total_taxable_amount"), 2))
-                payload["taxRtC"] =  abs(get_tax_account_rate(tax_item.get("account_head")))
-                payload["taxAmtC"] = abs(tax_item.get("tax_amount_after_discount_amount"))
-        else:
-            payload["taxblAmtC"] = 0
-            payload["taxRtC"] =  0
-            payload["taxAmtC"] = 0
+            if "A" in tax_code_list:
+                if tax_item.custom_code == "A":
+                    payload["taxblAmtA"] = abs(round(tax_item.get("custom_total_taxable_amount"), 2))
+                    payload["taxRtA"] =  abs(get_tax_account_rate(tax_item.get("account_head")))
+                    payload["taxAmtA"] = abs(tax_item.get("tax_amount_after_discount_amount"))
+            else:
+                payload["taxblAmtA"] = 0
+                payload["taxRtA"] =  0
+                payload["taxAmtA"] = 0
             
-        if "D" in tax_code_list:
-            if tax_item.custom_code == "D":
-                payload["taxblAmtD"] = abs(round(tax_item.get("custom_total_taxable_amount"), 2))
-                payload["taxRtD"] =  abs(get_tax_account_rate(tax_item.get("account_head")))
-                payload["taxAmtD"] = abs(tax_item.get("tax_amount_after_discount_amount"))
-        else:
-            payload["taxblAmtD"] = 0
-            payload["taxRtD"] =  0
-            payload["taxAmtD"] = 0
-            
-        if "E" in tax_code_list:
-            if tax_item.custom_code == "E":
-                payload["taxblAmtE"] = abs(round(tax_item.get("custom_total_taxable_amount"), 2))
-                payload["taxRtE"] =  abs(get_tax_account_rate(tax_item.get("account_head")))
-                payload["taxAmtE"] = abs(tax_item.get("tax_amount_after_discount_amount"))
-        else:
-            payload["taxblAmtE"] = 0
-            payload["taxRtE"] =  0
-            payload["taxAmtE"] = 0
+            if "B" in tax_code_list:
+                if tax_item.custom_code == "B":
+                    payload["taxblAmtB"] = abs(round(tax_item.get("custom_total_taxable_amount"), 2))
+                    payload["taxRtB"] =  abs(get_tax_account_rate(tax_item.get("account_head")))
+                    payload["taxAmtB"] = abs(tax_item.get("tax_amount_after_discount_amount"))
+            else:
+                payload["taxblAmtB"] = 0
+                payload["taxRtB"] =  0
+                payload["taxAmtB"] = 0
                 
+            if "C" in tax_code_list:
+                if tax_item.custom_code == "C":
+                    payload["taxblAmtC"] = abs(round(tax_item.get("custom_total_taxable_amount"), 2))
+                    payload["taxRtC"] =  abs(get_tax_account_rate(tax_item.get("account_head")))
+                    payload["taxAmtC"] = abs(tax_item.get("tax_amount_after_discount_amount"))
+            else:
+                payload["taxblAmtC"] = 0
+                payload["taxRtC"] =  0
+                payload["taxAmtC"] = 0
+                
+            if "D" in tax_code_list:
+                if tax_item.custom_code == "D":
+                    payload["taxblAmtD"] = abs(round(tax_item.get("custom_total_taxable_amount"), 2))
+                    payload["taxRtD"] =  abs(get_tax_account_rate(tax_item.get("account_head")))
+                    payload["taxAmtD"] = abs(tax_item.get("tax_amount_after_discount_amount"))
+            else:
+                payload["taxblAmtD"] = 0
+                payload["taxRtD"] =  0
+                payload["taxAmtD"] = 0
+                
+            if "E" in tax_code_list:
+                if tax_item.custom_code == "E":
+                    payload["taxblAmtE"] = abs(round(tax_item.get("custom_total_taxable_amount"), 2))
+                    payload["taxRtE"] =  abs(get_tax_account_rate(tax_item.get("account_head")))
+                    payload["taxAmtE"] = abs(tax_item.get("tax_amount_after_discount_amount"))
+            else:
+                payload["taxblAmtE"] = 0
+                payload["taxRtE"] =  0
+                payload["taxAmtE"] = 0
+                    
+        
+        if doc.is_return == 1:
+            return_status = sales_return_information(doc)
     
-    if doc.is_return == 1:
-        return_status = sales_return_information(doc)
-  
-        if return_status == "partial":
-            payload["rfdDt"] = date_time_str
-            payload["rfdRsnCd"] = doc.custom_credit_note_reason_code
-        elif return_status == "full":
-            payload["cnclReqDt"] = conc_datetime_str
-            payload["cnclDt"] = conc_datetime_str
-            payload["rfdDt"] = date_time_str
-            payload["rfdRsnCd"] = doc.custom_credit_note_reason_code
-        elif return_status == "null":
-            frappe.throw("Invalid, return amount is greater than original amount!")
+            if return_status == "partial":
+                payload["rfdDt"] = date_time_str
+                payload["rfdRsnCd"] = doc.custom_credit_note_reason_code
+            elif return_status == "full":
+                payload["cnclReqDt"] = conc_datetime_str
+                payload["cnclDt"] = conc_datetime_str
+                payload["rfdDt"] = date_time_str
+                payload["rfdRsnCd"] = doc.custom_credit_note_reason_code
+            elif return_status == "null":
+                frappe.throw("Invalid, return amount is greater than original amount!")
     
     if doc.custom_update_invoice_in_tims:
         try:
@@ -296,79 +297,79 @@ def trnsSalesSaveWrReq(doc, method):
         except:
             frappe.throw("Oops Bad Request!")
     else:
-        print(payload)
-        stockIOSaveReq(doc, date_str)
+        # print(payload)
+        # stockIOSaveReq(doc, date_str)
         return
         
 def stockIOSaveReq(doc, date_str):
     # sar_no, org_sar_no = get_etims_sar_no(doc)
     taxAmt = 0
     taxblAmt = 0
-    
-    headers = eTIMS.get_headers()
-    stock_list = etims_sale_item_list_stock(doc)
-    if len(stock_list):
-        for item in doc.items:
-            if item.get("custom_maintain_stock") == 1 and item.get("custom_tax_code") in ["B", "E"]:
-                taxblAmt += item.get("net_amount")
-                taxAmt +=  (item.get("amount") - item.get("net_amount"))
+    if doc.custom_update_invoice_in_tims:
+        headers = eTIMS.get_headers()
+        stock_list = etims_sale_item_list_stock(doc)
+        if len(stock_list):
+            for item in doc.items:
+                if item.get("custom_maintain_stock") == 1 and item.get("custom_tax_code") in ["B", "E"]:
+                    taxblAmt += item.get("net_amount")
+                    taxAmt +=  (item.get("amount") - item.get("net_amount"))
+                    
+                    # if not item.get("")
+            
+            payload = {
+                "sarNo": get_etims_sar_no(doc),
+                "orgSarNo": get_org_etims_sar_no(doc),
+                "regTyCd": "A",
+                "custTin": doc.tax_id,
+                "custNm": doc.customer,
+                "custBhfId": "",
+                "ocrnDt": date_str,
+                "totItemCnt": len(stock_list),
+                "totTaxblAmt": abs(round(taxblAmt, 2)),
+                "totTaxAmt": abs(round(taxAmt, 2)),
+                "totAmt": abs(doc.grand_total),
+                "remark": doc.remarks,
+                "regrId": doc.owner,
+                "regrNm": doc.owner,
+                "modrId": doc.modified_by,
+                "modrNm": doc.modified_by,
+                "itemList": stock_list
+                }
+            
+            if doc.is_return == 1: 
+                return_status = sales_return_information(doc)
                 
-                # if not item.get("")
-        
-        payload = {
-            "sarNo": get_etims_sar_no(doc),
-            "orgSarNo": get_org_etims_sar_no(doc),
-            "regTyCd": "A",
-            "custTin": doc.tax_id,
-            "custNm": doc.customer,
-            "custBhfId": "",
-            "ocrnDt": date_str,
-            "totItemCnt": len(stock_list),
-            "totTaxblAmt": abs(round(taxblAmt, 2)),
-            "totTaxAmt": abs(round(taxAmt, 2)),
-            "totAmt": abs(doc.grand_total),
-            "remark": doc.remarks,
-            "regrId": doc.owner,
-            "regrNm": doc.owner,
-            "modrId": doc.modified_by,
-            "modrNm": doc.modified_by,
-            "itemList": stock_list
-            }
-        
-        if doc.is_return == 1: 
-            return_status = sales_return_information(doc)
+                if return_status == "partial" or return_status == "full":
+                    payload["sarTyCd"] = "03"
+                
+                elif return_status == "null":
+                    frappe.throw("Invalid, return amount is greater than original amount!")
             
-            if return_status == "partial" or return_status == "full":
-                payload["sarTyCd"] = "03"
-            
-            elif return_status == "null":
-                frappe.throw("Invalid, return amount is greater than original amount!")
-        
-        else:
-            payload["sarTyCd"] = "11"
+            else:
+                payload["sarTyCd"] = "11"
 
-        if doc.custom_update_invoice_in_tims:
-            try:
-                response = requests.request(
-                            "POST", 
-                            eTIMS.tims_base_url() + 'insertStockIO',
-                            json = payload, 
-                            headers=headers
-                        )
-            
-                response_json = response.json()
+            if doc.custom_update_invoice_in_tims:
+                try:
+                    response = requests.request(
+                                "POST", 
+                                eTIMS.tims_base_url() + 'insertStockIO',
+                                json = payload, 
+                                headers=headers
+                            )
+                
+                    response_json = response.json()
 
-                if not response_json.get("resultCd") == '000':
-                    print("*"*80)
-                    print(response_json.get("resultMsg"))
-                    frappe.throw(response_json.get("resultMsg"))
-                        
-                frappe.msgprint(response_json.get("resultMsg"))
+                    if not response_json.get("resultCd") == '000':
+                        print("*"*80)
+                        print(response_json.get("resultMsg"))
+                        frappe.throw(response_json.get("resultMsg"))
+                            
+                    frappe.msgprint(response_json.get("resultMsg"))
 
-            except:
-                frappe.throw("Oops Bad Request!")
-        else:
-            print(payload)
+                except:
+                    frappe.throw("Oops Bad Request!")
+            else:
+                return
 
 def get_etims_sar_no(doc):
     etims_sar_no = 1
@@ -427,30 +428,31 @@ def get_last_inv_number(doc, branch_id):
    
     cur_number = 0
     last_inv_no = 0
-
-    settings_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id}, fields=["*"])
     
-    if settings_docs:
-        last_inv_no = settings_docs[0].get("last_sales_invoice_number")
+    if doc.custom_update_invoice_in_tims:
+        settings_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id}, fields=["*"])
         
-
-    try:
-        last_inv = frappe.db.get_all(doc.doctype,
-                                        filters = {'name': ['!=', doc.name], 'custom_update_invoice_in_tims': 1, "custom_tax_branch_office": branch_id},
-                                        fields=["custom_invoice_number"],
-                                        order_by='custom_invoice_number desc',
-                                        page_length = 1
-                                    )
-        
-        if last_inv[0]:
-            # print(last_inv)
-            last_inv_no = last_inv[0].get("custom_invoice_number")
+        if settings_docs:
+            last_inv_no = settings_docs[0].get("last_sales_invoice_number")
             
-        cur_number = last_inv_no + 1
-        
-    except:
 
-        cur_number = last_inv_no + 1
+        try:
+            last_inv = frappe.db.get_all(doc.doctype,
+                                            filters = {'name': ['!=', doc.name], 'custom_update_invoice_in_tims': 1, "custom_tax_branch_office": branch_id},
+                                            fields=["custom_invoice_number"],
+                                            order_by='custom_invoice_number desc',
+                                            page_length = 1
+                                        )
+            
+            if last_inv[0]:
+                # print(last_inv)
+                last_inv_no = last_inv[0].get("custom_invoice_number")
+                
+            cur_number = last_inv_no + 1
+            
+        except:
+
+            cur_number = last_inv_no + 1
     
     return cur_number
 
