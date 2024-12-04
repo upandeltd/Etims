@@ -25,8 +25,7 @@ def insert_invoice_number(doc,method):
     '''
     scu = ""
     item_count = 0
-    # if doc.custom_update_invoice_in_tims == 1:
-    if doc.name:
+    if doc.name and doc.custom_update_invoice_in_tims:
         branch_id = eTIMS.get_user_branch_id()
         init_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id}, fields=["sales_control_unit_id", "default_sales_warehouse"])
 
