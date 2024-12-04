@@ -13,10 +13,11 @@ def validate(doc, method):
         doc_exists = frappe.db.exists("Sales Invoice", {"name": doc.name})
 
         if doc_exists:
-            invoice_numbers = validate_inv_number(doc)
+            if doc.custom_update_invoice_in_tims:
+                invoice_numbers = validate_inv_number(doc)
         
-            if doc.custom_invoice_number in invoice_numbers:
-                insert_invoice_number(doc, method)
+                if doc.custom_invoice_number in invoice_numbers:
+                    insert_invoice_number(doc, method)
     
 def insert_invoice_number(doc,method):
     '''
