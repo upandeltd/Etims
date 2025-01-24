@@ -138,7 +138,7 @@ def trnsSalesSaveWrReq(doc, method):
         
         headers = eTIMS.get_headers()
         
-        request_date_and_time = doc.creation
+        request_date_and_time = doc.modified
     
         conc_datetime_str = eTIMS.strf_datetime_format(request_date_and_time)
         
