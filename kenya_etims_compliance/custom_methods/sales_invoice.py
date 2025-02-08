@@ -31,7 +31,7 @@ def insert_invoice_number(doc,method):
 
         if init_docs:
             scu = init_docs[0].get("sales_control_unit_id")
-            sales_warehouse = init_docs[0].get("default_sales_warehouse")
+            # sales_warehouse = init_docs[0].get("default_sales_warehouse")
         
         if doc.items:
             item_count = len(doc.items) 
@@ -47,8 +47,8 @@ def insert_invoice_number(doc,method):
         frappe.db.set_value('Sales Invoice', doc.name, {
             "custom_invoice_number": last_inv_number,
             "custom_sales_control_unit": scu,
-            "update_stock": 1,
-            "set_warehouse": sales_warehouse,
+            # "update_stock": 1,
+            # "set_warehouse": sales_warehouse,
             "custom_tax_branch_office": branch_id,
             "custom_total_taxable_amount": total_vat_amount,
             "custom_total_nontaxable_amount": total_non_vat_amount,
