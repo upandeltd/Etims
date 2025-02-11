@@ -17,7 +17,10 @@
   "tax_settings_section",
   "get_item_taxes",
   "item_tax_configuration",
-  "create_taxes"
+  "create_taxes",
+  "stock_settings_tab",
+  "update_stock_selling",
+  "update_stock_purchase"
  ],
  "fields": [
   {
@@ -60,7 +63,7 @@
   {
    "fieldname": "create_taxes",
    "fieldtype": "Button",
-   "label": "Create Taxes"
+   "label": "Create Item Tax Templates"
   },
   {
    "fieldname": "parent_tax_account",
@@ -79,11 +82,28 @@
    "fieldname": "get_item_taxes",
    "fieldtype": "Button",
    "label": "Get Item Taxes"
+  },
+  {
+   "fieldname": "stock_settings_tab",
+   "fieldtype": "Tab Break",
+   "label": "Stock Settings"
+  },
+  {
+   "default": "0",
+   "fieldname": "update_stock_selling",
+   "fieldtype": "Check",
+   "label": "Update Stock (Selling)"
+  },
+  {
+   "default": "0",
+   "fieldname": "update_stock_purchase",
+   "fieldtype": "Check",
+   "label": "Update Stock (Purchase)"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-02-07 21:49:00.186570",
+ "modified": "2025-02-11 18:41:37.456414",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "Tax Branch Configurations",

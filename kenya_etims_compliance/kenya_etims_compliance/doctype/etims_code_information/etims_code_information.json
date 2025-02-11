@@ -8,18 +8,20 @@
  "engine": "InnoDB",
  "field_order": [
   "title",
-  "last_search_date_and_time",
   "code_request_datetime",
-  "column_break_imke",
   "search_code",
+  "column_break_imke",
+  "last_search_date_and_time",
   "code_response_url",
   "2_customer_search_section",
   "customer_tin",
   "search_customer",
   "customer_details",
   "3_notice_search",
-  "last_request_date",
   "notice_date_and_time",
+  "column_break_97me",
+  "last_request_date",
+  "section_break_fayq",
   "search_notice",
   "notices"
  ],
@@ -27,7 +29,7 @@
   {
    "fieldname": "title",
    "fieldtype": "Section Break",
-   "label": "1. Code Search"
+   "label": "1. Get eTIMS Code Information"
   },
   {
    "fieldname": "last_search_date_and_time",
@@ -47,17 +49,17 @@
   {
    "fieldname": "search_code",
    "fieldtype": "Button",
-   "label": "Search Code"
+   "label": "Get Codes"
   },
   {
    "fieldname": "code_response_url",
    "fieldtype": "Button",
-   "label": "View Search Response"
+   "label": "View Codes"
   },
   {
    "fieldname": "2_customer_search_section",
    "fieldtype": "Section Break",
-   "label": "2. Customer Search"
+   "label": "2. Get Customer Information"
   },
   {
    "fieldname": "customer_tin",
@@ -68,18 +70,19 @@
   {
    "fieldname": "search_customer",
    "fieldtype": "Button",
-   "label": "Search Customer"
+   "label": "Get Customer Information"
   },
   {
    "fieldname": "customer_details",
    "fieldtype": "Table",
    "label": "Customer Details",
-   "options": "eTIMS Customer"
+   "options": "eTIMS Customer",
+   "read_only": 1
   },
   {
    "fieldname": "3_notice_search",
    "fieldtype": "Section Break",
-   "label": "3. Notice Search"
+   "label": "3. Get Notices"
   },
   {
    "fieldname": "last_request_date",
@@ -95,19 +98,28 @@
   {
    "fieldname": "search_notice",
    "fieldtype": "Button",
-   "label": "Search Notice"
+   "label": "Get Notices"
   },
   {
    "fieldname": "notices",
    "fieldtype": "Table",
    "label": "Notices",
-   "options": "eTIMS Notice Item"
+   "options": "eTIMS Notice Item",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_97me",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_fayq",
+   "fieldtype": "Section Break"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-12-06 19:30:34.920029",
+ "modified": "2025-02-11 21:34:34.232620",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Code Information",
