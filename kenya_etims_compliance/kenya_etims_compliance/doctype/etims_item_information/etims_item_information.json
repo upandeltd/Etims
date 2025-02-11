@@ -8,22 +8,24 @@
  "engine": "InnoDB",
  "field_order": [
   "1_item_classification_search_section",
-  "last_search_date_and_time",
   "search_datetime",
-  "column_break_manu",
   "search_item_classification",
+  "column_break_manu",
+  "last_search_date_and_time",
   "view_itemcls_search_response",
   "2_item_search_section",
-  "item_last_search_date_and_time",
   "item_request_datetime",
   "request_items",
+  "column_break_3wye",
+  "item_last_search_date_and_time",
+  "section_break_yfyj",
   "registered_items"
  ],
  "fields": [
   {
    "fieldname": "1_item_classification_search_section",
    "fieldtype": "Section Break",
-   "label": "1. Item Classification Search"
+   "label": "1. Get eTIMS Classification"
   },
   {
    "fieldname": "last_search_date_and_time",
@@ -34,7 +36,7 @@
   {
    "fieldname": "search_datetime",
    "fieldtype": "Datetime",
-   "label": "Start Search From"
+   "label": "From Date and Time"
   },
   {
    "fieldname": "column_break_manu",
@@ -43,12 +45,12 @@
   {
    "fieldname": "search_item_classification",
    "fieldtype": "Button",
-   "label": "Search Item Classification"
+   "label": "Get eTIMS Item Classification"
   },
   {
    "fieldname": "view_itemcls_search_response",
    "fieldtype": "Button",
-   "label": "View Response"
+   "label": "View Item Classification"
   },
   {
    "fieldname": "item_last_search_date_and_time",
@@ -59,29 +61,38 @@
   {
    "fieldname": "item_request_datetime",
    "fieldtype": "Datetime",
-   "label": "Start Search From"
+   "label": "From Date and Time"
   },
   {
    "fieldname": "request_items",
    "fieldtype": "Button",
-   "label": "Request Items"
+   "label": "Get Items"
   },
   {
    "fieldname": "registered_items",
    "fieldtype": "Table",
    "label": "Registered Items",
-   "options": "eTIMS Registered Items"
+   "options": "eTIMS Registered Items",
+   "read_only": 1
   },
   {
    "fieldname": "2_item_search_section",
    "fieldtype": "Section Break",
-   "label": "2. Item Search"
+   "label": "2. Get Registered Items"
+  },
+  {
+   "fieldname": "column_break_3wye",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_yfyj",
+   "fieldtype": "Section Break"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-12-11 11:32:14.107815",
+ "modified": "2025-02-12 00:19:58.797413",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Item Information",

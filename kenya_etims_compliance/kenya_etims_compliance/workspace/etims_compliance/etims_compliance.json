@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"kT0U0DkSdV\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">eTIMS Compliance</span>\",\"col\":12}},{\"id\":\"tskJRpVzOh\",\"type\":\"card\",\"data\":{\"card_name\":\"Master\",\"col\":4}},{\"id\":\"iemkpzIz-5\",\"type\":\"card\",\"data\":{\"card_name\":\"Shortcuts\",\"col\":4}},{\"id\":\"RuF0CiGTK7\",\"type\":\"card\",\"data\":{\"card_name\":\"Settings\",\"col\":4}}]",
+ "content": "[{\"id\":\"kT0U0DkSdV\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">eTIMS Compliance</span>\",\"col\":12}},{\"id\":\"j2FgKVfBa6\",\"type\":\"card\",\"data\":{\"card_name\":\"Setup\",\"col\":4}},{\"id\":\"tskJRpVzOh\",\"type\":\"card\",\"data\":{\"card_name\":\"Master\",\"col\":4}},{\"id\":\"iemkpzIz-5\",\"type\":\"card\",\"data\":{\"card_name\":\"Shortcuts\",\"col\":4}}]",
  "creation": "2024-02-17 12:49:27.432630",
  "custom_blocks": [],
  "docstatus": 0,
@@ -9,88 +9,9 @@
  "hide_custom": 0,
  "icon": "money-coins-1",
  "idx": 0,
- "indicator_color": "green",
  "is_hidden": 0,
  "label": "eTIMS Compliance",
  "links": [
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Master",
-   "link_count": 7,
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Device Initialization",
-   "link_count": 0,
-   "link_to": "TIS Device Initialization",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Code Information",
-   "link_count": 0,
-   "link_to": "eTIMS Code Information",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Item Information",
-   "link_count": 0,
-   "link_to": "eTIMS Item Information",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Branch Information",
-   "link_count": 0,
-   "link_to": "eTIMS Branch Information",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Import Item Information",
-   "link_count": 0,
-   "link_to": "eTIMS Import Item Information",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Purchase Information",
-   "link_count": 0,
-   "link_to": "eTIMS Purchase Information",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Stock Information",
-   "link_count": 0,
-   "link_to": "eTIMS Stock Information",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
   {
    "hidden": 0,
    "is_query_report": 0,
@@ -208,9 +129,105 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Setup",
+   "link_count": 2,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Tax Branch Configurations",
+   "link_count": 0,
+   "link_to": "Tax Branch Configurations",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Device Initialization",
+   "link_count": 0,
+   "link_to": "TIS Device Initialization",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Master",
+   "link_count": 6,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Code Information",
+   "link_count": 0,
+   "link_to": "eTIMS Code Information",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Item Information",
+   "link_count": 0,
+   "link_to": "eTIMS Item Information",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Branch Information",
+   "link_count": 0,
+   "link_to": "eTIMS Branch Information",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Import Item Information",
+   "link_count": 0,
+   "link_to": "eTIMS Import Item Information",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Purchase Information",
+   "link_count": 0,
+   "link_to": "eTIMS Purchase Information",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Stock Information",
+   "link_count": 0,
+   "link_to": "eTIMS Stock Information",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2024-05-09 07:01:17.097750",
+ "modified": "2025-02-12 00:41:55.897667",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Compliance",
