@@ -2,6 +2,9 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Tax Branch Configurations", {
+    // =============================================================== //
+    //                             General                             //
+    // =============================================================== //
     onload(frm){
         if(!frm.doc.tax_accounts){
             // Loop through accounts and add them to the child table
@@ -36,20 +39,10 @@ frappe.ui.form.on("Tax Branch Configurations", {
             }
         }    
     },
-    update_stock_selling(frm){
-        if(frm.doc.update_stock_selling == 1){
-            frappe.msgprint("If this action is enabled, Sales Invoices with update stock option enabled will also send the stock movement and stock master data to eTIMS.")
-        }else{
-            frappe.msgprint("If this action is disabled, Sales Invoices with update stock option enabled will not send the stock movement and stock master data to eTIMS.")
-        }
-    },
-    update_stock_purchase(frm){
-        if(frm.doc.update_stock_purchase == 1){
-            frappe.msgprint("If this action is enabled, Purchase Invoices with update stock option enabled will also send the stock movement and stock master data to eTIMS.")
-        }else{
-            frappe.msgprint("If this action is disabled, Purchase Invoices with update stock option enabled will not send the stock movement and stock master data to eTIMS.")
-        }
-    },
+
+    // =============================================================== //
+    //                             Accounts                            //
+    // =============================================================== //
     create_accounts(frm) {
         if(!frm.doc.__islocal){
             frappe.confirm('This action will disable any other default tax templates for sales and purchase, proceed?',
@@ -82,6 +75,11 @@ frappe.ui.form.on("Tax Branch Configurations", {
         }
         
 	},
+
+    // =============================================================== //
+    //                       Item Tax Templates                        //
+    // =============================================================== //
+
     get_item_taxes(frm) {
         if(!frm.doc.item_tax_configuration.length > 0){
             // Loop through accounts and add them to the child table
@@ -103,6 +101,7 @@ frappe.ui.form.on("Tax Branch Configurations", {
             frm.refresh_field("item_tax_configuration");
         }
     },
+    
     create_taxes(frm) {
         if(!frm.doc.__islocal){
             frappe.confirm('This action will disable any other default tax templates for sales and purchase, proceed?',
@@ -133,9 +132,48 @@ frappe.ui.form.on("Tax Branch Configurations", {
             frappe.msgprint("You need to save the document first!")
         }
         
-	}
+	},
+    // =============================================================== //
+    //                       Stock Settings                            //
+    // =============================================================== //
+    update_stock_selling(frm){
+        if(frm.doc.update_stock_selling == 1){
+            frappe.msgprint("If this action is enabled, Sales Invoices with update stock option enabled will also send the stock movement and stock master data to eTIMS.")
+        }else{
+            frappe.msgprint("If this action is disabled, Sales Invoices with update stock option enabled will not send the stock movement and stock master data to eTIMS.")
+        }
+    },
+    update_stock_purchase(frm){
+        if(frm.doc.update_stock_purchase == 1){
+            frappe.msgprint("If this action is enabled, Purchase Invoices with update stock option enabled will also send the stock movement and stock master data to eTIMS.")
+        }else{
+            frappe.msgprint("If this action is disabled, Purchase Invoices with update stock option enabled will not send the stock movement and stock master data to eTIMS.")
+        }
+    },
+    get_item_groups(frm){
+        frappe.call({
+            method: "get_item_groups",
+            doc: frm.doc,
+            callback: function (r) {
+                if(r.message){
+                    if(r.message.status == "Success"){
+
+                        frm.refresh_field("item_group_codes")
+                    }
+                    frm.save()
+                }
+            }
+        })
+    },
+    update_codes(frm){
+
+    },
 });
 
+
+// =============================================================== //
+//                      Initial Settings Data                      //
+// =============================================================== //
 const accounts = [
     {
         "account_name": "VAT-A-Exempt",

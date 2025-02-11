@@ -20,7 +20,12 @@
   "create_taxes",
   "stock_settings_tab",
   "update_stock_selling",
-  "update_stock_purchase"
+  "column_break_d9gc",
+  "update_stock_purchase",
+  "section_break_rskj",
+  "get_item_groups",
+  "item_group_codes",
+  "update_codes"
  ],
  "fields": [
   {
@@ -99,11 +104,35 @@
    "fieldname": "update_stock_purchase",
    "fieldtype": "Check",
    "label": "Update Stock (Purchase)"
+  },
+  {
+   "fieldname": "item_group_codes",
+   "fieldtype": "Table",
+   "label": "Item Group Codes",
+   "options": "eTIMS Item Group"
+  },
+  {
+   "fieldname": "update_codes",
+   "fieldtype": "Button",
+   "label": "Update Codes"
+  },
+  {
+   "fieldname": "column_break_d9gc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_rskj",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "get_item_groups",
+   "fieldtype": "Button",
+   "label": "Get Item Groups"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-02-11 18:41:37.456414",
+ "modified": "2025-02-12 01:02:03.111951",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "Tax Branch Configurations",
