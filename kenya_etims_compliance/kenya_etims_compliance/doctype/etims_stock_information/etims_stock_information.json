@@ -8,10 +8,10 @@
  "engine": "InnoDB",
  "field_order": [
   "search_stock_movement_section",
-  "last_search_date_and_time",
   "from_date_and_time",
-  "column_break_lk3k",
   "search_stock_movement",
+  "column_break_lk3k",
+  "last_search_date_and_time",
   "view_stock_movement",
   "stock_master_save_section",
   "consolidate_stock",
@@ -22,12 +22,13 @@
   {
    "fieldname": "search_stock_movement_section",
    "fieldtype": "Section Break",
-   "label": "1. Search Stock Movement"
+   "label": "1. Get eTIMS Stock Movement"
   },
   {
    "fieldname": "last_search_date_and_time",
    "fieldtype": "Datetime",
-   "label": "Last Search Date and Time"
+   "label": "Last Search Date and Time",
+   "read_only": 1
   },
   {
    "fieldname": "from_date_and_time",
@@ -41,7 +42,7 @@
   {
    "fieldname": "search_stock_movement",
    "fieldtype": "Button",
-   "label": "Search Stock Movement"
+   "label": "Get Stock Movement"
   },
   {
    "fieldname": "view_stock_movement",
@@ -67,13 +68,13 @@
   {
    "fieldname": "save_stock",
    "fieldtype": "Button",
-   "label": "Save Stock"
+   "label": "Update Stock To eTIMS"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-12-11 11:35:45.401822",
+ "modified": "2025-02-12 00:37:13.012895",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Stock Information",

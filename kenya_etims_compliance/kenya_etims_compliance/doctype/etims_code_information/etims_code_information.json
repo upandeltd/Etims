@@ -19,10 +19,10 @@
   "customer_details",
   "3_notice_search",
   "notice_date_and_time",
+  "search_notice",
   "column_break_97me",
   "last_request_date",
   "section_break_fayq",
-  "search_notice",
   "notices"
  ],
  "fields": [
@@ -40,7 +40,7 @@
   {
    "fieldname": "code_request_datetime",
    "fieldtype": "Datetime",
-   "label": "Start Search From"
+   "label": "From Date and Time"
   },
   {
    "fieldname": "column_break_imke",
@@ -93,7 +93,7 @@
   {
    "fieldname": "notice_date_and_time",
    "fieldtype": "Datetime",
-   "label": "Start Search From"
+   "label": "From Date and Time"
   },
   {
    "fieldname": "search_notice",
@@ -119,7 +119,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-02-11 21:34:34.232620",
+ "modified": "2025-02-12 00:20:42.455089",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Code Information",
