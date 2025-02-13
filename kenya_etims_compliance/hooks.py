@@ -142,7 +142,8 @@ doc_events = {
             "on_submit": "kenya_etims_compliance.custom_methods.bin_stock_entry.on_submit"
         },  
         "Item": {
-            "before_save": "kenya_etims_compliance.custom_methods.item.autofill_tims_info"
+            # "before_save": "kenya_etims_compliance.custom_methods.item.autofill_tims_info",
+            "before_save":"kenya_etims_compliance.custom_methods.item.create_etims_item_data"
         },
         "Purchase Invoice": {
             "before_save": "kenya_etims_compliance.custom_methods.purchase_invoice.validate",

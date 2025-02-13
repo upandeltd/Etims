@@ -7,6 +7,7 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "system_user",
   "user_id",
   "user_name",
   "password",
@@ -16,9 +17,7 @@
   "used_unused",
   "column_break_ulgj",
   "remark",
-  "registration_id",
   "registration_name",
-  "modifier_id",
   "modifier_name",
   "saved",
   "register_user"
@@ -26,12 +25,8 @@
  "fields": [
   {
    "fieldname": "user_id",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
+   "fieldtype": "Data",
    "label": "User ID",
-   "length": 20,
-   "options": "User",
    "reqd": 1
   },
   {
@@ -42,7 +37,7 @@
    "in_standard_filter": 1,
    "label": "User Name",
    "length": 60,
-   "read_only": 1
+   "reqd": 1
   },
   {
    "fieldname": "password",
@@ -92,13 +87,7 @@
    "reqd": 1
   },
   {
-   "fieldname": "registration_id",
-   "fieldtype": "Data",
-   "label": "Registration ID",
-   "length": 20,
-   "reqd": 1
-  },
-  {
+   "default": "admin",
    "fieldname": "registration_name",
    "fieldtype": "Data",
    "label": "Registration Name",
@@ -106,13 +95,7 @@
    "reqd": 1
   },
   {
-   "fieldname": "modifier_id",
-   "fieldtype": "Data",
-   "label": "Modifier ID",
-   "length": 60,
-   "reqd": 1
-  },
-  {
+   "default": "admin",
    "fieldname": "modifier_name",
    "fieldtype": "Data",
    "label": "Modifier Name",
@@ -132,11 +115,21 @@
    "fieldname": "register_user",
    "fieldtype": "Button",
    "label": "Register User"
+  },
+  {
+   "fieldname": "system_user",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "System User",
+   "length": 20,
+   "options": "User",
+   "reqd": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-12-11 11:35:15.930059",
+ "modified": "2025-02-13 21:23:21.594817",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Branch User",

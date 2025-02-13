@@ -1,3 +1,4 @@
+import frappe.commands
 import requests, traceback
 from datetime import datetime
 
@@ -99,27 +100,88 @@ def autofill_tims_info(doc, method):
         if not doc.custom_item_code:
             doc.custom_item_code = get_item_code(doc)
 
+def create_etims_item_data(doc, method):
+    '''
+    Method autofills tims info for item
+    '''
+    user = frappe.session.user
+    
+    creator = frappe.db.get_value("eTIMS Branch User", {"system_user": doc.owner, "saved": 1}, "user_name")
+    modifier = frappe.db.get_value("eTIMS Branch User", {"system_user": doc.modified_by, "saved": 1}, "user_name")
+
+    if not creator:
+        frappe.throw("Item Creater Not Registered As Branch Operator")
+        
+    if not modifier:
+        frappe.throw("Item Modifier Not Registered As Branch Operator")
+        
+    if doc.custom_update_item_to_tims == 1 and not doc.custom_registered_in_tims == 1:
+        exists = frappe.db.exists("eTIMS Item", {"item": doc.name})
+        print(get_item_pkg_unit_codes(doc.custom_default_packing_unit))
+        if exists:
+            print("*"*89)
+            print(exists)
+        
+        new_doc = frappe.new_doc("eTIMS Item")
+        new_doc.item = doc.name
+        new_doc.item_classification_code = doc.custom_item_classification_code
+        new_doc.item_name = doc.item_code
+        new_doc.item_standard_name = doc.item_name
+        new_doc.quantity_unit_code = get_item_qty_unit_codes(doc.custom_default_quantity_unit)
+        new_doc.packaging_unit_code = get_item_pkg_unit_codes(doc.custom_default_packing_unit)
+        new_doc.usedunused = get_item_status(doc.disabled)
+        new_doc.item_type_code = get_item_type_code(doc.item_group)
+        new_doc.barcode = ""
+        new_doc.batch_number = ""
+        new_doc.default_unit_price = get_item_prices(doc)
+        new_doc.safety_quantity = 0
+        new_doc.additional_information = doc.description
+        new_doc.insurance_appicable_yn = "N"
+        new_doc.origin_place_code_nation = get_country_code(doc.custom_country_of_origin)
+        new_doc.etims_item_code = get_item_code(doc)
+        new_doc.registration_name = creator
+        new_doc.modifier_name = modifier
+        
+        if doc.taxes:
+            for tax_item in doc.taxes:
+                new_doc.taxation_type_code = get_taxation_type(tax_item.get("item_tax_template"))
+        else:
+            frappe.throw("Tax template for Item is required!")
+        
+        new_doc.insert()
+        frappe.db.commit()
 
         
-def get_item_pkg_unit_codes(pkg_unit):
-    try:
-        etims_code_doc = frappe.get_doc("eTIMS Packing Unit", pkg_unit)
-        if etims_code_doc:
-            return etims_code_doc.get("etims_code")
-    except:
-        return
+def get_country_code(country):
+    if not country:
+        return None
 
+    try:
+        return frappe.db.get_value("eTIMS Country", country, "code_name")
+    
+    except frappe.DoesNotExistError:
+        return None 
+def get_item_pkg_unit_codes(pkg_unit):
+    if not pkg_unit:
+        return None
+
+    try:
+        return frappe.db.get_value("eTIMS Packing Unit", pkg_unit, "etims_code")
+    
+    except frappe.DoesNotExistError:
+        return None 
 
 def get_item_qty_unit_codes(qty_unit):
+    if not qty_unit:
+        return None
+
     try:
-        etims_code_doc = frappe.get_doc("eTIMS Quantity Unit", qty_unit)
-        if etims_code_doc:
-            return etims_code_doc.get("etims_code")
-    except:
-        return       
+        return frappe.db.get_value("eTIMS Quantity Unit", qty_unit, "etims_code")
+    except frappe.DoesNotExistError:
+        return None       
     
-def get_item_status(doc):
-    if not doc.disabled:
+def get_item_status(disabled):
+    if not disabled:
         return "Y"
     else:
         return "N"
@@ -135,24 +197,24 @@ def get_taxation_type(tax_template):
     return tax_list[0]
 
 def get_item_prices(doc):
-    if not doc.custom_default_unit_price:
-        item_price_doc = frappe.db.get_all("Item Price", filters={"item_code": doc.item_code, "selling":1, "customer": ""}, fields=["price_list_rate"])
+    item_price_docs = frappe.db.get_all("Item Price", filters={"item_code": doc.item_code, "selling":1, "customer": ""}, fields=["price_list_rate"])
+    
+    if item_price_docs:
         
-        if item_price_doc:
+        return item_price_docs[0].get("price_list_rate")
+    else:
+        
+        return 0
             
-            return item_price_doc[0].get("price_list_rate")
-        else:
-            frappe.throw("Price list for Item is required!")
-    
-def get_item_type_code(doc):
-    item_type_doc = frappe.get_doc("Item Group", doc.item_group)
-    
-    if item_type_doc:
-        return item_type_doc.get("custom_etims_item_type_code")
+def get_item_type_code(item_group):
+    if not item_group:
+        return None
+
+    return frappe.db.get_value("Item Group", item_group, "custom_etims_item_type_code")
     
 def get_item_code(doc):
     if doc.custom_origin_place_code_nation:
-        str_item_code = doc.custom_origin_place_code_nation + str(get_item_type_code(doc)) + get_item_pkg_unit_codes(doc.custom_default_packing_unit) + get_item_qty_unit_codes(doc.custom_default_quantity_unit)
+        str_item_code = doc.custom_origin_place_code_nation + str(get_item_type_code(doc.item_group)) + get_item_pkg_unit_codes(doc.custom_default_packing_unit) + get_item_qty_unit_codes(doc.custom_default_quantity_unit)
     
         item_code = str(str_item_code) + create_item_digit_code(doc)
     
@@ -188,8 +250,6 @@ def create_item_digit_code(doc):
     
     if len(item_codes) > 0:
         for item in item_codes:
-            print("*"*80)
-            print(item)
             if not item in digit_code_list:
                 digit_code_list.append(int(item))
                 

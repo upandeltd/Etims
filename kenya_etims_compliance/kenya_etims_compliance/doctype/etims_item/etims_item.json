@@ -1,52 +1,47 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "format:{etims_item_code}",
  "creation": "2025-02-13 18:57:25.441988",
  "default_view": "List",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "item",
-  "item_code",
+  "item_name",
+  "etims_item_code",
   "item_classification_code",
   "item_type_code",
   "column_break_4tzj",
   "item_standard_name",
   "origin_place_code_nation",
-  "packing_unit_code",
+  "packaging_unit_code",
   "quantity_unit_code",
+  "usedunused",
   "column_break_nmep",
   "barcode",
   "batch_number",
   "taxation_type_code",
   "default_unit_price",
-  "column_break_vlz0",
-  "add_information",
   "safety_quantity",
+  "column_break_vlz0",
+  "additional_information",
   "insurance_appicable_yn",
-  "usedunused"
+  "registration_name",
+  "modifier_name"
  ],
  "fields": [
   {
    "fieldname": "item_classification_code",
    "fieldtype": "Link",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
    "label": "Item Classification Code",
    "length": 10,
    "options": "eTIMS Item Classification"
   },
   {
-   "fieldname": "item_code",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "eTIMS Item Code",
-   "length": 20
-  },
-  {
    "fieldname": "item_type_code",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Item Type Code",
    "length": 5
   },
@@ -63,13 +58,9 @@
   {
    "fieldname": "origin_place_code_nation",
    "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Origin Place Code (Nation)",
-   "length": 5
-  },
-  {
-   "fieldname": "packing_unit_code",
-   "fieldtype": "Data",
-   "label": "Packing Unit Code",
    "length": 5
   },
   {
@@ -81,6 +72,8 @@
   {
    "fieldname": "taxation_type_code",
    "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Taxation Type Code",
    "length": 5
   },
@@ -103,20 +96,12 @@
   {
    "fieldname": "default_unit_price",
    "fieldtype": "Float",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
    "label": "Default Unit Price",
    "length": 18
   },
   {
    "fieldname": "column_break_vlz0",
    "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "add_information",
-   "fieldtype": "Data",
-   "label": "Add Information",
-   "length": 7
   },
   {
    "fieldname": "safety_quantity",
@@ -133,23 +118,60 @@
   {
    "fieldname": "usedunused",
    "fieldtype": "Data",
+   "in_standard_filter": 1,
    "label": "Used/UnUsed",
    "length": 1
   },
   {
    "fieldname": "item",
    "fieldtype": "Link",
+   "in_standard_filter": 1,
    "label": "Item",
    "length": 11,
    "options": "Item"
+  },
+  {
+   "fieldname": "item_name",
+   "fieldtype": "Data",
+   "label": "Item Name"
+  },
+  {
+   "fieldname": "additional_information",
+   "fieldtype": "Small Text",
+   "label": "Additional Information",
+   "length": 7
+  },
+  {
+   "fieldname": "packaging_unit_code",
+   "fieldtype": "Data",
+   "label": "Packaging Unit Code",
+   "length": 5
+  },
+  {
+   "fieldname": "etims_item_code",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "eTIMS Item Code",
+   "length": 20
+  },
+  {
+   "fieldname": "registration_name",
+   "fieldtype": "Data",
+   "label": "Registration Name"
+  },
+  {
+   "fieldname": "modifier_name",
+   "fieldtype": "Data",
+   "label": "Modifier Name"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-02-13 19:03:26.977097",
+ "modified": "2025-02-13 21:25:14.181817",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Item",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {
@@ -165,7 +187,9 @@
    "write": 1
   }
  ],
+ "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "item"
 }
