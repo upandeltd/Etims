@@ -188,6 +188,8 @@ def create_item_digit_code(doc):
     
     if len(item_codes) > 0:
         for item in item_codes:
+            print("*"*80)
+            print(item)
             if not item in digit_code_list:
                 digit_code_list.append(int(item))
                 

@@ -58,13 +58,7 @@ frappe.ui.form.on("Tax Branch Configurations", {
                             }
                         },
                         callback: function (r) {
-                            if(r.message){
-                                if(r.message.status == "Success"){
-
-                                    frm.refresh_field("accounts_created")
-                                }
-                                frm.save()
-                            }
+                            return
                         }
                     })
                 }, () => {
@@ -117,12 +111,7 @@ frappe.ui.form.on("Tax Branch Configurations", {
                             }
                         },
                         callback: function (r) {
-                            if(r.message){
-                                if(r.message.status == "Success"){
-                                    frm.refresh_field("item_tax_configuration")
-                                }
-                                frm.save()
-                            }
+                            return
                         }
                     })
                 }, () => {
@@ -155,18 +144,18 @@ frappe.ui.form.on("Tax Branch Configurations", {
             method: "get_item_groups",
             doc: frm.doc,
             callback: function (r) {
-                if(r.message){
-                    if(r.message.status == "Success"){
-
-                        frm.refresh_field("item_group_codes")
-                    }
-                    frm.save()
-                }
+                return
             }
         })
     },
     update_codes(frm){
-
+        frappe.call({
+            method: "update_item_group_codes",
+            doc: frm.doc,
+            callback: function (r) {
+                return
+            }
+        })
     },
 });
 

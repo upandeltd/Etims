@@ -15,17 +15,18 @@
   "tax_accounts",
   "create_accounts",
   "tax_settings_section",
+  "item_tax_template",
   "get_item_taxes",
   "item_tax_configuration",
   "create_taxes",
+  "section_break_cpoc",
+  "get_item_groups",
+  "item_group_codes",
+  "update_codes",
   "stock_settings_tab",
   "update_stock_selling",
   "column_break_d9gc",
-  "update_stock_purchase",
-  "section_break_rskj",
-  "get_item_groups",
-  "item_group_codes",
-  "update_codes"
+  "update_stock_purchase"
  ],
  "fields": [
   {
@@ -47,7 +48,7 @@
   {
    "fieldname": "tax_settings_section",
    "fieldtype": "Tab Break",
-   "label": "Item Tax Templates"
+   "label": "Item Settings"
   },
   {
    "fieldname": "accounts_tab",
@@ -121,18 +122,24 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "section_break_rskj",
-   "fieldtype": "Section Break"
-  },
-  {
    "fieldname": "get_item_groups",
    "fieldtype": "Button",
    "label": "Get Item Groups"
+  },
+  {
+   "fieldname": "section_break_cpoc",
+   "fieldtype": "Section Break",
+   "label": "Assign eTIMS Codes To Item Groups"
+  },
+  {
+   "fieldname": "item_tax_template",
+   "fieldtype": "Section Break",
+   "label": "Item Tax Templates"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-02-12 01:02:03.111951",
+ "modified": "2025-02-13 18:48:04.782649",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "Tax Branch Configurations",

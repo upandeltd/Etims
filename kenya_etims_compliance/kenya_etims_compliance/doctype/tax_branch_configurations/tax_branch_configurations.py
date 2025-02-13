@@ -36,12 +36,13 @@ class TaxBranchConfigurations(Document):
                     frappe.db.commit()
                     
                     frappe.msgprint(f'Account {new_acc.name} has been created.')
+                    
                 except:
                     frappe.throw(f'Unexpected error with account {item.get("account_name")}!')
                     
             else:
                 frappe.msgprint(f'Account {item.get("account_name")} exists for company {self.company}.')
-    
+                    
     @frappe.whitelist()
     def create_item_tax_templates(self):
         if not frappe.form_dict.message:
@@ -99,9 +100,24 @@ class TaxBranchConfigurations(Document):
             self.save()
     
     @frappe.whitelist()
-    def update_item_group_codes():
-        pass
-    
+    def update_item_group_codes(self):
+        item_groups = self.item_group_codes
+        
+        if len(item_groups):
+            for item_group in item_groups:
+                exists = frappe.db.exists("Item Group", {"name": item_group.get("item_group"), "custom_etims_item_type_code": int(item_group.get("code"))})
+                
+                if not exists:
+                    item_group_doc = frappe.get_doc("Item Group", item_group.get("item_group"))
+                    item_group_doc.custom_etims_item_type_code = int(item_group.get("code"))
+                    
+                    item_group_doc.save()
+                    frappe.db.commit()
+     
+                    frappe.msgprint(f'eTIMS Item Type Code changed to {item_group.get("code")} for Item Group {item_group.get("item_group")}.')
+                else:
+                    frappe.msgprint(f'To change Item Group {item_group.get("item_group")}, kindly do so in the item group master.')
+                
 def disable_default_taxes(company):
     disable_sales_taxes(company)
     disable_purchase_taxes(company)

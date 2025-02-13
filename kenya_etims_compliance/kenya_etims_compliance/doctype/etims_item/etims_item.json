@@ -1,0 +1,171 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-02-13 18:57:25.441988",
+ "default_view": "List",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "item",
+  "item_code",
+  "item_classification_code",
+  "item_type_code",
+  "column_break_4tzj",
+  "item_standard_name",
+  "origin_place_code_nation",
+  "packing_unit_code",
+  "quantity_unit_code",
+  "column_break_nmep",
+  "barcode",
+  "batch_number",
+  "taxation_type_code",
+  "default_unit_price",
+  "column_break_vlz0",
+  "add_information",
+  "safety_quantity",
+  "insurance_appicable_yn",
+  "usedunused"
+ ],
+ "fields": [
+  {
+   "fieldname": "item_classification_code",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Item Classification Code",
+   "length": 10,
+   "options": "eTIMS Item Classification"
+  },
+  {
+   "fieldname": "item_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "eTIMS Item Code",
+   "length": 20
+  },
+  {
+   "fieldname": "item_type_code",
+   "fieldtype": "Data",
+   "label": "Item Type Code",
+   "length": 5
+  },
+  {
+   "fieldname": "item_standard_name",
+   "fieldtype": "Data",
+   "label": "Item Standard Name",
+   "length": 200
+  },
+  {
+   "fieldname": "column_break_4tzj",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "origin_place_code_nation",
+   "fieldtype": "Data",
+   "label": "Origin Place Code (Nation)",
+   "length": 5
+  },
+  {
+   "fieldname": "packing_unit_code",
+   "fieldtype": "Data",
+   "label": "Packing Unit Code",
+   "length": 5
+  },
+  {
+   "fieldname": "quantity_unit_code",
+   "fieldtype": "Data",
+   "label": "Quantity Unit Code",
+   "length": 5
+  },
+  {
+   "fieldname": "taxation_type_code",
+   "fieldtype": "Data",
+   "label": "Taxation Type Code",
+   "length": 5
+  },
+  {
+   "fieldname": "batch_number",
+   "fieldtype": "Data",
+   "label": "Batch Number",
+   "length": 10
+  },
+  {
+   "fieldname": "column_break_nmep",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "barcode",
+   "fieldtype": "Data",
+   "label": "Barcode",
+   "length": 20
+  },
+  {
+   "fieldname": "default_unit_price",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Default Unit Price",
+   "length": 18
+  },
+  {
+   "fieldname": "column_break_vlz0",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "add_information",
+   "fieldtype": "Data",
+   "label": "Add Information",
+   "length": 7
+  },
+  {
+   "fieldname": "safety_quantity",
+   "fieldtype": "Float",
+   "label": "Safety Quantity",
+   "length": 13
+  },
+  {
+   "fieldname": "insurance_appicable_yn",
+   "fieldtype": "Data",
+   "label": "Insurance Appicable Y/N",
+   "length": 1
+  },
+  {
+   "fieldname": "usedunused",
+   "fieldtype": "Data",
+   "label": "Used/UnUsed",
+   "length": 1
+  },
+  {
+   "fieldname": "item",
+   "fieldtype": "Link",
+   "label": "Item",
+   "length": 11,
+   "options": "Item"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-02-13 19:03:26.977097",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS Item",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
