@@ -27,6 +27,15 @@ frappe.ui.form.on("Tax Branch Configurations", {
                 }
             };
         });
+
+        frm.set_query("tis_device_initialization", function() {
+            return {
+                "filters": {
+                    "company": frm.doc.company,
+                    "branch_id": frm.doc.tax_branch_office
+                }
+            };
+        });
     },
     parent_tax_account(frm){
         if(frm.doc.tax_accounts){
