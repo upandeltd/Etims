@@ -173,7 +173,7 @@ function preview_etims_info(frm){
 
 function create_etims_sinv(frm){
     frappe.call({
-        method: 'kenya_etims_compliance.custom_methods.sales_invoice.create_stime_sinv',
+        method: 'kenya_etims_compliance.custom_methods.sales_invoice.create_etims_sinv',
         args: {
             message:{
                 data:{

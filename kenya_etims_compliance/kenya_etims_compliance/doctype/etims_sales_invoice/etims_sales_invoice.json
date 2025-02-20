@@ -55,7 +55,10 @@
   "tax_amount_e",
   "section_break_x8z8",
   "total_item_count",
+  "total_before_discount",
+  "total_discount_amount",
   "total_taxable_amount",
+  "total_non_taxable_amount",
   "total_tax_amount",
   "total_amount",
   "sales_updated_in_etims",
@@ -408,11 +411,26 @@
   {
    "fieldname": "column_break_v6wt",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_non_taxable_amount",
+   "fieldtype": "Currency",
+   "label": "Total Non Taxable Amount"
+  },
+  {
+   "fieldname": "total_before_discount",
+   "fieldtype": "Currency",
+   "label": "Total Before Discount"
+  },
+  {
+   "fieldname": "total_discount_amount",
+   "fieldtype": "Currency",
+   "label": "Total Discount Amount"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-02-15 15:40:10.190764",
+ "modified": "2025-02-21 00:54:13.081873",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Sales Invoice",

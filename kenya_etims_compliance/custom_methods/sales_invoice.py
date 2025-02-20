@@ -19,27 +19,10 @@ def insert_tax_details(doc,method):
     '''
     Method sets tax details e.g taxable amounts
     '''
-    item_count = 0
     if doc.name and doc.custom_update_invoice_in_tims:                
         if doc.items:
-            item_count = len(doc.items) 
             insert_tax_amounts(doc)
-
-        total_discount_amount = get_total_discount(doc)
-        
-        total_vat_amount = fetch_total_vat(doc)
-        total_non_vat_amount = fetch_total_non_vat(doc)
                 
-        frappe.db.set_value('Sales Invoice', doc.name, {
-            "custom_total_taxable_amount": total_vat_amount,
-            "custom_total_nontaxable_amount": total_non_vat_amount,
-            "custom_item_count": item_count,
-            "custom_total_discount_amount": total_discount_amount,
-            "custom_total_before_discount": total_discount_amount + doc.base_grand_total
-        }, update_modified=True)
-        
-        doc.reload()
-        
 def insert_tax_amounts(doc):
     if doc.items:
         taxable_amounts = get_taxable_amounts(doc)
@@ -165,7 +148,7 @@ def get_sales_status_code(sales_status):
     return code
 
 @frappe.whitelist()
-def create_stime_sinv():
+def create_etims_sinv():
 
     '''
     Method that collects sales information and updates it to tims server
@@ -179,6 +162,7 @@ def create_stime_sinv():
     doc_name = data_obj.get("doc_name")
     
     doc = frappe.get_doc("Sales Invoice", doc_name)
+    count = 0
     
     if doc.custom_update_invoice_in_tims:
         tax_code_list = []
@@ -196,7 +180,7 @@ def create_stime_sinv():
         request_date = doc.posting_date
         date_str = eTIMS.strf_date_object(request_date)
             
-        count = doc.custom_item_count   
+        count = len(doc.items)
                     
         payload = {
             "trdInvcNo": doc.name,
@@ -206,7 +190,10 @@ def create_stime_sinv():
             "salesDt": date_str,
             "stockRlsDt": conc_datetime_str,
             "totItemCnt": count,
-            "totTaxblAmt": abs(doc.custom_total_taxable_amount),
+            "totDscAmt": abs(round(get_total_discount(doc), 2)),
+            "totExDsc": abs(round((get_total_discount(doc) + doc.base_grand_total), 2)),
+            "totNonTaxAmt": abs(round(fetch_total_non_vat(doc), 2)),
+            "totTaxblAmt": abs(fetch_total_vat(doc)),
             "totTaxAmt": abs(doc.base_total_taxes_and_charges),
             "totAmt": abs(doc.base_grand_total),
             "prchrAcptcYn":"N",
@@ -318,7 +305,6 @@ def stockIOSaveReq(doc, date_str):
                 "custBhfId": "",
                 "ocrnDt": date_str,
                 "totItemCnt": len(stock_list),
-                "totTaxblAmt": abs(round(taxblAmt, 2)),
                 "totTaxAmt": abs(round(taxAmt, 2)),
                 "totAmt": abs(doc.base_grand_total),
                 "remark": doc.remarks,
@@ -658,7 +644,10 @@ def create_etims_sales_invoice(payload):
         new_doc.confirmation_date = payload.get("cfmDt")
         new_doc.stock_release_date = payload.get("stockRlsDt")
         new_doc.total_item_count = payload.get("totItemCnt")
+        new_doc.total_discount_amount = payload.get("totDscAmt")
+        new_doc.total_before_discount = payload.get("totExDsc")
         new_doc.total_taxable_amount = payload.get("totTaxblAmt")
+        new_doc.total_non_taxable_amount = payload.get("totNonTaxAmt")
         new_doc.total_tax_amount = payload.get("totTaxAmt")
         new_doc.total_amount = payload.get("totAmt")
         new_doc.purchase_accept = payload.get("prchrAcptcYn")
