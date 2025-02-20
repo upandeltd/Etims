@@ -7,7 +7,7 @@ import frappe
 class eTIMS():
     def get_headers():
         branch_id = eTIMS.get_user_branch_id()
-        header_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id, "active":1}, fields=["pin", "branch_id", "communication_key"])
+        header_docs = frappe.db.get_list("TIS Device Initialization", filters={"branch_id": branch_id, "active":1}, fields=["pin", "branch_id", "communication_key"])
         
         if header_docs:
             headers = {
@@ -223,49 +223,64 @@ class eTIMS():
         
     def get_user_branch_id():
         current_user = frappe.session.user
-            
-        tax_branch_perms = frappe.db.get_all("User Permission", filters={"user":current_user, "allow": "Tax Branch Office", "is_default": 1}, fields =["for_value"])
+
+        query = """
+            SELECT 
+                up.for_value AS for_value
+            FROM
+                `tabUser Permission` AS up
+            WHERE
+                up.user = %s
+            AND
+                up.allow = "Tax Branch Office"
+            AND
+                up.is_default = 1
+        """
+
+        results = frappe.db.sql(query, (current_user), as_dict=True)
+    
+        # tax_branch_perms = frappe.db.get_all("User Permission", filters={"user":current_user, "allow": "Tax Branch Office", "is_default": 1}, fields =["for_value"])
                 
-        if tax_branch_perms:
-            tax_branch_id_current_user = tax_branch_perms[0].get("for_value")
+        if results:
+            tax_branch_id_current_user = results[0].get("for_value")
             
             return  tax_branch_id_current_user
 
         
     def itemSaveReq(doc_name):
         headers = eTIMS.get_headers()
-        
-        item = frappe.get_doc("Item", doc_name)
-        
-        if item.get("custom_item_classification_code"):
+        item = frappe.get_doc("eTIMS Item", doc_name)
+        item_doc = frappe.get_doc("Item", item.get("item"))
+
+        if item.get("item_classification_code"):
         
             payload = {
-                "itemCd":item.get("custom_item_code"),
-                "itemClsCd":item.get("custom_item_classification_code"),
-                "itemClsNm":item.get("custom_item_classification_name"),
-                "itemTyCd":item.get("custom_item_type_code"),
-                "itemNm":item.get("custom_item_name"),
-                "itemStdNm":item.get("custom_item_standard_name"),
-                "orgnNatCd":item.get("custom_origin_place_code_nation"),
-                "pkgUnitCd":item.get("custom_packaging_unit_code"),
-                "qtyUnitCd":item.get("custom_quantity_unit_code"),
-                "taxTyCd":item.get("custom_taxation_type_code"),
-                "btchNo":item.get("custom_batch_number"),
-                "bcd":item.get("custom_barcode"),
-                "dftPrc":item.get("custom_default_unit_price"),
-                "grpPrcL1":item.get("custom_group1_unit_price"),
-                "grpPrcL2":item.get("custom_group2_unit_price"),
-                "grpPrcL3": item.get("custom_group3_unit_price"),
-                "grpPrcL4":item.get("custom_group4_unit_price"),
-                "grpPrcL5":item.get("custom_group5_unit_price"),
-                "addInfo":item.get("custom_additional_information"),
-                "sftyQty":item.get("custom_safety_quantity"),
-                "isrcAplcbYn":item.get("custom_insurance_appicableyn"),
-                "useYn":item.get("custom_used__unused"),
-                "regrId":item.get("custom_registration_id"),
-                "regrNm":item.get("custom_registration_name"), 
-                "modrId":item.get("custom_modifier_id"), 
-                "modrNm":item.get("custom_modifier_name")
+                "itemCd":item.get("etims_item_code"),
+                "itemClsCd":item.get("item_classification_code"),
+                "itemClsNm": item.get("item_classification_name"),
+                "itemTyCd":item.get("item_type_code"),
+                "itemNm":item.get("item_name"),
+                "itemStdNm":item.get("item_standard_name"),
+                "orgnNatCd":item.get("origin_place_code_nation"),
+                "pkgUnitCd":item.get("packaging_unit_code"),
+                "qtyUnitCd":item.get("quantity_unit_code"),
+                "taxTyCd":item.get("taxation_type_code"),
+                "btchNo":item.get("batch_number"),
+                "bcd":item.get("barcode"),
+                "dftPrc":item.get("default_unit_price"),
+                "grpPrcL1": 0, 
+                "grpPrcL2": 0,
+                "grpPrcL3":  0,
+                "grpPrcL4": 0,
+                "grpPrcL5": 0,
+                "addInfo":item.get("additional_information"),
+                "sftyQty":item.get("safety_quantity"),
+                "isrcAplcbYn":item.get("insurance_appicable_yn"),
+                "useYn":item.get("usedunused"),
+                "regrId":item.get("registration_name"),
+                "regrNm":item.get("registration_name"), 
+                "modrId":item.get("modifier_name"), 
+                "modrNm":item.get("modifier_name")
             }
             
             try:
@@ -279,11 +294,11 @@ class eTIMS():
                 response_json = response.json()
                 
                 if not response_json.get("resultCd") == '000':
-                    
+                    print(response_json)
                     return {"Error":response_json.get("resultMsg")}
                 
-                item.custom_registered_in_tims = 1
-                item.save()
+                item_doc.custom_registered_in_tims = 1
+                item_doc.save()
 
                 return {"Success":response_json.get("resultMsg")}
 

@@ -10,17 +10,26 @@
  "field_order": [
   "company",
   "tax_branch_office",
+  "tis_device_initialization",
   "parent_tax_account",
   "accounts_tab",
   "tax_accounts",
   "create_accounts",
   "tax_settings_section",
+  "item_tax_template",
   "get_item_taxes",
   "item_tax_configuration",
   "create_taxes",
+  "section_break_cpoc",
+  "get_item_groups",
+  "item_group_codes",
+  "update_codes",
   "stock_settings_tab",
   "update_stock_selling",
-  "update_stock_purchase"
+  "last_etims_sales_invoice_number",
+  "column_break_d9gc",
+  "update_stock_purchase",
+  "last_etims_purchase_invoice_number"
  ],
  "fields": [
   {
@@ -42,7 +51,7 @@
   {
    "fieldname": "tax_settings_section",
    "fieldtype": "Tab Break",
-   "label": "Item Tax Templates"
+   "label": "Item Settings"
   },
   {
    "fieldname": "accounts_tab",
@@ -99,11 +108,58 @@
    "fieldname": "update_stock_purchase",
    "fieldtype": "Check",
    "label": "Update Stock (Purchase)"
+  },
+  {
+   "fieldname": "item_group_codes",
+   "fieldtype": "Table",
+   "label": "Item Group Codes",
+   "options": "eTIMS Item Group"
+  },
+  {
+   "fieldname": "update_codes",
+   "fieldtype": "Button",
+   "label": "Update Codes"
+  },
+  {
+   "fieldname": "column_break_d9gc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "get_item_groups",
+   "fieldtype": "Button",
+   "label": "Get Item Groups"
+  },
+  {
+   "fieldname": "section_break_cpoc",
+   "fieldtype": "Section Break",
+   "label": "Assign eTIMS Codes To Item Groups"
+  },
+  {
+   "fieldname": "item_tax_template",
+   "fieldtype": "Section Break",
+   "label": "Item Tax Templates"
+  },
+  {
+   "fieldname": "tis_device_initialization",
+   "fieldtype": "Link",
+   "label": "TIS Device Initialization",
+   "options": "TIS Device Initialization",
+   "reqd": 1
+  },
+  {
+   "fieldname": "last_etims_sales_invoice_number",
+   "fieldtype": "Int",
+   "label": "Last eTIMS Sales Invoice Number"
+  },
+  {
+   "fieldname": "last_etims_purchase_invoice_number",
+   "fieldtype": "Int",
+   "label": "Last eTIMS Purchase Invoice Number"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-02-11 18:41:37.456414",
+ "modified": "2025-02-15 11:29:05.429662",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "Tax Branch Configurations",

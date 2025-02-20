@@ -36,12 +36,13 @@ class TaxBranchConfigurations(Document):
                     frappe.db.commit()
                     
                     frappe.msgprint(f'Account {new_acc.name} has been created.')
+                    
                 except:
                     frappe.throw(f'Unexpected error with account {item.get("account_name")}!')
                     
             else:
                 frappe.msgprint(f'Account {item.get("account_name")} exists for company {self.company}.')
-    
+                    
     @frappe.whitelist()
     def create_item_tax_templates(self):
         if not frappe.form_dict.message:
@@ -78,14 +79,56 @@ class TaxBranchConfigurations(Document):
                     
             else:
                 frappe.msgprint(f'Item Tax Template {item.get("title")} exists for company {self.company}.')
+                
+    @frappe.whitelist()
+    def get_item_groups(self):
+        item_groups = frappe.db.sql("""
+            SELECT name, custom_etims_item_type_code
+            FROM `tabItem Group`
+            WHERE is_group=0
+        """, as_dict=True)
+        
+        if item_groups:
+            for item_group in item_groups:
+                group_exists = frappe.db.exists("eTIMS Item Group", {"item_group": item_group.get("name"), "parent": self.name})
+                if not group_exists:
+                    self.append("item_group_codes",{
+                        "item_group": item_group.get("name"),
+                        "code": item_group.get("custom_etims_item_type_code")
+                    })
+                    
+            self.save()
     
+    @frappe.whitelist()
+    def update_item_group_codes(self):
+        item_groups = self.item_group_codes
+        
+        if len(item_groups):
+            for item_group in item_groups:
+                exists = frappe.db.exists("Item Group", {"name": item_group.get("item_group"), "custom_etims_item_type_code": int(item_group.get("code"))})
+                
+                if not exists:
+                    item_group_doc = frappe.get_doc("Item Group", item_group.get("item_group"))
+                    item_group_doc.custom_etims_item_type_code = int(item_group.get("code"))
+                    
+                    item_group_doc.save()
+                    frappe.db.commit()
+     
+                    frappe.msgprint(f'eTIMS Item Type Code changed to {item_group.get("code")} for Item Group {item_group.get("item_group")}.')
+                else:
+                    frappe.msgprint(f'To change Item Group {item_group.get("item_group")}, kindly do so in the item group master.')
+                
 def disable_default_taxes(company):
     disable_sales_taxes(company)
     disable_purchase_taxes(company)
     
 def disable_sales_taxes(company):
-    default_taxes = frappe.db.get_list("Sales Taxes and Charges Template", filters={"company": company, "is_default": 1}, fields=["name"])
-    
+    default_taxes = frappe.db.sql("""
+        SELECT name 
+        FROM `tabSales Taxes and Charges Template` 
+        WHERE company = %s AND is_default = 1
+    """, (company,), as_dict=True)
+
     if default_taxes:
         for d_tax in default_taxes:
             doc = frappe.get_doc("Sales Taxes and Charges Template", d_tax.get("name"))
@@ -95,7 +138,11 @@ def disable_sales_taxes(company):
             frappe.db.commit()
     
 def disable_purchase_taxes(company):
-    default_taxes = frappe.db.get_list("Purchase Taxes and Charges Template", filters={"company": company, "is_default": 1}, fields=["name"])
+    default_taxes = frappe.db.sql("""
+        SELECT name 
+        FROM `tabPurchase Taxes and Charges Template` 
+        WHERE company = %s AND is_default = 1
+    """, (company,), as_dict=True)
     
     if default_taxes:
         for d_tax in default_taxes:
