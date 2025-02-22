@@ -168,6 +168,60 @@ class eTIMSSalesInvoice(Document):
                         invoice_numbers.append(invoice_no.get("invoice_number"))
                     
         return invoice_numbers
+    
+    # def on_update(self):
+    #     if self.sales_updated_in_etims:
+    #         file_name = self.create_qr_code()
+                
+    #         attachment_url = create_attachment(file_name, self.trader_invoice_number)
+
+    #         self.receipt_qr_code = attachment_url
+            
+    #         # self.save()
+    #         # self.submit()
+    #         frappe.db.commit()
+    #         # create_sales_receipt(data, doc.name)
+            
+def create_qr_code2(branch_id, receipt_signature): 
+        header_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id, "active":1}, fields=["api_mode", "pin"])
+    
+        if receipt_signature:
+            if header_docs:
+                settings_doc = header_docs[0]
+                
+                url = "https://etims-sbx.kra.go.ke/common/link/etims/receipt/indexEtimsReceiptData?Data=" + settings_doc.get("pin") + branch_id + receipt_signature
+                file_name = receipt_signature + ".png"
+                
+                file_path = frappe.get_site_path('private', 'files', file_name)
+                
+                if settings_doc.get("api_mode") == "Production":
+                    url = "https://etims.kra.go.ke/common/link/etims/receipt/indexEtimsReceiptData?Data=" + settings_doc.get("pin") + branch_id + receipt_signature
+                else:
+                    url = "https://etims-sbx.kra.go.ke/common/link/etims/receipt/indexEtimsReceiptData?Data=" + settings_doc.get("pin") + branch_id + receipt_signature
+                    
+                
+                # print(qrcode)
+                try:
+                    qrcode = segno.make_qr(url)
+                    qrcode.save(file_path, scale=5)
+                    
+                    return file_name, url
+                    
+                except:
+                    frappe.throw("QR Code Not Generated!")
+                    
+def create_attachment(file_name, inv_name):
+    new_attachment = frappe.new_doc("File")
+    new_attachment.file_name = file_name
+    new_attachment.file_url = "/private/files/" + file_name
+    new_attachment.attached_to_doctype = "eTIMS Sales Invoice"
+    new_attachment.attached_to_name = inv_name
+    new_attachment.is_private = 1
+    
+    new_attachment.save()
+    frappe.db.commit()
+    
+    return new_attachment.get("file_url")
 
 def get_etims_details(company, branch_id, owner, modified_by):
     query = """
@@ -215,6 +269,8 @@ def writeInvoiceToeTIMS(doc, method):
         if etims_inv_doc_name and not etims_inv_doc_name in ["None", None]:
             data_doc = frappe.get_doc("eTIMS Sales Invoice", etims_inv_doc_name)
             trnsSalesSaveWrReq(data_doc)
+        else:
+            frappe.throw("Update Invoice In eTIMS is checked, you can't proceed without creating an eTIMS Sales Invoice!")
 
 @frappe.whitelist()
 def trnsSalesSaveWrReq(doc):
@@ -326,12 +382,19 @@ def trnsSalesSaveWrReq(doc):
             
         # # stockIOSaveReq(doc, date_str)
         doc.sales_updated_in_etims = 1
+        file_name, url = create_qr_code2(headers.get("bhfId"), data.get("rcptSign"))
+            
+        attachment_url = create_attachment(file_name, doc.name)
+
+        doc.receipt_qr_code = attachment_url
+        doc.receipt_url = url
+        
         doc.save()
         frappe.db.commit()
         # doc.submit()
         # print(payload)
         
-    #     frappe.msgprint(response_json.get("resultMsg"))
+        frappe.msgprint(f'Invoice {doc.trader_invoice_number} has been submitted to eTIMS 🎉')
 
     except:
         frappe.throw("Oops Bad Request!")
@@ -487,18 +550,21 @@ def get_set_options():
     }
 
     # Fetch values from the database
-    fetched_values = frappe.db.get_value(
+    fetched_value = frappe.db.get_value(
         "eTIMS Sales Invoice",
         {"trader_invoice_number": doc_name},
         ["sales_type_code", "payment_type_code", "sales_status_code", "receipt_type_code", "credit_note_reason_code"]
     )
+    
+    if not fetched_value or fetched_value in ["None", None]:
+        frappe.throw("eTIMS Sales Invoice has not been created yet.")
 
-    if fetched_values:
-        # Unpack fetched values and replace defaults only if not None
-        keys = ["sales_type_code", "payment_type_code", "sales_status_code", "receipt_type_code", "credit_note_reason_code"]
-        for i, key in enumerate(keys):
-            if fetched_values[i] is not None:
-                defaults[key] = fetched_values[i]
+
+    # Unpack fetched values and replace defaults only if not None
+    keys = ["sales_type_code", "payment_type_code", "sales_status_code", "receipt_type_code", "credit_note_reason_code"]
+    for i, key in enumerate(keys):
+        if fetched_value[i] is not None:
+            defaults[key] = fetched_value[i]
 
     defaults["sales_type_code"] = get_sales_type_name(defaults.get("sales_type_code"))
     defaults["payment_type_code"] = get_payment_type_name(defaults.get("payment_type_code"))

@@ -75,7 +75,8 @@
   "control_unit_date_time",
   "control_unit_date",
   "control_unit_time",
-  "receipt_qr_code"
+  "receipt_qr_code",
+  "receipt_url"
  ],
  "fields": [
   {
@@ -133,6 +134,7 @@
   {
    "fieldname": "invoice_number",
    "fieldtype": "Int",
+   "in_list_view": 1,
    "label": "Invoice Number"
   },
   {
@@ -142,7 +144,7 @@
   },
   {
    "fieldname": "total_item_count",
-   "fieldtype": "Float",
+   "fieldtype": "Int",
    "label": "Total Item Count"
   },
   {
@@ -275,6 +277,7 @@
    "default": "0",
    "fieldname": "sales_updated_in_etims",
    "fieldtype": "Check",
+   "in_list_view": 1,
    "label": "Sales Updated In eTIMS"
   },
   {
@@ -426,11 +429,16 @@
    "fieldname": "total_discount_amount",
    "fieldtype": "Currency",
    "label": "Total Discount Amount"
+  },
+  {
+   "fieldname": "receipt_url",
+   "fieldtype": "Data",
+   "label": "Receipt URL"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-02-21 00:54:13.081873",
+ "modified": "2025-02-21 16:15:12.544771",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Sales Invoice",
