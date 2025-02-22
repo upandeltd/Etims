@@ -1,7 +1,7 @@
 frappe.ui.form.on("Sales Invoice",{
     refresh:function(frm){
         if(frm.doc.custom_update_invoice_in_tims){
-            if(frm.doc.docstatus==0  && !frm.doc.__islocal){
+            if(frm.doc.docstatus==0  && frm.doc.name){
                 frm.add_custom_button('Preview eTIMS Information', () => {
                     preview_etims_info(frm);
                 }, "Preview");
@@ -23,7 +23,7 @@ frappe.ui.form.on("Sales Invoice",{
     },
     onload:function(frm){
         if(frm.doc.custom_update_invoice_in_tims){
-            if(frm.doc.docstatus==0  && !frm.doc.__islocal){
+            if(frm.doc.docstatus==0  && frm.doc.name){
                 frm.add_custom_button('Preview eTIMS Information', () => {
                     preview_etims_info(frm);
                 }, "Preview");
