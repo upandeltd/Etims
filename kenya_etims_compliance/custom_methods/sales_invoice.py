@@ -16,7 +16,7 @@ def validate(doc, method):
             insert_tax_details(doc, method)
             
             
-def confirm_etims_sinv(doc, method):
+def confirm_etims_sinv(doc):
     # Skip execution if the document is being submitted
     if doc.docstatus == 1:
         return
@@ -27,70 +27,10 @@ def confirm_etims_sinv(doc, method):
         frappe.throw(f'Delete eTIMS Sales Invoice <a href="/app/etims-sales-invoice/{doc_exists}" target="_blank">{doc_exists}</a> to continue editing.')
         
 @frappe.whitelist()
-def get_etims_sinv_data(einv_name):    
+def get_sinv_data(inv_name):    
+    inv_data = frappe.get_doc("Sales Invoice", inv_name)
 
-    query = """
-        SELECT 
-            name,
-            company,
-            branch_id,
-            sales_control_unit,
-            sales_date,
-            confirmation_date,
-            stock_release_date,
-            receipt_publish_date,
-            trader_invoice_number,
-            invoice_number,
-            original_invoice_number,
-            customer_tin,
-            customer_name,
-            is_return,
-            sales_type_code,
-            payment_type_code,
-            purchase_accept,
-            sales_status_code,
-            receipt_type_code,
-            credit_note_reason_code,
-            taxable_amount_a,
-            taxable_amount_b,
-            taxable_amount_c,
-            taxable_amount_d,
-            taxable_amount_e,
-            tax_rate_a,
-            tax_rate_b,
-            tax_rate_c,
-            tax_rate_d,
-            tax_rate_e,
-            tax_amount_a,
-            tax_amount_b,
-            tax_amount_c,
-            tax_amount_d,
-            tax_amount_e,
-            total_item_count,
-            total_before_discount,
-            total_discount_amount,
-            total_taxable_amount,
-            total_non_taxable_amount,
-            total_tax_amount,
-            total_amount,
-            remark,
-            current_receipt_number,
-            total_receipt_number,
-            internal_data,
-            receipt_signature,
-            control_unit_date_time,
-            control_unit_date,
-            control_unit_time,
-            receipt_qr_code
-        FROM `tabeTIMS Sales Invoice` 
-        WHERE name = %s
-    """
-    inv_data = frappe.db.sql(query, einv_name, as_dict=True)
-    inv_data[0]["total_discount_amount"] = float(inv_data[0]["total_discount_amount"])
-    inv_data[0]["total_taxable_amount"] = float(inv_data[0]["total_taxable_amount"])
-    inv_data[0]["total_non_taxable_amount"] = float(inv_data[0]["total_non_taxable_amount"])
-    # inv_data[0]["taxable_amount_a"] = float(inv_data[0]["taxable_amount_a"])
-    return inv_data[0]
+    return inv_data
 
 def insert_tax_details(doc,method):
     '''
@@ -99,6 +39,8 @@ def insert_tax_details(doc,method):
     if doc.name and doc.custom_update_invoice_in_tims:                
         if doc.items:
             insert_tax_amounts(doc)
+    
+    confirm_etims_sinv(doc)
                 
 def insert_tax_amounts(doc):
     if doc.items:
@@ -146,7 +88,8 @@ def get_taxable_amounts(doc):
                 taxable_amounts_dict[item.get("custom_tax_code")] += item.base_net_amount
     except:
         frappe.throw(Exception)
-        
+    print("&"*80)
+    print(taxable_amounts_dict)
     return taxable_amounts_dict      
 
 def fetch_total_vat(doc):
@@ -277,6 +220,8 @@ def create_etims_sinv():
                 "totTaxAmt": abs(doc.base_total_taxes_and_charges),
                 "totAmt": abs(doc.base_grand_total),
                 "prchrAcptcYn":"N",
+                "isRtn": doc.get("is_return"),
+                "rtAgnst": doc.get("return_against"),
                 "remark": doc.remarks,
                 "regrNm": etims_details.get("creator"),
                 "modrNm": etims_details.get("modifier"),
@@ -341,23 +286,21 @@ def create_etims_sinv():
                     payload["taxAmtE"] = 0
                         
             
-            if doc.is_return == 1:
-                return_status = sales_return_information(doc)
+            # if doc.is_return == 1:
+            #     return_status = sales_return_information(doc)
         
-                if return_status == "partial":
-                    payload["rfdDt"] = date_time_str
-                    payload["rfdRsnCd"] = doc.custom_credit_note_reason_code
-                elif return_status == "full":
-                    payload["cnclReqDt"] = conc_datetime_str
-                    payload["cnclDt"] = conc_datetime_str
-                    payload["rfdDt"] = date_time_str
-                    payload["rfdRsnCd"] = doc.custom_credit_note_reason_code
-                elif return_status == "null":
-                    frappe.throw("Invalid, return amount is greater than original amount!")
+            #     if return_status == "partial":
+            #         payload["rfdDt"] = date_time_str
+            #         payload["rfdRsnCd"] = doc.custom_credit_note_reason_code
+            #     elif return_status == "full":
+            #         payload["cnclReqDt"] = conc_datetime_str
+            #         payload["cnclDt"] = conc_datetime_str
+            #         payload["rfdDt"] = date_time_str
+            #         payload["rfdRsnCd"] = doc.custom_credit_note_reason_code
+            #     elif return_status == "null":
+            #         frappe.throw("Invalid, return amount is greater than original amount!")
         
             try:
-                print(payload)
-                print(abs(round(fetch_total_non_vat(doc), 2)))
                 create_etims_sales_invoice(payload)
                 
             except:
@@ -586,75 +529,6 @@ def create_sales_receipt(data, doc_name):
     new_rcpt_doc.insert()
     
     frappe.db.commit()
-    
-# def create_qr_codedd(pin, branch_id, rcpt_signature):
-#     header_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id, "active":1}, fields=["api_mode"])
-
-#     if rcpt_signature:
-#         if header_docs:
-#             settings_doc = header_docs[0]
-            
-#             url = "https://etims-sbx.kra.go.ke/common/link/etims/receipt/indexEtimsReceiptData?Data=" + pin+ branch_id + rcpt_signature
-#             file_name = rcpt_signature + ".png"
-            
-#             file_path = frappe.get_site_path('private', 'files', file_name)
-            
-#             if settings_doc.get("api_mode") == "Production":
-#                 url = "https://etims.kra.go.ke/common/link/etims/receipt/indexEtimsReceiptData?Data=" + pin+ branch_id + rcpt_signature
-#             else:
-#                 url = "https://etims-sbx.kra.go.ke/common/link/etims/receipt/indexEtimsReceiptData?Data=" + pin+ branch_id + rcpt_signature
-                
-#             try:
-#                 big_code = pyqrcode.create(url, error='L', version=27, mode='binary')
-#                 big_code.png(file_path, scale=10, module_color=[0, 0, 0, 128], background=[255, 255, 255])
-#                 # big_code.show()
-                
-#                 return file_name
-                
-#             except:
-#                 frappe.throw("QR Code Not Generated!")
-
-def create_qr_code(pin, branch_id, rcpt_signature):     
-    header_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id, "active":1}, fields=["api_mode"])
-
-    if rcpt_signature:
-        if header_docs:
-            settings_doc = header_docs[0]
-            
-            url = "https://etims-sbx.kra.go.ke/common/link/etims/receipt/indexEtimsReceiptData?Data=" + pin+ branch_id + rcpt_signature
-            file_name = rcpt_signature + ".png"
-            
-            file_path = frappe.get_site_path('private', 'files', file_name)
-            
-            if settings_doc.get("api_mode") == "Production":
-                url = "https://etims.kra.go.ke/common/link/etims/receipt/indexEtimsReceiptData?Data=" + pin+ branch_id + rcpt_signature
-            else:
-                url = "https://etims-sbx.kra.go.ke/common/link/etims/receipt/indexEtimsReceiptData?Data=" + pin+ branch_id + rcpt_signature
-                
-            
-            # print(qrcode)
-            try:
-                qrcode = segno.make_qr(url)
-                qrcode.save(file_path, scale=5)
-                
-                return file_name
-                
-            except:
-                frappe.throw("QR Code Not Generated!")
-            
-    
-def create_attachment(file_name, inv_name):
-    new_attachment = frappe.new_doc("File")
-    new_attachment.file_name = file_name
-    new_attachment.file_url = "/private/files/" + file_name
-    new_attachment.attached_to_doctype = "Sales Invoice"
-    new_attachment.attached_to_name = inv_name
-    new_attachment.is_private = 1
-    
-    new_attachment.save()
-    frappe.db.commit()
-    
-    return new_attachment.get("file_url")
 
 def sales_return_information(doc):
     diff_amount = 0
@@ -752,6 +626,8 @@ def create_etims_sales_invoice(payload):
         new_doc.tax_amount_c = payload.get("taxAmtC")
         new_doc.tax_amount_d = payload.get("taxAmtD")
         new_doc.tax_amount_e = payload.get("taxAmtE")
+        new_doc.is_return = payload.get("isRtn")
+        new_doc.return_against = payload.get("rtAgnst")
         
         for item in payload.get("itemList"):
             new_doc.append("items", {
@@ -775,39 +651,5 @@ def create_etims_sales_invoice(payload):
             
         new_doc.insert()
         frappe.db.commit()
-    # else:
-    #     if not doc_exists in ["None", None]:
-    #         etims_sinv = frappe.get_doc("eTIMS Sales Invoice", doc_exists)
-    #         etims_sinv.trader_invoice_number = payload.get("trdInvcNo")
-    #         etims_sinv.customer_tin = payload.get("custTin")
-    #         etims_sinv.customer_name = payload.get("custNm")
-    #         etims_sinv.sales_date = payload.get("salesDt")
-    #         etims_sinv.confirmation_date = payload.get("cfmDt")
-    #         etims_sinv.stock_release_date = payload.get("stockRlsDt")
-    #         etims_sinv.total_item_count = payload.get("totItemCnt")
-    #         etims_sinv.total_taxable_amount = payload.get("totTaxblAmt")
-    #         etims_sinv.total_tax_amount = payload.get("totTaxAmt")
-    #         etims_sinv.total_amount = payload.get("totAmt")
-    #         etims_sinv.purchase_accept = payload.get("prchrAcptcYn")
-    #         etims_sinv.remark = payload.get("remark")
-    #         etims_sinv.registration_name = payload.get("regrNm")
-    #         etims_sinv.modifier_name = payload.get("modrNm")
-    #         etims_sinv.receipt_publish_date = payload.get("receipt")["rcptPbctDt"]
-    #         etims_sinv.taxable_amount_a = payload.get("taxblAmtA")
-    #         etims_sinv.taxable_amount_b = payload.get("taxblAmtB")
-    #         etims_sinv.taxable_amount_c = payload.get("taxblAmtC")
-    #         etims_sinv.taxable_amount_d = payload.get("taxblAmtD")
-    #         etims_sinv.taxable_amount_e = payload.get("taxblAmtE")
-    #         etims_sinv.tax_rate_a = payload.get("taxRtA")
-    #         etims_sinv.tax_rate_b = payload.get("taxRtB")
-    #         etims_sinv.tax_rate_c = payload.get("taxRtC")
-    #         etims_sinv.tax_rate_d = payload.get("taxRtD")
-    #         etims_sinv.tax_rate_e = payload.get("taxRtE")
-    #         etims_sinv.tax_amount_a = payload.get("taxAmtA")
-    #         etims_sinv.tax_amount_b = payload.get("taxAmtB")
-    #         etims_sinv.tax_amount_c = payload.get("taxAmtC")
-    #         etims_sinv.tax_amount_d = payload.get("taxAmtD")
-    #         etims_sinv.tax_amount_e = payload.get("taxAmtE")
-            
-    #         etims_sinv.save()
-    #         frappe.db.commit()
+
+        frappe.msgprint(f'eTIMS Sales Invoice <a href="/app/etims-sales-invoice/{new_doc.name}" target="_blank">{new_doc.name}</a> has been created.')

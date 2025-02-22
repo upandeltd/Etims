@@ -1,5 +1,5 @@
 from datetime  import datetime
-import requests, traceback
+import requests, traceback, html
 
     
 import frappe
@@ -295,7 +295,8 @@ class eTIMS():
                 
                 if not response_json.get("resultCd") == '000':
                     print(response_json)
-                    return {"Error":response_json.get("resultMsg")}
+                    escaped_error = html.escape(response_json.get("resultMsg"))
+                    return {"Error": escaped_error}
                 
                 item_doc.custom_registered_in_tims = 1
                 item_doc.save()

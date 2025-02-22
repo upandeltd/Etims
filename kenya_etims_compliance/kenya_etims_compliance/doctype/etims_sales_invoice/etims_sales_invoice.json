@@ -25,6 +25,7 @@
   "customer_tin",
   "customer_name",
   "is_return",
+  "return_against",
   "section_break_27av",
   "sales_type_code",
   "payment_type_code",
@@ -263,6 +264,7 @@
    "label": "Is Return"
   },
   {
+   "default": "06",
    "depends_on": "eval:doc.is_return==1",
    "description": "01- Missing Quantity, 02- Missing Data, 03- Damaged, 04- Wasted, 05- Raw Material Shortage, 06- Refund",
    "fieldname": "credit_note_reason_code",
@@ -434,11 +436,17 @@
    "fieldname": "receipt_url",
    "fieldtype": "Data",
    "label": "Receipt URL"
+  },
+  {
+   "fieldname": "return_against",
+   "fieldtype": "Link",
+   "label": "Return Against",
+   "options": "Sales Invoice"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-02-21 16:15:12.544771",
+ "modified": "2025-02-22 14:08:17.019712",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Sales Invoice",

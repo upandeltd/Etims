@@ -29,7 +29,7 @@ frappe.ui.form.on("Sales Invoice",{
                 }, "Preview");
 
                 frm.add_custom_button('eTIMS Sales Invoice', () => {
-                    preview_etims_info(frm);
+                    create_etims_sinv(frm);
                 }, "Create");
             }
 
@@ -61,11 +61,11 @@ frappe.ui.form.on("Sales Invoice",{
                 frm.add_custom_button('Preview eTIMS Information', () => {
                     preview_etims_info(frm);
                 }, "Preview");
-            }
 
-            frm.add_custom_button('eTIMS Sales Invoice', () => {
-                preview_etims_info(frm);
-            }, "Create");
+                frm.add_custom_button('eTIMS Sales Invoice', () => {
+                    create_etims_sinv(frm);
+                }, "Create");
+            }
 
             if(frm.doc.docstatus==1){
                 frappe.db.get_value('eTIMS Sales Invoice', {trader_invoice_number: frm.doc.name}, 'receipt_url')
