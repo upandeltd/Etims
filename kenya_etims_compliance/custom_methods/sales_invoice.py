@@ -88,8 +88,7 @@ def get_taxable_amounts(doc):
                 taxable_amounts_dict[item.get("custom_tax_code")] += item.base_net_amount
     except:
         frappe.throw(Exception)
-    print("&"*80)
-    print(taxable_amounts_dict)
+
     return taxable_amounts_dict      
 
 def fetch_total_vat(doc):
@@ -284,21 +283,6 @@ def create_etims_sinv():
                     payload["taxblAmtE"] = 0
                     payload["taxRtE"] =  0
                     payload["taxAmtE"] = 0
-                        
-            
-            # if doc.is_return == 1:
-            #     return_status = sales_return_information(doc)
-        
-            #     if return_status == "partial":
-            #         payload["rfdDt"] = date_time_str
-            #         payload["rfdRsnCd"] = doc.custom_credit_note_reason_code
-            #     elif return_status == "full":
-            #         payload["cnclReqDt"] = conc_datetime_str
-            #         payload["cnclDt"] = conc_datetime_str
-            #         payload["rfdDt"] = date_time_str
-            #         payload["rfdRsnCd"] = doc.custom_credit_note_reason_code
-            #     elif return_status == "null":
-            #         frappe.throw("Invalid, return amount is greater than original amount!")
         
             try:
                 create_etims_sales_invoice(payload)
@@ -637,6 +621,7 @@ def create_etims_sales_invoice(payload):
                 "item_name": item.get("itemNm") ,
                 "packaging_unit_code": item.get("pkgUnitCd") ,
                 "quantity_unit_code": item.get("qtyUnitCd") ,
+                "update_stock": item.get("custom_maintain_stock"),
                 "package": item.get("pkg") ,
                 "quantity": item.get("qty") ,
                 "unit_price": item.get("prc") ,

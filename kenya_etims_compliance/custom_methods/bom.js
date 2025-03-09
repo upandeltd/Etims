@@ -1,6 +1,5 @@
 frappe.ui.form.on('BOM',{
-    onload: function(frm){
-        console.log(frm.doc.custom_updated_to_etims ==0, frm.doc.name)
+    refresh: function(frm){
         if(frm.doc.custom_updated_to_etims==0 && frm.doc.name){
             frm.add_custom_button('Save To eTIMS', () => {
                 send_bom_info_to_etims(frm);
