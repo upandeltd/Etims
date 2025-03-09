@@ -1,4 +1,4 @@
-import frappe.commands
+import frappe.commands, html
 import requests, traceback
 from datetime import datetime
 
@@ -104,7 +104,7 @@ def create_etims_item_data(doc, method):
         new_doc.batch_number = ""
         new_doc.default_unit_price = get_item_prices(doc)
         new_doc.safety_quantity = 0
-        new_doc.additional_information = doc.description
+        new_doc.additional_information = ""
         new_doc.insurance_appicable_yn = "N"
         new_doc.origin_place_code_nation = get_country_code(doc.custom_country_of_origin)
         new_doc.etims_item_code = get_item_code(doc)

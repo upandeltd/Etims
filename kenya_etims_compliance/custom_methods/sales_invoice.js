@@ -1,7 +1,7 @@
 frappe.ui.form.on("Sales Invoice",{
     refresh:function(frm){
         if(frm.doc.custom_update_invoice_in_tims){
-            if(frm.doc.docstatus==0){
+            if(frm.doc.docstatus==0  && frm.doc.name){
                 frm.add_custom_button('Preview eTIMS Information', () => {
                     preview_etims_info(frm);
                 }, "Preview");
@@ -10,33 +10,38 @@ frappe.ui.form.on("Sales Invoice",{
                     create_etims_sinv(frm);
                 }, "Create");
             }
-        }
-    },
-    is_return:function(frm){
-        updateSalesType(frm)
 
-        refresh_field("custom_receipt_type_code")
-        refresh_field("custom_invoice_status_code")
-        refresh_field("custom_credit_note_reason_code")
+            if(frm.doc.docstatus==1){
+                frappe.db.get_value('eTIMS Sales Invoice', {trader_invoice_number: frm.doc.name}, 'receipt_url')
+                .then(r => {
+                    frm.add_custom_button('eTIMS Receipt', () => {
+                        window.open(r.message.receipt_url, '_blank')
+                    }, "View");
+                })
+            }
+        }
     },
     onload:function(frm){
         if(frm.doc.custom_update_invoice_in_tims){
-            if(frm.doc.docstatus==0){
+            if(frm.doc.docstatus==0  && frm.doc.name){
                 frm.add_custom_button('Preview eTIMS Information', () => {
                     preview_etims_info(frm);
                 }, "Preview");
 
                 frm.add_custom_button('eTIMS Sales Invoice', () => {
-                    preview_etims_info(frm);
+                    create_etims_sinv(frm);
                 }, "Create");
             }
+
+            if(frm.doc.docstatus==1){
+                frappe.db.get_value('eTIMS Sales Invoice', {trader_invoice_number: frm.doc.name}, 'receipt_url')
+                .then(r => {
+                    frm.add_custom_button('eTIMS Receipt', () => {
+                        window.open(r.message.receipt_url, '_blank')
+                    }, "View");
+                })
+            }
         }
-
-        updateSalesType(frm)
-
-        refresh_field("custom_receipt_type_code")
-        refresh_field("custom_invoice_status_code")
-        refresh_field("custom_credit_note_reason_code")
     },
 
     after_save:function(frm){
@@ -56,11 +61,20 @@ frappe.ui.form.on("Sales Invoice",{
                 frm.add_custom_button('Preview eTIMS Information', () => {
                     preview_etims_info(frm);
                 }, "Preview");
+
+                frm.add_custom_button('eTIMS Sales Invoice', () => {
+                    create_etims_sinv(frm);
+                }, "Create");
             }
 
-            frm.add_custom_button('eTIMS Sales Invoice', () => {
-                preview_etims_info(frm);
-            }, "Create");
+            if(frm.doc.docstatus==1){
+                frappe.db.get_value('eTIMS Sales Invoice', {trader_invoice_number: frm.doc.name}, 'receipt_url')
+                .then(r => {
+                    frm.add_custom_button('eTIMS Receipt', () => {
+                        window.open(r.message.receipt_url, '_blank')
+                    }, "View");
+                })
+            }
         }
     }
 })
@@ -173,7 +187,7 @@ function preview_etims_info(frm){
 
 function create_etims_sinv(frm){
     frappe.call({
-        method: 'kenya_etims_compliance.custom_methods.sales_invoice.create_stime_sinv',
+        method: 'kenya_etims_compliance.custom_methods.sales_invoice.create_etims_sinv',
         args: {
             message:{
                 data:{

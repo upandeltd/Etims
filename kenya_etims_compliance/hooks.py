@@ -131,9 +131,9 @@ doctype_js = {
 
 doc_events = {
         "Sales Invoice": {
-            "before_save": "kenya_etims_compliance.custom_methods.sales_invoice.validate",
+            # "before_save": "kenya_etims_compliance.custom_methods.sales_invoice.validate",
             "on_update": "kenya_etims_compliance.custom_methods.sales_invoice.insert_tax_details",
-            # "on_update": "kenya_etims_compliance.custom_methods.sales_invoice.create_payload",
+            # "on_update": "kenya_etims_compliance.custom_methods.sales_invoice.confirm_etims_sinv",
             "before_submit": "kenya_etims_compliance.kenya_etims_compliance.doctype.etims_sales_invoice.etims_sales_invoice.writeInvoiceToeTIMS"
             # "on_submit": "kenya_etims_compliance.custom_methods.bin.on_submit"
         },
@@ -250,4 +250,4 @@ doc_events = {
 #	"kenya_etims_compliance.auth.validate"
 # ]
 
-fixtures = ["Custom Field"]
+# fixtures = ["Custom Field"]

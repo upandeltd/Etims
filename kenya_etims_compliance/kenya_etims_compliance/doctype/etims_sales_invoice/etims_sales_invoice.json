@@ -25,6 +25,7 @@
   "customer_tin",
   "customer_name",
   "is_return",
+  "return_against",
   "section_break_27av",
   "sales_type_code",
   "payment_type_code",
@@ -55,7 +56,10 @@
   "tax_amount_e",
   "section_break_x8z8",
   "total_item_count",
+  "total_before_discount",
+  "total_discount_amount",
   "total_taxable_amount",
+  "total_non_taxable_amount",
   "total_tax_amount",
   "total_amount",
   "sales_updated_in_etims",
@@ -72,7 +76,8 @@
   "control_unit_date_time",
   "control_unit_date",
   "control_unit_time",
-  "receipt_qr_code"
+  "receipt_qr_code",
+  "receipt_url"
  ],
  "fields": [
   {
@@ -130,6 +135,7 @@
   {
    "fieldname": "invoice_number",
    "fieldtype": "Int",
+   "in_list_view": 1,
    "label": "Invoice Number"
   },
   {
@@ -139,7 +145,7 @@
   },
   {
    "fieldname": "total_item_count",
-   "fieldtype": "Float",
+   "fieldtype": "Int",
    "label": "Total Item Count"
   },
   {
@@ -258,6 +264,7 @@
    "label": "Is Return"
   },
   {
+   "default": "06",
    "depends_on": "eval:doc.is_return==1",
    "description": "01- Missing Quantity, 02- Missing Data, 03- Damaged, 04- Wasted, 05- Raw Material Shortage, 06- Refund",
    "fieldname": "credit_note_reason_code",
@@ -272,6 +279,7 @@
    "default": "0",
    "fieldname": "sales_updated_in_etims",
    "fieldtype": "Check",
+   "in_list_view": 1,
    "label": "Sales Updated In eTIMS"
   },
   {
@@ -408,11 +416,37 @@
   {
    "fieldname": "column_break_v6wt",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_non_taxable_amount",
+   "fieldtype": "Currency",
+   "label": "Total Non Taxable Amount"
+  },
+  {
+   "fieldname": "total_before_discount",
+   "fieldtype": "Currency",
+   "label": "Total Before Discount"
+  },
+  {
+   "fieldname": "total_discount_amount",
+   "fieldtype": "Currency",
+   "label": "Total Discount Amount"
+  },
+  {
+   "fieldname": "receipt_url",
+   "fieldtype": "Data",
+   "label": "Receipt URL"
+  },
+  {
+   "fieldname": "return_against",
+   "fieldtype": "Link",
+   "label": "Return Against",
+   "options": "Sales Invoice"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-02-15 15:40:10.190764",
+ "modified": "2025-02-22 14:08:17.019712",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Sales Invoice",

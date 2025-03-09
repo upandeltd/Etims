@@ -128,7 +128,6 @@
    "fieldtype": "Link",
    "in_standard_filter": 1,
    "label": "Item",
-   "length": 11,
    "options": "Item"
   },
   {
@@ -175,7 +174,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-02-13 23:34:23.855461",
+ "modified": "2025-02-22 17:01:26.698329",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Item",
