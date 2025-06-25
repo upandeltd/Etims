@@ -78,14 +78,14 @@ def create_etims_item_data(doc, method):
     '''    
     creator = frappe.db.get_value("eTIMS Branch User", {"system_user": doc.owner, "saved": 1}, "user_name")
     modifier = frappe.db.get_value("eTIMS Branch User", {"system_user": doc.modified_by, "saved": 1}, "user_name")
-
-    if not creator:
-        frappe.throw("Item Creater Not Registered As Branch Operator")
-        
-    if not modifier:
-        frappe.throw("Item Modifier Not Registered As Branch Operator")
         
     if doc.custom_update_item_to_tims == 1 and not doc.custom_registered_in_tims == 1:
+        if not creator:
+            frappe.throw("Item Creater Not Registered As Branch User")
+        
+        if not modifier:
+            frappe.throw("Item Modifier Not Registered As Branch User")
+
         exists = frappe.db.exists("eTIMS Item", {"item": doc.name})
 
         if exists:
@@ -185,8 +185,8 @@ def get_item_type_code(item_group):
     return frappe.db.get_value("Item Group", item_group, "custom_etims_item_type_code")
     
 def get_item_code(doc):
-    if doc.custom_origin_place_code_nation:
-        str_item_code = doc.custom_origin_place_code_nation + str(get_item_type_code(doc.item_group)) + get_item_pkg_unit_codes(doc.custom_default_packing_unit) + get_item_qty_unit_codes(doc.custom_default_quantity_unit)
+    if doc.custom_country_of_origin:
+        str_item_code = doc.custom_country_of_origin + str(get_item_type_code(doc.item_group)) + get_item_pkg_unit_codes(doc.custom_default_packing_unit) + get_item_qty_unit_codes(doc.custom_default_quantity_unit)
     
         item_code = str(str_item_code) + create_item_digit_code(doc.custom_etims_item)
     
