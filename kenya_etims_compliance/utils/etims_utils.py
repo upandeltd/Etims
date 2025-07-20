@@ -79,6 +79,7 @@ class eTIMS():
         settings_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id, "active":1}, fields=["*"])
             
         t_base_url = eTIMS.get_base_url() + '/api/method/kenya_etims_compliance.utils.etims_response.'
+        # t_base_url = "http://127.0.0.1:8000" + '/api/method/kenya_etims_compliance.utils.etims_response.'
         
         if settings_docs:
             if settings_docs[0].api_mode == "Production":
@@ -294,7 +295,6 @@ class eTIMS():
                 response_json = response.json()
                 
                 if not response_json.get("resultCd") == '000':
-                    print(response_json)
                     escaped_error = html.escape(response_json.get("resultMsg"))
                     return {"Error": escaped_error}
                 

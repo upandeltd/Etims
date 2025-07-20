@@ -28,7 +28,8 @@ def selectInitOsdcInfo():
                     "dvcId":"9999911300000001",
                     "sdcId":"KRACU0300000789",
                     "mrcNo":"WIS01000150",
-                    "cmcKey":"F7EAB71D774C40B5A954F8FF2B9408B10D6CBFA336FB429AB666"
+                    # "cmcKey":"F7EAB71D774C40B5A954F8FF2B9408B10D6CBFA336FB429AB666"
+                    "cmcKey":"ECA8E98F726147698B6C71A50BD58512943C55CD634E4D8EAE96"
                     }
                 }
             }

@@ -15,7 +15,7 @@ class TISDeviceInitialization(Document):
             "bhfId": self.branch_id,
             "dvcSrlNo" : self.device_serial_number
         }
-       
+        print(eTIMS.tims_base_url() + 'selectInitOsdcInfo',)
         try:
             response = requests.request(
                         "POST",

@@ -121,6 +121,7 @@ def create_etims_item_data(doc, method):
         frappe.db.commit()
         
         doc.custom_etims_item = new_doc.name
+        doc.custom_etims_item_code = frappe.db.get_value("eTIMS Item", {"name": doc.custom_etims_item}, "etims_item_code")
         
         frappe.msgprint(f'eTIMS Item {new_doc.name} has been created.')
 
@@ -186,7 +187,8 @@ def get_item_type_code(item_group):
     
 def get_item_code(doc):
     if doc.custom_country_of_origin:
-        str_item_code = doc.custom_country_of_origin + str(get_item_type_code(doc.item_group)) + get_item_pkg_unit_codes(doc.custom_default_packing_unit) + get_item_qty_unit_codes(doc.custom_default_quantity_unit)
+        origin_place_code = frappe.db.get_value("eTIMS Country", doc.custom_country_of_origin, "code_name")
+        str_item_code = origin_place_code + str(get_item_type_code(doc.item_group)) + get_item_pkg_unit_codes(doc.custom_default_packing_unit) + get_item_qty_unit_codes(doc.custom_default_quantity_unit)
     
         item_code = str(str_item_code) + create_item_digit_code(doc.custom_etims_item)
     

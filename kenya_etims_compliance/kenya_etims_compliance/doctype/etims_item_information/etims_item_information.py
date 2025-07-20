@@ -151,7 +151,7 @@ class eTIMSItemInformation(Document):
                                 {"item_name": item.get("item_name"),
                                 "etims_item_code": item.get("etims_item_code"),
                                 "quantity": item.get("qty"),
-                                "stock_uom": item.get("uom"), 
+                                "stock_uom": item.get("uom"),
                                 "parent_bom": item.get("bom")
                                 })
                     self.save()
@@ -317,7 +317,7 @@ def create_new_item_doctype(item):
         new_item_doc.custom_taxation_type_code = item.get("taxTyCd")
         new_item_doc.custom_registration_id = current_user
         new_item_doc.custom_modifier_id = current_user
-        new_item_doc.custom_registered_in_tims = 1
+        new_item_doc.custom_registered_in_tims = 0
         
         if item.get("taxTyCd"):
             tax_template = get_item_tax_template(item.get("taxTyCd"))

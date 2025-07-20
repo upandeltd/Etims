@@ -1,6 +1,7 @@
 frappe.ui.form.on('Item',{
-    onload: function(frm){
-        if(!frm.doc.custom_registered_in_tims==1){
+    refresh: function(frm){
+        console.log("Hello")
+        if(frm.doc.custom_registered_in_tims!=1 && frm.doc.custom_update_item_to_tims==1){
             frm.add_custom_button('Register To eTIMS', () => {
                 send_item_info_to_etims(frm);
             }, "Actions");
