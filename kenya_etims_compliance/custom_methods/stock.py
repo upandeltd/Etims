@@ -188,7 +188,6 @@ def get_etims_sar_no(doc, branch_id):
         new_doc.reference = doc.name
         new_doc.tax_branch_office = branch_id
         new_doc.sr_number = new_sar_no
-        # new_doc.orginal_sr_number = get_org_etims_sar_no(doc)
         new_doc.insert()
         frappe.db.commit()
 
@@ -200,26 +199,12 @@ def get_etims_sar_no(doc, branch_id):
         new_doc.reference = doc.name
         new_doc.tax_branch_office = branch_id
         new_doc.sr_number = etims_sar_no 
-        # new_doc.orginal_sr_number = eTIMS.get_org_etims_sar_no(doc)
         
         new_doc.insert()
         frappe.db.commit()
 
         return etims_sar_no
-    
-# def get_org_etims_sar_no(doc):
-#     org_etims_sar_no = 0
-    
-#     if doc.custom_original_invoice_number:
-#         prev_doc  = frappe.db.get_all("eTIMS Stock Release Number", filters={"reference": doc.amended_from}, fields=["sr_number"])
-        
-#         org_etims_sar_no = prev_doc[0].get("sr_number")
-    
-#         return org_etims_sar_no
-#     else:
-
-#         return org_etims_sar_no
-    
+      
 def check_if_interbranch(item):
     interbranch_transfer = False
     
@@ -247,8 +232,6 @@ def get_warehouse_branch(warehouse_name):
     except:
         frappe.throw("No tax branch id")
     
-    
-
 def etims_stock_item_list(doc):
     stock_item_list = []
     for item in doc.items:

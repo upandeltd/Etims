@@ -50,8 +50,7 @@ class eTIMSSalesInvoice(Document):
             org_inv_no = get_org_etims_sar_no(self)
            
             self.invoice_number = last_inv_number
-            self.original_invoice_number = org_inv_no
-        
+            self.original_invoice_number = org_inv_no   
 
     def validate_inv_number(self):
         invoice_numbers = []
