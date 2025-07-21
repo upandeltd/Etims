@@ -15,17 +15,6 @@ def validate(doc, method):
         if doc_exists:
             insert_tax_details(doc, method)
             
-def on_trash(doc, method):
-    # Skip execution if the document is being submitted
-    if doc.docstatus == 1 or doc.docstatus == 2:
-        return
-    
-    doc_exists = frappe.db.exists("eTIMS Sales Invoice", {"trader_invoice_number": doc.name})
-
-    if doc_exists and doc_exists not in ["None", None]:
-        frappe.delete_doc("eTIMS Sales Invoice", doc_exists, force=True, ignore_permissions=True)
-    
-            
 def confirm_etims_sinv(doc):
     # Skip execution if the document is being submitted
     if doc.docstatus == 1:

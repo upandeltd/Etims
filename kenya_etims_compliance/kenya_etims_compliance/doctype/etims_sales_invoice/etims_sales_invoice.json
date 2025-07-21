@@ -262,6 +262,7 @@
    "depends_on": "eval:doc.is_return==1",
    "fieldname": "is_return",
    "fieldtype": "Check",
+   "in_list_view": 1,
    "label": "Is Return"
   },
   {
@@ -454,7 +455,7 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-21 09:46:22.246102",
+ "modified": "2025-07-21 13:37:53.861341",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Sales Invoice",

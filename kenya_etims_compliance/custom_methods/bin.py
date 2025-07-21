@@ -3,7 +3,8 @@ import frappe
 from kenya_etims_compliance.utils.etims_utils import eTIMS
 
 def on_submit(doc, method):
-    etims_details = get_etims_details(doc.company, doc.set_warehouse, doc.owner, doc.modified_by)
+    branch_id = eTIMS.get_user_branch_id()
+    etims_details = get_etims_details(doc.company, branch_id, doc.owner, doc.modified_by)
     mod_user_name = etims_details.get("modifier")
     reg_user_name = etims_details.get("creator")
     
@@ -28,7 +29,7 @@ def get_bin_qty(item_code, store_warehouse):
     return quantity
 
 def stockMasterSaveReq(item, doc, regName, modName, warehouse):
-    item_code = frappe.db.get_value('Item', item.get("item_code"), 'custom_item_code')
+    item_code = frappe.db.get_value('Item', item.get("item_code"), 'custom_etims_item_code')
     
     quantity = get_bin_qty(item.get("item_code"), warehouse)
     
