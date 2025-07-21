@@ -140,6 +140,7 @@ doc_events = {
         "Stock Entry": {
             "before_submit": "kenya_etims_compliance.custom_methods.stock.update_stock_to_etims",
             "before_validate": "kenya_etims_compliance.custom_methods.stock.insert_tax_rate_and_amount",
+            "before_save":"kenya_etims_compliance.custom_methods.stock.insert_tax_code",
             "on_submit": "kenya_etims_compliance.custom_methods.bin_stock_entry.on_submit"
         },  
         "Item": {

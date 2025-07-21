@@ -246,6 +246,7 @@ def process_etims_sinv(doc_name):
             "isRtn": doc.get("is_return"),
             "rtAgnst": doc.get("return_against"),
             "remark": doc.remarks,
+            "update_stock": doc.update_stock,
             "regrNm": etims_details.get("creator"),
             "modrNm": etims_details.get("modifier"),
             "receipt":{
@@ -486,7 +487,7 @@ def etims_sale_item_list_sales(doc):
         etims_item_exists = frappe.db.exists("eTIMS Item", {"item": item.get("item_code")})
 
         if not etims_item_exists:
-            frappe.throw("Item {} has not corresponding eTIMS Item.")
+            frappe.throw("Item {} has not corresponding eTIMS Item.".format(item.get("item_code")))
 
         item_detail = frappe.get_doc("eTIMS Item", etims_item_exists)
         item_etims_data = {
@@ -654,6 +655,7 @@ def create_etims_sales_invoice(payload):
     new_doc.customer_tin = payload.get("custTin")
     new_doc.customer_name = payload.get("custNm")
     new_doc.sales_date = payload.get("salesDt")
+    new_doc.update_stock = payload.get("update_stock")
     new_doc.confirmation_date = payload.get("cfmDt")
     new_doc.stock_release_date = payload.get("stockRlsDt")
     new_doc.total_item_count = payload.get("totItemCnt")
@@ -719,6 +721,7 @@ def update_existing_etims_sinv(etims_sinv_name, payload):
     etims_sinv_doc.customer_tin = payload.get("custTin")
     etims_sinv_doc.customer_name = payload.get("custNm")
     etims_sinv_doc.sales_date = payload.get("salesDt")
+    etims_sinv_doc.update_stock = payload.get("update_stock")
     etims_sinv_doc.confirmation_date = payload.get("cfmDt")
     etims_sinv_doc.stock_release_date = payload.get("stockRlsDt")
     etims_sinv_doc.total_item_count = payload.get("totItemCnt")

@@ -9,6 +9,7 @@
  "engine": "InnoDB",
  "field_order": [
   "update_invoice_in_etims",
+  "update_stock",
   "company",
   "branch_id",
   "sales_control_unit",
@@ -160,7 +161,7 @@
   },
   {
    "fieldname": "total_amount",
-   "fieldtype": "Data",
+   "fieldtype": "Currency",
    "label": "Total Amount"
   },
   {
@@ -442,11 +443,17 @@
    "fieldtype": "Link",
    "label": "Return Against",
    "options": "Sales Invoice"
+  },
+  {
+   "default": "0",
+   "fieldname": "update_stock",
+   "fieldtype": "Check",
+   "label": "Update Stock"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-02-22 14:08:17.019712",
+ "modified": "2025-07-21 02:02:01.147383",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Sales Invoice",
