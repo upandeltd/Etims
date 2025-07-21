@@ -512,7 +512,8 @@ def etims_sale_item_list_sales(doc):
 					"taxTyCd": item_detail.get("taxation_type_code"),
 					"taxblAmt": abs(round(item.get("base_net_amount"), 2)),
 					"taxAmt": abs(round((item.get("base_amount") - item.get("base_net_amount")), 2)),
-					"totAmt": abs(item.get("base_amount")) 
+					"totAmt": abs(item.get("base_amount")),
+                    "update_stock": item.get("custom_maintain_stock")
 				}
 
         if not item_etims_data in sales_item_list:
@@ -706,7 +707,8 @@ def create_etims_sales_invoice(payload):
             "tax_type_code": item.get("taxTyCd") ,
             "taxable_amount": item.get("taxblAmt") ,
             "tax_amount": item.get("taxAmt") ,
-            "total_amount": item.get("totAmt")
+            "total_amount": item.get("totAmt"),
+            "update_stock": item.get("update_stock")
         })
         
     new_doc.insert()
@@ -775,7 +777,8 @@ def update_existing_etims_sinv(etims_sinv_name, payload):
             "tax_type_code": item.get("taxTyCd") ,
             "taxable_amount": item.get("taxblAmt") ,
             "tax_amount": item.get("taxAmt") ,
-            "total_amount": item.get("totAmt")
+            "total_amount": item.get("totAmt"),
+            "update_stock": item.get("update_stock")
         })
         
     etims_sinv_doc.save()

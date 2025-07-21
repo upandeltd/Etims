@@ -451,9 +451,10 @@
    "label": "Update Stock"
   }
  ],
+ "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-21 02:02:01.147383",
+ "modified": "2025-07-21 09:46:22.246102",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Sales Invoice",
