@@ -1,22 +1,24 @@
 import requests
 import frappe
 from kenya_etims_compliance.utils.etims_utils import eTIMS
+from frappe.exceptions import ValidationError
 
 def on_submit(doc, method):
-    branch_id = eTIMS.get_user_branch_id()
-    etims_details = get_etims_details(doc.company, branch_id, doc.owner, doc.modified_by)
-    mod_user_name = etims_details.get("modifier")
-    reg_user_name = etims_details.get("creator")
-    
-    try: 
-        for item in doc.items:
-            if item.get("custom_maintain_stock") == 1:
-                stockMasterSaveReq(item, doc, reg_user_name, mod_user_name, doc.set_warehouse)
-                item.custom_stock_master_updated = 1
-                            
-                frappe.msgprint("Master Stock updated successfully")
-    except:
-        frappe.throw("Error saving Master Stock")        
+    if doc.custom_update_invoice_in_tims:
+        branch_id = eTIMS.get_user_branch_id()
+        etims_details = get_etims_details(doc.company, branch_id, doc.owner, doc.modified_by)
+        mod_user_name = etims_details.get("modifier")
+        reg_user_name = etims_details.get("creator")
+        
+        try: 
+            for item in doc.items:
+                if item.get("custom_maintain_stock") == 1:
+                    stockMasterSaveReq(item, doc, reg_user_name, mod_user_name, doc.set_warehouse)
+                    item.custom_stock_master_updated = 1
+                                
+                    frappe.msgprint("Master Stock updated successfully")
+        except:
+            frappe.throw("Error saving Master Stock")        
     
 def get_bin_qty(item_code, store_warehouse):
     quantity = 0
@@ -72,8 +74,8 @@ def save_stock_master(payload):
         
         return {"Success":response_json.get("resultMsg")}
 
-    except:
-        return {"Error":"Oops Bad Request!"}
+    except ValidationError as e:
+        frappe.throw(str(e))
     
 def get_etims_details(company, branch_id, owner, modified_by):
     query = """

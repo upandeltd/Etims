@@ -1,6 +1,7 @@
 import requests
 import frappe
 from kenya_etims_compliance.utils.etims_utils import eTIMS
+from frappe.exceptions import ValidationError
 
 def on_submit(doc, method):
     if doc.custom_send_stock_info_to_etims: #*******Change condition
@@ -79,8 +80,8 @@ def save_stock_master(doc, payload, branch_id):
             
             return {"Success":response_json.get("resultMsg")}
 
-        except:
-            return {"Error":"Oops Bad Request!"}
+        except ValidationError as e:
+            frappe.throw(str(e))
     
     else:
         print("**Stock Master - Stock***")

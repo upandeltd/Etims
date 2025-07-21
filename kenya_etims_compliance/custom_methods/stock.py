@@ -2,14 +2,26 @@ import requests
 
 import frappe
 from kenya_etims_compliance.utils.etims_utils import eTIMS
+from frappe.exceptions import ValidationError
 
 def insert_tax_code(doc, method):
     if doc.custom_send_stock_info_to_etims == 1:
         if doc.items:
             for item in doc.items:
-                tax_code = frappe.db.get_value("eTIMS Item", {"item": item.get("item_code")}, "taxation_type_code")
-                if tax_code:
-                    item.custom_tax_code = tax_code
+                item_code = item.get("item_code")
+                if not item_code:
+                    frappe.throw("Item in row {} is missing an item code.".format(item.idx))
+
+                etims_item_code = frappe.db.get_value("Item", {"name": item_code}, "custom_etims_item_code")
+                if not etims_item_code:
+                    frappe.throw("Item {} does not have a corresponding eTIMS Item.".format(item_code))
+
+                tax_code = frappe.db.get_value("eTIMS Item", {"etims_item_code": etims_item_code}, "taxation_type_code")
+                if not tax_code:
+                    frappe.throw("Item {} does not have a corresponding eTIMS Tax Code.".format(item_code))
+
+                item.custom_tax_code = tax_code
+
     
     insert_tax_rate_and_amount(doc, method)
 
@@ -163,10 +175,9 @@ def stockIOSaveReq(doc, date_str, item_count, sar_type, branch_id):
             
             doc.custom_updated_in_etims = 1   
             frappe.msgprint(response_json.get("resultMsg"))
-
-        except:
-            
-            frappe.throw("Error: Oops Bad Request!")
+        
+        except ValidationError as e:
+            frappe.throw(str(e))
     else:
         print(branch_id)
         print(payload)
@@ -235,10 +246,13 @@ def get_warehouse_branch(warehouse_name):
 def etims_stock_item_list(doc):
     stock_item_list = []
     for item in doc.items:
-        etims_item_code = frappe.db.get_value("eTIMS Item", {"item": item.get("item_code")}, "etims_item_code")
-
-        if not etims_item_code: 
-            frappe.throw("item {} does not have a corresponding eTIMS item.".format(item.get("item_code")))
+        etims_item_code = frappe.db.get_value("Item", {"name": item.get("item_code")}, "custom_etims_item_code")
+        if not etims_item_code:
+            frappe.throw("Item {} has not corresponding eTIMS Item.".format(item.get("item_code")))
+            
+        etims_item_exists = frappe.db.exists("eTIMS Item", {"etims_item_code": etims_item_code})
+        if not etims_item_exists:
+            frappe.throw("Item {} has not corresponding eTIMS Item.".format(item.get("item_code")))
 
         item_detail = frappe.get_doc("eTIMS Item", etims_item_code)
         item_etims_data = {

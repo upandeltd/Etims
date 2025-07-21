@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, time
 
 import frappe
 from kenya_etims_compliance.utils.etims_utils import eTIMS
+from frappe.exceptions import ValidationError
 
 
 def validate(doc, method):
@@ -318,8 +319,8 @@ def process_etims_sinv(doc_name):
                 update_existing_etims_sinv(doc_exists, payload)
                 # frappe.throw(f'eTIMS Sales Invoice <a href="/app/etims-sales-invoice/{doc_exists}" target="_blank">{doc_exists}</a> already exists.')
             
-        except:
-            frappe.throw("Oops Bad Request!")
+        except ValidationError as e:
+            frappe.throw(str(e))
 
 def get_etims_sar_no(doc):
     etims_sar_no = 1
@@ -379,8 +380,11 @@ def get_customer_details(customer):
 def etims_sale_item_list_sales(doc):
     sales_item_list = []
     for item in doc.items:
-        etims_item_exists = frappe.db.exists("eTIMS Item", {"item": item.get("item_code")})
-
+        etims_item_code = frappe.db.get_value("Item", {"name": item.get("item_code")}, "custom_etims_item_code")
+        if not etims_item_code:
+            frappe.throw("Item {} has not corresponding eTIMS Item.".format(item.get("item_code")))
+            
+        etims_item_exists = frappe.db.exists("eTIMS Item", {"etims_item_code": etims_item_code})
         if not etims_item_exists:
             frappe.throw("Item {} has not corresponding eTIMS Item.".format(item.get("item_code")))
 

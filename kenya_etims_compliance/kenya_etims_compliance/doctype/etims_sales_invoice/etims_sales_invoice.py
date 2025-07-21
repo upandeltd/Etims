@@ -358,7 +358,7 @@ def trnsSalesSaveWrReq(doc):
         frappe.msgprint(f'Invoice {doc.trader_invoice_number} has been submitted to eTIMS 🎉')
 
     except ValidationError as e:
-        frappe.throw(e)
+        frappe.throw(str(e)) 
         
 def stockIOSaveReq(doc, date_str):
     taxAmt = 0
@@ -420,8 +420,8 @@ def stockIOSaveReq(doc, date_str):
                         
                 frappe.msgprint(response_json.get("resultMsg"))
 
-            except:
-                frappe.throw("Oops Bad Request!")
+            except ValidationError as e:
+                frappe.throw(str(e)) 
         else:
             return
 
