@@ -46,10 +46,10 @@ def get_bin_qty(item_code, store_warehouse):
         
         return quantity
         
-def stockMasterSaveReq(item, doc, regName, modName, branch_id, warehosue):
+def stockMasterSaveReq(item, doc, regName, modName, branch_id, warehouse):
     item_code = frappe.db.get_value('Item', item.get("item_code"), 'custom_etims_item_code')
     
-    quantity = get_bin_qty(item.get("item_code"), warehosue)
+    quantity = get_bin_qty(item.get("item_code"), warehouse)
     
     payload = {
         "itemCd": item_code,

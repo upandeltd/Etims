@@ -15,6 +15,16 @@ def validate(doc, method):
         if doc_exists:
             insert_tax_details(doc, method)
             
+def on_trash(doc, method):
+    # Skip execution if the document is being submitted
+    if doc.docstatus == 1 or doc.docstatus == 2:
+        return
+    
+    doc_exists = frappe.db.exists("eTIMS Sales Invoice", {"trader_invoice_number": doc.name})
+
+    if doc_exists and doc_exists not in ["None", None]:
+        frappe.delete_doc("eTIMS Sales Invoice", doc_exists, force=True, ignore_permissions=True)
+    
             
 def confirm_etims_sinv(doc):
     # Skip execution if the document is being submitted
@@ -322,74 +332,6 @@ def process_etims_sinv(doc_name):
         except:
             frappe.throw("Oops Bad Request!")
 
-        
-def stockIOSaveReq(doc, date_str):
-    taxAmt = 0
-    taxblAmt = 0
-    if doc.custom_update_invoice_in_tims:
-        headers = eTIMS.get_headers()
-        stock_list = etims_sale_item_list_stock(doc)
-        if len(stock_list):
-            for item in doc.items:
-                if item.get("custom_maintain_stock") == 1 and item.get("custom_tax_code") in ["B", "E"]:
-                    taxblAmt += item.get("base_net_amount")
-                    taxAmt +=  (item.get("base_amount") - item.get("base_net_amount"))
-                                
-            payload = {
-                "sarNo": get_etims_sar_no(doc),
-                "orgSarNo": get_org_etims_sar_no(doc),
-                "regTyCd": "A",
-                "custTin": doc.tax_id,
-                "custNm": doc.customer,
-                "custBhfId": "",
-                "ocrnDt": date_str,
-                "totItemCnt": len(stock_list),
-                "totTaxAmt": abs(round(taxAmt, 2)),
-                "totAmt": abs(doc.base_grand_total),
-                "remark": doc.remarks,
-                "regrId": doc.owner,
-                "regrNm": doc.owner,
-                "modrId": doc.modified_by,
-                "modrNm": doc.modified_by,
-                "itemList": stock_list
-                }
-            
-            if doc.is_return == 1: 
-                return_status = sales_return_information(doc)
-                
-                if return_status == "partial" or return_status == "full":
-                    payload["sarTyCd"] = "03"
-                
-                elif return_status == "null":
-                    frappe.throw("Invalid, return amount is greater than original amount!")
-            
-            else:
-                payload["sarTyCd"] = "11"
-
-            if doc.custom_update_invoice_in_tims:
-                try:
-                    print(payload)
-                    response = requests.request(
-                                "POST", 
-                                eTIMS.tims_base_url() + 'insertStockIO',
-                                json = payload, 
-                                headers=headers
-                            )
-                
-                    response_json = response.json()
-
-                    if not response_json.get("resultCd") == '000':
-                        # print("*"*80)
-                        # print(response_json.get("resultMsg"))
-                        frappe.throw(response_json.get("resultMsg"))
-                            
-                    frappe.msgprint(response_json.get("resultMsg"))
-
-                except:
-                    frappe.throw("Oops Bad Request!")
-            else:
-                return
-
 def get_etims_sar_no(doc):
     etims_sar_no = 1
     branch_id = eTIMS.get_user_branch_id()
@@ -443,42 +385,6 @@ def get_customer_details(customer):
     }
     
     return cust_dict
-    
-    
-def etims_sale_item_list_sales2(doc):
-    sales_item_list = []
-    for item in doc.items:
-        item_tax_code = get_tax_template_details(item.get("item_tax_template"))
-        item_detail = frappe.db.get_all("Item", filters={"disabled": 0, "item_code": item.get("item_code")}, fields = ["*"])
-        item_etims_data = {
-					"itemSeq": item.get("idx"),
-					"itemCd": item_detail[0].get("custom_etims_item_code"),
-					"itemClsCd": item_detail[0].get("custom_item_classification_code"),
-					"itemNm": item_detail[0].get("item_name"),
-					# "bcd":null,
-					"pkgUnitCd": item_detail[0].get("custom_default_packing_unit"),
-					"pkg": abs(item.get("qty")),
-					"qtyUnitCd": item_detail[0].get("custom_default_quantity_unit"),
-					"qty": abs(item.get("qty")),
-					"prc": abs(item.get("base_rate")),
-					"splyAmt": abs(item.get("base_amount")),
-					"dcRt": abs(item.get("discount_percentage")),
-					"dcAmt": abs(round((item.get("custom_discount_amount_kes") * item.get("qty")), 2)),
-					# "isrccCd":null,
-					# "isrccNm":null,
-					# "isrcRt":null,
-					# "isrcAmt":null,
-                    "totDcAmt": abs(round((item.get("custom_discount_amount_kes") * item.get("qty")), 2)),
-					"taxTyCd": item_tax_code,
-					"taxblAmt": abs(round(item.get("base_net_amount"), 2)),
-					"taxAmt": abs(round((item.get("base_amount") - item.get("base_net_amount")), 2)),
-					"totAmt": abs(item.get("base_amount")) 
-				}
-
-        if not item_etims_data in sales_item_list:
-            sales_item_list.append(item_etims_data)
-            
-    return sales_item_list
 
 
 def etims_sale_item_list_sales(doc):
@@ -520,38 +426,6 @@ def etims_sale_item_list_sales(doc):
             sales_item_list.append(item_etims_data)
             
     return sales_item_list
-
-
-def etims_sale_item_list_stock(doc):
-    stock_item_list = []
-    for item in doc.items:
-        if item.custom_maintain_stock:
-            item_tax_code = get_tax_template_details(item.get("item_tax_template"))
-            item_detail = frappe.db.get_all("Item", filters={"disabled": 0, "item_code": item.get("item_code")}, fields = ["*"])
-            item_etims_data = {
-                        "itemSeq": item.get("idx"),
-                        "itemCd": item_detail[0].get("custom_item_code"),
-                        "itemClsCd": item_detail[0].get("custom_item_classification_code"),
-                        "itemNm": item_detail[0].get("custom_item_name"),
-                        "pkgUnitCd": item_detail[0].get("custom_packaging_unit_code"),
-                        "pkg": item.get("qty"),
-                        "qtyUnitCd": item_detail[0].get("custom_quantity_unit_code"),
-                        "qty": abs(item.get("qty")),
-                        "prc": abs(item.get("base_rate")),
-                        "splyAmt": abs(item.get("base_amount")),
-                        "dcRt": abs(item.get("discount_percentage")),
-                        "dcAmt": abs(round((item.get("custom_discount_amount_kes") * item.get("qty")), 2)),
-                        "totDcAmt": abs(round((item.get("custom_discount_amount_kes") * item.get("qty")), 2)),
-                        "taxTyCd": item_tax_code,
-                        "taxblAmt": abs(round(item.get("base_net_amount"), 2)),
-                        "taxAmt": abs(round((item.get("base_amount") - item.get("base_net_amount")), 2)),
-                        "totAmt": abs(item.get("base_amount"))
-                    }
-
-            if not item_etims_data in stock_item_list:
-                stock_item_list.append(item_etims_data)
-                
-    return stock_item_list
 
 def get_tax_template_details(template_name):
     tax_doc = frappe.get_doc("Item Tax Template", template_name)
