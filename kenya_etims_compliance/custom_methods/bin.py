@@ -9,16 +9,17 @@ def on_submit(doc, method):
         etims_details = get_etims_details(doc.company, branch_id, doc.owner, doc.modified_by)
         mod_user_name = etims_details.get("modifier")
         reg_user_name = etims_details.get("creator")
-        
-        try: 
-            for item in doc.items:
-                if item.get("custom_maintain_stock") == 1:
-                    stockMasterSaveReq(item, doc, reg_user_name, mod_user_name, doc.set_warehouse)
-                    item.custom_stock_master_updated = 1
-                                
-                    frappe.msgprint("Master Stock updated successfully")
-        except:
-            frappe.throw("Error saving Master Stock")        
+
+        if etims_details.get("update_stock)") == 1:
+            try: 
+                for item in doc.items:
+                    if item.get("custom_maintain_stock") == 1:
+                        stockMasterSaveReq(item, doc, reg_user_name, mod_user_name, doc.set_warehouse)
+                        item.custom_stock_master_updated = 1
+                                    
+                        frappe.msgprint("Master Stock updated successfully")
+            except:
+                frappe.throw("Error saving Master Stock")        
     
 def get_bin_qty(item_code, store_warehouse):
     quantity = 0

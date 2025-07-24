@@ -12,11 +12,12 @@ def on_submit(doc, method):
             if doc.stock_entry_type == "Material Receipt":
                 if t_warehouse_id:
                     etims_details = get_etims_details(doc.company, t_warehouse_id, doc.owner, doc.modified_by)
-                    for item in doc.items:
-                        stockMasterSaveReq(item, doc, etims_details.get("creator"), etims_details.get("modifier"), t_warehouse_id, doc.to_warehouse)
-                        item.custom_stock_master_updated = 1
-                                    
-                        frappe.msgprint("Master Stock updated successfully")
+                    if etims_details.get("update_stock)") == 1:
+                        for item in doc.items:
+                            stockMasterSaveReq(item, doc, etims_details.get("creator"), etims_details.get("modifier"), t_warehouse_id, doc.to_warehouse)
+                            item.custom_stock_master_updated = 1
+                                        
+                            frappe.msgprint("Master Stock updated successfully")
 
                 else:
                     frappe.throw("Missing Value For Warehouse Id")
@@ -24,13 +25,13 @@ def on_submit(doc, method):
             elif doc.stock_entry_type == "Material Transfer":
                 if t_warehouse_id and s_warehouse_id:
                     etims_details = get_etims_details(doc.company, t_warehouse_id, doc.owner, doc.modified_by)
-
-                    for item in doc.items:
-                        stockMasterSaveReq(item, doc, etims_details.get("creator"), etims_details.get("modifier"), s_warehouse_id, doc.from_warehouse)
-                        stockMasterSaveReq(item, doc, etims_details.get("creator"), etims_details.get("modifier"), t_warehouse_id, doc.to_warehouse)
-                        item.custom_stock_master_updated = 1
-                                    
-                        frappe.msgprint("Master Stock updated successfully")
+                    if etims_details.get("update_stock)") == 1:
+                        for item in doc.items:
+                            stockMasterSaveReq(item, doc, etims_details.get("creator"), etims_details.get("modifier"), s_warehouse_id, doc.from_warehouse)
+                            stockMasterSaveReq(item, doc, etims_details.get("creator"), etims_details.get("modifier"), t_warehouse_id, doc.to_warehouse)
+                            item.custom_stock_master_updated = 1
+                                        
+                            frappe.msgprint("Master Stock updated successfully")
 
                 else:
                     frappe.throw("Missing Value For Warehouse Id")
