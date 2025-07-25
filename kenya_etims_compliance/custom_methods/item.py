@@ -19,9 +19,6 @@ def itemSaveReq(doc_name):
     for key, value in response.items():
         if key == "Success":
             return {"Success": value}
-        else:
-            eTIMS.log_errors("Item Registration", value)
-            return {"Error": value}
 
 @frappe.whitelist()
 def importItemUpdateReq(doc_name):
@@ -58,9 +55,9 @@ def importItemUpdateReq(doc_name):
 
             return {"Success":response_json.get("resultMsg")}
 
-        except:
-            eTIMS.log_errors("Import Item Update", traceback.format_exc())
-            return {"Error":"Oops Bad Request!"}	       	
+        except Exception as e:
+            frappe.log_error(frappe.get_traceback(), "Import Item Update")
+            raise e       	
     
 def get_status_code(code_name):    
     if code_name == "Unsent":

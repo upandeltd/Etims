@@ -111,13 +111,6 @@ class eTIMS():
         if item_barcodes:
             
             return item_barcodes[0].get("barcode")
-        
-    def log_errors(title, description):
-        new_doc = frappe.new_doc("Error Logging")
-        new_doc.title = title
-        new_doc.description = description
-        
-        new_doc.insert()
             
     def get_etims_sar_no(doc):
         etims_sar_no = 1
@@ -303,10 +296,9 @@ class eTIMS():
 
                 return {"Success":response_json.get("resultMsg")}
 
-            except:
-                
-                eTIMS.log_errors("Item Registration", traceback.format_exc())
-                return {"Error":"Oops Bad Request!"}
+            except Exception as e:
+                frappe.log_error(frappe.get_traceback(), "Item Registration")
+                raise e
         else:
             frappe.throw("Missing Item Classification Code!")
     

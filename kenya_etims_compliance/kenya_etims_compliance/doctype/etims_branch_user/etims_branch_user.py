@@ -45,6 +45,6 @@ class eTIMSBranchUser(Document):
                 user.save()
                 return {"Success":response_json.get("resultMsg")}
 
-            except:
-                eTIMS.log_errors("User Register", traceback.format_exc())
-                return {"Error":"Oops Bad Request!"}	
+            except Exception as e:
+                frappe.log_error(frappe.get_traceback(), "User Register")
+                raise e

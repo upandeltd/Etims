@@ -46,9 +46,9 @@ class eTIMSBranchInformation(Document):
 
             return {"Success":response_json.get("resultMsg")}
 
-        except:
-            eTIMS.log_errors("Branch Information", traceback.format_exc())
-            return {"Error":"Oops Bad Request!"}
+        except Exception as e:
+            frappe.log_error(frappe.get_traceback(), "Branch Information")
+            raise e
     
  
 def process_branch_information(response_result):
