@@ -44,9 +44,9 @@ class eTIMSCodeInformation(Document):
 
             return {"Success": response_json.get("resultMsg")}
 
-        except:
-            eTIMS.log_errors("Code Search", traceback.format_exc())
-            return {"Error":"Oops Bad Request!"}
+        except Exception as e:
+            frappe.log_error(frappe.get_traceback(), "Code Search")
+            raise e
 
     #This part describes the Customer API function (url : /selectCustomer) and 
     # data types for each item. The Customer means the taxpayer. 
@@ -91,10 +91,10 @@ class eTIMSCodeInformation(Document):
                         self.create_customer(cust)
 
             return {"Success": response_json.get("resultMsg")}
-
-        except:
-            eTIMS.log_errors("Customer Search", traceback.format_exc())
-            return {"Error":"Oops Bad Request!"}
+        
+        except Exception as e:
+            frappe.log_error(frappe.get_traceback(), "Customer Search")
+            raise e
     
     #This part describes the components of Notice API function(url : /selectNoticeList) and data types for each item. 
     # This API function is divided into 'Request:Argument' and 'Response: Return Object'. 
@@ -139,9 +139,9 @@ class eTIMSCodeInformation(Document):
                     self.save()
             return {"Success": response_json.get("resultMsg")}
 
-        except:
-            eTIMS.log_errors("Notice Search", traceback.format_exc())
-            return {"Error":"Oops Bad Request!"}
+        except Exception as e:
+            frappe.log_error(frappe.get_traceback(), "Notice Search")
+            raise e
 
     def create_customer(self, customer):
         customer_dict = {

@@ -15,7 +15,7 @@ class TISDeviceInitialization(Document):
             "bhfId": self.branch_id,
             "dvcSrlNo" : self.device_serial_number
         }
-       
+        print(eTIMS.tims_base_url() + 'selectInitOsdcInfo',)
         try:
             response = requests.request(
                         "POST",
@@ -43,9 +43,9 @@ class TISDeviceInitialization(Document):
             self.save()
             return {"Success":response_json.get("resultMsg")}
 
-        except:
-            eTIMS.log_errors("TIS Device Verification", traceback.format_exc())
-            return {"Error":"Oops Bad Request!"}
+        except Exception as e:
+            frappe.log_error(frappe.get_traceback(), "TIS Device Verification")
+            raise e
         
 #Method to create communication key and stores it in communication key doctype       
 def save_communication_key(comKey, branch_id):

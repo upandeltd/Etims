@@ -43,9 +43,9 @@ class eTIMSItemInformation(Document):
             self.save()
             return {"Success":response_json.get("resultMsg")}
 
-        except:
-            eTIMS.log_errors("Item Classification Search", traceback.format_exc())
-            return {"Error":"Oops Bad Request!"}	        
+        except Exception as e:
+            frappe.log_error(frappe.get_traceback(), "Item Classification Search")
+            raise e        
     
     # This part describes the components of SelectItemList API function (url : /selectItemList) and data types for each item. 
     # This API function is divided into 'Request:Argument' and 'Response: Return Object'. 
@@ -85,10 +85,9 @@ class eTIMSItemInformation(Document):
             self.save()
             return {"Success":response_json.get("resultMsg")}
 
-        except:
-            eTIMS.log_errors("Item Search", traceback.format_exc())
-
-            return {"Error":"Oops Bad Request!"}	
+        except Exception as e:
+            frappe.log_error(frappe.get_traceback(), "Item Search")
+            raise e	
         
     @frappe.whitelist()
     def itemSaveComposition(self):
@@ -131,9 +130,9 @@ class eTIMSItemInformation(Document):
                     self.itemSaveComposition()
                     return {"Success":response_json.get("resultMsg")}
 
-                except:
-                    eTIMS.log_errors("Item Save Composition", traceback.format_exc())
-                    return {"Error":"Oops Bad Request!"}
+                except Exception as e:
+                    frappe.log_error(frappe.get_traceback(), "Item Save Composition")
+                    raise e
 
     @frappe.whitelist()
     def consolidate_item_bom(self):
@@ -151,7 +150,7 @@ class eTIMSItemInformation(Document):
                                 {"item_name": item.get("item_name"),
                                 "etims_item_code": item.get("etims_item_code"),
                                 "quantity": item.get("qty"),
-                                "stock_uom": item.get("uom"), 
+                                "stock_uom": item.get("uom"),
                                 "parent_bom": item.get("bom")
                                 })
                     self.save()
@@ -317,7 +316,7 @@ def create_new_item_doctype(item):
         new_item_doc.custom_taxation_type_code = item.get("taxTyCd")
         new_item_doc.custom_registration_id = current_user
         new_item_doc.custom_modifier_id = current_user
-        new_item_doc.custom_registered_in_tims = 1
+        new_item_doc.custom_registered_in_tims = 0
         
         if item.get("taxTyCd"):
             tax_template = get_item_tax_template(item.get("taxTyCd"))

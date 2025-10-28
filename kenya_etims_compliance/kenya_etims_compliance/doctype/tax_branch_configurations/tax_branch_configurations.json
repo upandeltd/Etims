@@ -25,9 +25,11 @@
   "item_group_codes",
   "update_codes",
   "stock_settings_tab",
+  "auto_create_etims_sales_invoice",
   "update_stock_selling",
   "last_etims_sales_invoice_number",
   "column_break_d9gc",
+  "auto_create_etims_purchase_invoice",
   "update_stock_purchase",
   "last_etims_purchase_invoice_number"
  ],
@@ -95,7 +97,7 @@
   {
    "fieldname": "stock_settings_tab",
    "fieldtype": "Tab Break",
-   "label": "Stock Settings"
+   "label": "Transaction Settings"
   },
   {
    "default": "0",
@@ -155,11 +157,23 @@
    "fieldname": "last_etims_purchase_invoice_number",
    "fieldtype": "Int",
    "label": "Last eTIMS Purchase Invoice Number"
+  },
+  {
+   "default": "0",
+   "fieldname": "auto_create_etims_sales_invoice",
+   "fieldtype": "Check",
+   "label": "Auto Create eTIMS Invoice"
+  },
+  {
+   "default": "0",
+   "fieldname": "auto_create_etims_purchase_invoice",
+   "fieldtype": "Check",
+   "label": "Auto Create eTIMS Invoice"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-02-15 11:29:05.429662",
+ "modified": "2025-07-20 19:33:20.788030",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "Tax Branch Configurations",

@@ -6,7 +6,9 @@ frappe.ui.form.on("Tax Branch Configurations", {
     //                             General                             //
     // =============================================================== //
     onload(frm){
-        if(!frm.doc.tax_accounts){
+        console.log(frm.doc.tax_accounts)
+        if(frm.doc.tax_accounts.length == 0){
+            console.log(frm.doc.tax_accounts)
             // Loop through accounts and add them to the child table
             accounts.forEach(account => {
                 let child = frm.add_child("tax_accounts");

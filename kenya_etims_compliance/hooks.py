@@ -134,12 +134,13 @@ doc_events = {
             # "before_save": "kenya_etims_compliance.custom_methods.sales_invoice.validate",
             "on_update": "kenya_etims_compliance.custom_methods.sales_invoice.insert_tax_details",
             # "on_update": "kenya_etims_compliance.custom_methods.sales_invoice.confirm_etims_sinv",
-            "before_submit": "kenya_etims_compliance.kenya_etims_compliance.doctype.etims_sales_invoice.etims_sales_invoice.writeInvoiceToeTIMS"
-            # "on_submit": "kenya_etims_compliance.custom_methods.bin.on_submit"
+            "before_submit": "kenya_etims_compliance.kenya_etims_compliance.doctype.etims_sales_invoice.etims_sales_invoice.writeInvoiceToeTIMS",
+            "on_submit": "kenya_etims_compliance.custom_methods.bin.on_submit"
         },
         "Stock Entry": {
             "before_submit": "kenya_etims_compliance.custom_methods.stock.update_stock_to_etims",
             "before_validate": "kenya_etims_compliance.custom_methods.stock.insert_tax_rate_and_amount",
+            "before_save":"kenya_etims_compliance.custom_methods.stock.insert_tax_code",
             "on_submit": "kenya_etims_compliance.custom_methods.bin_stock_entry.on_submit"
         },  
         "Item": {

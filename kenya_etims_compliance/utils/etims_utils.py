@@ -79,6 +79,7 @@ class eTIMS():
         settings_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id, "active":1}, fields=["*"])
             
         t_base_url = eTIMS.get_base_url() + '/api/method/kenya_etims_compliance.utils.etims_response.'
+        # t_base_url = "http://127.0.0.1:8000" + '/api/method/kenya_etims_compliance.utils.etims_response.'
         
         if settings_docs:
             if settings_docs[0].api_mode == "Production":
@@ -110,13 +111,6 @@ class eTIMS():
         if item_barcodes:
             
             return item_barcodes[0].get("barcode")
-        
-    def log_errors(title, description):
-        new_doc = frappe.new_doc("Error Logging")
-        new_doc.title = title
-        new_doc.description = description
-        
-        new_doc.insert()
             
     def get_etims_sar_no(doc):
         etims_sar_no = 1
@@ -294,7 +288,6 @@ class eTIMS():
                 response_json = response.json()
                 
                 if not response_json.get("resultCd") == '000':
-                    print(response_json)
                     escaped_error = html.escape(response_json.get("resultMsg"))
                     return {"Error": escaped_error}
                 
@@ -303,10 +296,9 @@ class eTIMS():
 
                 return {"Success":response_json.get("resultMsg")}
 
-            except:
-                
-                eTIMS.log_errors("Item Registration", traceback.format_exc())
-                return {"Error":"Oops Bad Request!"}
+            except Exception as e:
+                frappe.log_error(frappe.get_traceback(), "Item Registration")
+                raise e
         else:
             frappe.throw("Missing Item Classification Code!")
     

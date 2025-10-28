@@ -7,6 +7,7 @@ from datetime import datetime
 import frappe
 from frappe.model.document import Document
 from kenya_etims_compliance.utils.etims_utils import eTIMS
+from frappe.exceptions import ValidationError
 
 class eTIMSSalesInvoice(Document):
     def before_insert(self):
@@ -46,11 +47,10 @@ class eTIMSSalesInvoice(Document):
     def insert_invoice_number(self):
         if self.update_invoice_in_etims:		
             last_inv_number = self.get_last_inv_number()
-            org_inv_no = self.get_org_etims_sar_no()
+            org_inv_no = get_org_etims_sar_no(self)
            
             self.invoice_number = last_inv_number
-            self.original_invoice_number = org_inv_no
-        
+            self.original_invoice_number = org_inv_no   
 
     def validate_inv_number(self):
         invoice_numbers = []
@@ -86,64 +86,7 @@ class eTIMSSalesInvoice(Document):
     #         }, update_modified=True)
             
     #         self.reload()
-            
-    # def get_etims_sar_no(doc):
-    # 	etims_sar_no = 1
-    # 	branch_id = eTIMS.get_user_branch_id()
-    # 	try:
-    # 		etims_sar_docs = frappe.get_last_doc("eTIMS Stock Release Number", filters={"tax_branch_office": branch_id})
-            
-    # 		new_sar_no = etims_sar_docs.get("sr_number") + 1
-            
-    # 		new_doc = frappe.new_doc("eTIMS Stock Release Number") 
-    # 		new_doc.reference_type = doc.doctype
-    # 		new_doc.reference = doc.name
-    # 		new_doc.tax_branch_office = branch_id
-    # 		new_doc.sr_number = new_sar_no
-    # 		new_doc.orginal_sr_number = get_org_etims_sar_no(doc)
-    # 		new_doc.insert()
-    # 		frappe.db.commit()
-
-    # 		return new_sar_no
-    # 	except:
-    # 		new_doc = frappe.new_doc("eTIMS Stock Release Number") 
-    # 		new_doc.reference_type = doc.doctype
-    # 		new_doc.reference = doc.name
-    # 		new_doc.tax_branch_office = branch_id
-    # 		new_doc.sr_number = etims_sar_no 
-    # 		new_doc.orginal_sr_number = get_org_etims_sar_no(doc)
-            
-    # 		new_doc.insert()
-    # 		frappe.db.commit()
-
-    # 		return etims_sar_no
         
-    # def get_org_etims_sar_no(doc):
-    # 	org_etims_sar_no = 0
-        
-    # 	if doc.custom_original_invoice_number:
-    # 		prev_doc  = frappe.db.get_all("eTIMS Stock Release Number", filters={"reference": doc.return_against}, fields=["sr_number"])
-            
-    # 		org_etims_sar_no = prev_doc[0].get("sr_number")
-        
-    # 		return org_etims_sar_no
-    # 	else:
-
-    # 		return org_etims_sar_no
-    
-    def get_org_etims_sar_no(self):
-        org_etims_sar_no = 0
-        
-        if self.return_against:
-            org_inv_no  = frappe.db.get_value("eTIMS Sales Invoice", {"trader_invoice_number": self.return_against}, "invoice_number")
-            
-            org_etims_sar_no = org_inv_no
-        
-            return org_etims_sar_no
-        else:
-
-            return org_etims_sar_no
-    
     def get_last_inv_number(self):
     
         cur_number = 0
@@ -406,86 +349,81 @@ def trnsSalesSaveWrReq(doc):
         frappe.db.commit()
                 
         ######STOCK######
-        # # stockIOSaveReq(doc, date_str)
-        
-        # doc.submit()
-        # print(payload)
+        settings_details = get_etims_details(doc.company, headers.get("bhfId"), doc.owner, doc.modified_by)
+
+        if settings_details.get("update_stock")==1:
+            stockIOSaveReq(doc, doc.get("sales_date"))
+    
         
         frappe.msgprint(f'Invoice {doc.trader_invoice_number} has been submitted to eTIMS 🎉')
 
-    except:
-        frappe.throw("Oops Bad Request!")
+    except ValidationError as e:
+        frappe.throw(str(e)) 
         
 def stockIOSaveReq(doc, date_str):
-    # sar_no, org_sar_no = get_etims_sar_no(doc)
     taxAmt = 0
     taxblAmt = 0
-    if doc.custom_update_invoice_in_tims:
-        headers = eTIMS.get_headers()
-        stock_list = etims_sale_item_list_stock(doc)
-        if len(stock_list):
-            for item in doc.items:
-                if item.get("custom_maintain_stock") == 1 and item.get("custom_tax_code") in ["B", "E"]:
-                    taxblAmt += item.get("base_net_amount")
-                    taxAmt +=  (item.get("base_amount") - item.get("base_net_amount"))
-                    
-                    # if not item.get("")
+    headers = eTIMS.get_headers()
+    stock_list = etims_sale_item_list_stock(doc)
+    if len(stock_list):
+        for item in doc.items:
+            if item.get("update_stock") == 1 and item.get("tax_type_code") in ["B", "E"]:
+                taxblAmt += item.get("taxable_amount")
+                taxAmt +=  item.get("tax_amount")
+                        
+        payload = {
+            "sarNo": get_etims_sar_no(doc),
+            "orgSarNo": get_org_etims_sar_no(doc),
+            "regTyCd": "A",
+            "custTin": doc.customer_tin,
+            "custNm": doc.customer_name,
+            "custBhfId": "",
+            "ocrnDt": date_str,
+            "totItemCnt": len(stock_list),
+            "totTaxblAmt": abs(round(taxblAmt, 2)),
+            "totTaxAmt": abs(round(taxAmt, 2)),
+            "totAmt": abs(doc.total_amount),
+            "remark": doc.remark,
+            "regrId": doc.get("registration_name"),
+            "regrNm": doc.get("registration_name"),
+            "modrId": doc.get("modifier_name"),
+            "modrNm": doc.get("modifier_name"),
+            "itemList": stock_list
+            }
+        
+        if doc.is_return == 1: 
+            return_status = sales_return_information(doc.get("trader_invoice_number"))
             
-            payload = {
-                "sarNo": get_etims_sar_no(doc),
-                "orgSarNo": get_org_etims_sar_no(doc),
-                "regTyCd": "A",
-                "custTin": doc.tax_id,
-                "custNm": doc.customer,
-                "custBhfId": "",
-                "ocrnDt": date_str,
-                "totItemCnt": len(stock_list),
-                "totTaxblAmt": abs(round(taxblAmt, 2)),
-                "totTaxAmt": abs(round(taxAmt, 2)),
-                "totAmt": abs(doc.base_grand_total),
-                "remark": doc.remarks,
-                "regrId": doc.owner,
-                "regrNm": doc.owner,
-                "modrId": doc.modified_by,
-                "modrNm": doc.modified_by,
-                "itemList": stock_list
-                }
+            if return_status == "partial" or return_status == "full":
+                payload["sarTyCd"] = "03"
             
-            if doc.is_return == 1: 
-                return_status = sales_return_information(doc)
-                
-                if return_status == "partial" or return_status == "full":
-                    payload["sarTyCd"] = "03"
-                
-                elif return_status == "null":
-                    frappe.throw("Invalid, return amount is greater than original amount!")
+            elif return_status == "null":
+                frappe.throw("Invalid, return amount is greater than original amount!")
+        
+        else:
+            payload["sarTyCd"] = "11"
+
+        if doc.update_invoice_in_etims:
+            try:
+                # print(payload)
+                response = requests.request(
+                            "POST", 
+                            eTIMS.tims_base_url() + 'insertStockIO',
+                            json = payload, 
+                            headers=headers
+                        )
             
-            else:
-                payload["sarTyCd"] = "11"
+                response_json = response.json()
 
-            if doc.custom_update_invoice_in_tims:
-                try:
-                    print(payload)
-                    response = requests.request(
-                                "POST", 
-                                eTIMS.tims_base_url() + 'insertStockIO',
-                                json = payload, 
-                                headers=headers
-                            )
-                
-                    response_json = response.json()
+                if not response_json.get("resultCd") == '000':
+                    frappe.throw(response_json.get("resultMsg"))
+                        
+                frappe.msgprint(response_json.get("resultMsg"))
 
-                    if not response_json.get("resultCd") == '000':
-                        # print("*"*80)
-                        # print(response_json.get("resultMsg"))
-                        frappe.throw(response_json.get("resultMsg"))
-                            
-                    frappe.msgprint(response_json.get("resultMsg"))
-
-                except:
-                    frappe.throw("Oops Bad Request!")
-            else:
-                return
+            except ValidationError as e:
+                frappe.throw(str(e)) 
+        else:
+            return
 
 def etims_sale_item_list_sales(items):
     sales_item_list = []
@@ -520,37 +458,113 @@ def etims_sale_item_list_sales(items):
             
     return sales_item_list
 
+# def etims_sale_item_list_stock2(doc):
+#     stock_item_list = []
+#     for item in doc.items:
+#         if item.custom_maintain_stock:
+#             # item_tax_code = get_tax_template_details(item.get("item_tax_template"))
+#             item_detail = frappe.db.get_all("Item", filters={"disabled": 0, "item_code": item.get("item_code")}, fields = ["*"])
+#             item_etims_data = {
+#                         "itemSeq": item.get("idx"),
+#                         "itemCd": item_detail[0].get("custom_item_code"),
+#                         "itemClsCd": item_detail[0].get("custom_item_classification_code"),
+#                         "itemNm": item_detail[0].get("custom_item_name"),
+#                         "pkgUnitCd": item_detail[0].get("custom_packaging_unit_code"),
+#                         "pkg": item.get("qty"),
+#                         "qtyUnitCd": item_detail[0].get("custom_quantity_unit_code"),
+#                         "qty": abs(item.get("qty")),
+#                         "prc": abs(item.get("base_rate")),
+#                         "splyAmt": abs(item.get("base_amount")),
+#                         "dcRt": abs(item.get("discount_percentage")),
+#                         "dcAmt": abs(round((item.get("custom_discount_amount_kes") * item.get("qty")), 2)),
+#                         "totDcAmt": abs(round((item.get("custom_discount_amount_kes") * item.get("qty")), 2)),
+#                         "taxTyCd": item_tax_code,
+#                         "taxblAmt": abs(round(item.get("base_net_amount"), 2)),
+#                         "taxAmt": abs(round((item.get("base_amount") - item.get("base_net_amount")), 2)),
+#                         "totAmt": abs(item.get("base_amount"))
+#                     }
+
+#             if not item_etims_data in stock_item_list:
+#                 stock_item_list.append(item_etims_data)
+                
+#     return stock_item_list
+
 def etims_sale_item_list_stock(doc):
     stock_item_list = []
+    count = 0
     for item in doc.items:
-        if item.custom_maintain_stock:
-            item_tax_code = get_tax_template_details(item.get("item_tax_template"))
-            item_detail = frappe.db.get_all("Item", filters={"disabled": 0, "item_code": item.get("item_code")}, fields = ["*"])
+        if item.update_stock:
+            count += 1
+            print("*c"*90)
+            # item_tax_code = get_tax_template_details(item.get("item_tax_template"))
             item_etims_data = {
-                        "itemSeq": item.get("idx"),
-                        "itemCd": item_detail[0].get("custom_item_code"),
-                        "itemClsCd": item_detail[0].get("custom_item_classification_code"),
-                        "itemNm": item_detail[0].get("custom_item_name"),
-                        "pkgUnitCd": item_detail[0].get("custom_packaging_unit_code"),
-                        "pkg": item.get("qty"),
-                        "qtyUnitCd": item_detail[0].get("custom_quantity_unit_code"),
-                        "qty": abs(item.get("qty")),
-                        "prc": abs(item.get("base_rate")),
-                        "splyAmt": abs(item.get("base_amount")),
-                        "dcRt": abs(item.get("discount_percentage")),
-                        "dcAmt": abs(round((item.get("custom_discount_amount_kes") * item.get("qty")), 2)),
-                        "totDcAmt": abs(round((item.get("custom_discount_amount_kes") * item.get("qty")), 2)),
-                        "taxTyCd": item_tax_code,
-                        "taxblAmt": abs(round(item.get("base_net_amount"), 2)),
-                        "taxAmt": abs(round((item.get("base_amount") - item.get("base_net_amount")), 2)),
-                        "totAmt": abs(item.get("base_amount"))
-                    }
+                "itemSeq": item.get("idx"),
+                "itemCd": item.get("etims_item_code"),
+                "itemClsCd": item.get("item_classification_code"),
+                "itemNm": item.get("item_name"),
+                "pkgUnitCd": item.get("packaging_unit_code"),
+                "pkg": abs(item.get("package")),
+                "qtyUnitCd": item.get("quantity_unit_code"),
+                "qty": abs(item.get("quantity")),
+                "prc": abs(item.get("unit_price")),
+                "splyAmt": abs(item.get("supply_amount")),
+                "dcRt": abs(item.get("discount_rate")),
+                "dcAmt": abs(item.get("total_discount_amount")),
+                "totDcAmt": abs(item.get("total_discount_amount")),
+                "taxTyCd": item.get("tax_type_code"),
+                "taxblAmt": abs(item.get("taxable_amount")),
+                "taxAmt": abs(item.get("tax_amount")),
+                "totAmt": abs(item.get("total_amount")) 
+            }
 
             if not item_etims_data in stock_item_list:
                 stock_item_list.append(item_etims_data)
                 
     return stock_item_list
 
+def get_etims_sar_no(doc):
+        etims_sar_no = 1
+        branch_id = eTIMS.get_user_branch_id()
+        try:
+            etims_sar_docs = frappe.get_last_doc("eTIMS Stock Release Number", filters={"tax_branch_office": branch_id})
+            
+            new_sar_no = etims_sar_docs.get("sr_number") + 1
+            
+            new_doc = frappe.new_doc("eTIMS Stock Release Number") 
+            new_doc.reference_type = doc.doctype
+            new_doc.reference = doc.name
+            new_doc.tax_branch_office = branch_id
+            new_doc.sr_number = new_sar_no
+            new_doc.orginal_sr_number = get_org_etims_sar_no(doc)
+            new_doc.insert()
+            frappe.db.commit()
+
+            return new_sar_no
+        except:
+            new_doc = frappe.new_doc("eTIMS Stock Release Number") 
+            new_doc.reference_type = doc.doctype
+            new_doc.reference = doc.name
+            new_doc.tax_branch_office = branch_id
+            new_doc.sr_number = etims_sar_no 
+            new_doc.orginal_sr_number = get_org_etims_sar_no(doc)
+            
+            new_doc.insert()
+            frappe.db.commit()
+
+            return etims_sar_no
+    
+def get_org_etims_sar_no(doc):
+    org_etims_sar_no = 0
+    
+    if doc.return_against:
+        org_inv_no  = frappe.db.get_value("eTIMS Sales Invoice", {"trader_invoice_number": doc.return_against}, "invoice_number")
+        
+        org_etims_sar_no = org_inv_no
+    
+        return org_etims_sar_no
+    else:
+
+        return org_etims_sar_no
 
 @frappe.whitelist()
 def update_etims_values():

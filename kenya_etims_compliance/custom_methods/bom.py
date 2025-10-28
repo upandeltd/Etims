@@ -62,9 +62,9 @@ def post_item_compostion(item_payload, doc):
                 doc.save()
                 frappe.msgprint(response_json.get("resultMsg"))
 
-            except:
-                eTIMS.log_errors("Item Save Composition", traceback.format_exc())
-                frappe.throw("Oops Bad Request!")
+            except Exception as e:
+                frappe.log_error(frappe.get_traceback(), "Item Save Composition")
+                raise e
             
 def check_if_all_items_sent(doc):
     check_count = 0
