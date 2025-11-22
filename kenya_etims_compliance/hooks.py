@@ -30,8 +30,8 @@ doctype_js = {
 	"Item" : "custom_methods/item.js",
     "Customer" : "custom_methods/customer.js",
     "BOM" : "custom_methods/bom.js",
-    "Sales Invoice": "custom_methods/sales_invoice.js",
-    "Purchase Invoice": "custom_methods/purchase_invoice.js"
+    "Sales Invoice": "custom_methods/sales_invoice.js"
+    # "Purchase Invoice": "custom_methods/purchase_invoice.js"
 }
 
 # include js in doctype views
@@ -147,13 +147,13 @@ doc_events = {
             # "before_save": "kenya_etims_compliance.custom_methods.item.autofill_tims_info",
             "before_save":"kenya_etims_compliance.custom_methods.item.create_etims_item_data"
         },
-        "Purchase Invoice": {
-            "before_save": "kenya_etims_compliance.custom_methods.purchase_invoice.validate",
-            "before_submit": "kenya_etims_compliance.custom_methods.purchase_invoice.trnsPurchaseSaveReq",
-            "on_update": "kenya_etims_compliance.custom_methods.purchase_invoice.insert_invoice_number",
-            "on_change": "kenya_etims_compliance.custom_methods.purchase_invoice.add_taxes",
-            "on_submit": "kenya_etims_compliance.custom_methods.bin.on_submit"
-        }
+        # "Purchase Invoice": {
+        #     "before_save": "kenya_etims_compliance.custom_methods.purchase_invoice.validate",
+        #     "before_submit": "kenya_etims_compliance.custom_methods.purchase_invoice.trnsPurchaseSaveReq",
+        #     "on_update": "kenya_etims_compliance.custom_methods.purchase_invoice.insert_invoice_number",
+        #     "on_change": "kenya_etims_compliance.custom_methods.purchase_invoice.add_taxes",
+        #     "on_submit": "kenya_etims_compliance.custom_methods.bin.on_submit"
+        # }
         # "eTIMS Purchase Invoice": {
         #     "on_update": "kenya_etims_compliance.custom_methods.etims_purchase_invoice.update_stock_to_etims",
         # },
