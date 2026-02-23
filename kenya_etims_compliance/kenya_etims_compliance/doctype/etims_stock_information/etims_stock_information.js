@@ -8,7 +8,7 @@ frappe.ui.form.on("eTIMS Stock Information", {
             method: 'stockMoveReq',
             doc: frm.doc,
             // // disable the button until the request is completed
-            btn: $('.primary-action'),
+            btn: frm.page.btn_primary,
             // // freeze the screen until the request is completed
             freeze: true,
             callback: function(r)   {
@@ -36,7 +36,7 @@ frappe.ui.form.on("eTIMS Stock Information", {
             method: 'insert_items',
             doc: frm.doc,
             // // disable the button until the request is completed
-            btn: $('.primary-action'),
+            btn: frm.page.btn_primary,
             // // freeze the screen until the request is completed
             freeze: true,
             callback: function(r)   {
@@ -52,7 +52,7 @@ frappe.ui.form.on("eTIMS Stock Information", {
             method: 'stockMasterSaveReq',
             doc: frm.doc,
             // // disable the button until the request is completed
-            btn: $('.primary-action'),
+            btn: frm.page.btn_primary,
             // // freeze the screen until the request is completed
             freeze: true,
             callback: function(r)   {

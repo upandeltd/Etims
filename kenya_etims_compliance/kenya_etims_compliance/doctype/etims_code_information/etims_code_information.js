@@ -8,7 +8,7 @@ frappe.ui.form.on("eTIMS Code Information", {
             method: 'codeSearchReq',
             doc: frm.doc,
             // // disable the button until the request is completed
-            btn: $('.primary-action'),
+            btn: frm.page.btn_primary,
             // // freeze the screen until the request is completed
             freeze: true,
             callback: function(r)  {
@@ -35,7 +35,7 @@ frappe.ui.form.on("eTIMS Code Information", {
             method: 'custSearchReq',
             doc: frm.doc,
             // // disable the button until the request is completed
-            btn: $('.primary-action'),
+            btn: frm.page.btn_primary,
             // // freeze the screen until the request is completed
             freeze: true,
             callback: function(r)   {
@@ -58,7 +58,7 @@ frappe.ui.form.on("eTIMS Code Information", {
             method: 'noticeSearchReq',
             doc: frm.doc,
             // // disable the button until the request is completed
-            btn: $('.primary-action'),
+            btn: frm.page.btn_primary,
             // // freeze the screen until the request is completed
             freeze: true,
             callback: function(r)   {

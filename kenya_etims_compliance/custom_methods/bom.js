@@ -3,7 +3,8 @@ frappe.ui.form.on('BOM',{
         console.log("hello")
         if(!frm.doc.custom_updated_to_etims == 1){
             frappe.call({
-                "method": "kenya_etims_compliance.custom_methods.bom.itemSaveComposition?doc_name=" + frm.doc.name,
+                "method": "kenya_etims_compliance.custom_methods.bom.itemSaveComposition",
+                args: { doc_name: frm.doc.name },
                 freeze: true,
                 callback: function(r)   {
                    return

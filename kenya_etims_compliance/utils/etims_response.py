@@ -3,7 +3,7 @@
 
 import frappe
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def selectInitOsdcInfo():
     
     return {"resultCd":"000",
@@ -33,7 +33,7 @@ def selectInitOsdcInfo():
                 }
             }
     
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def selectCustomer():
     
     return {"resultCd":"000",
@@ -52,7 +52,7 @@ def selectCustomer():
                 }
             }
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def selectImportItemList():
     return {
         "resultCd":"000",
@@ -109,7 +109,7 @@ def selectImportItemList():
         }
     
     
-@frappe.whitelist(allow_guest=True) 
+@frappe.whitelist() 
 def selectStockMoveList():
     return {"resultCd":"000",
             "resultMsg":"It is succeeded",
@@ -183,7 +183,7 @@ def selectStockMoveList():
                 ]
             }}
     
-@frappe.whitelist(allow_guest=True) 
+@frappe.whitelist() 
 def selectTrnsPurchaseSalesList():
     return {"resultCd":"000",
             "resultMsg":"It is succeeded",

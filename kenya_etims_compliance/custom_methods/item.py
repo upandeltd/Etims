@@ -77,7 +77,7 @@ def importItemUpdateReq(doc_name):
 
             return {"Success":response_json.get("resultMsg")}
 
-        except:
+        except Exception:
             eTIMS.log_errors("Import Item Update", traceback.format_exc())
             return {"Error":"Oops Bad Request!"}	       	
     
@@ -130,7 +130,7 @@ def get_item_pkg_unit_codes(pkg_unit):
         etims_code_doc = frappe.get_doc("eTIMS Packing Unit", pkg_unit)
         if etims_code_doc:
             return etims_code_doc.get("etims_code")
-    except:
+    except Exception:
         return
 
 
@@ -139,7 +139,7 @@ def get_item_qty_unit_codes(qty_unit):
         etims_code_doc = frappe.get_doc("eTIMS Quantity Unit", qty_unit)
         if etims_code_doc:
             return etims_code_doc.get("etims_code")
-    except:
+    except Exception:
         return       
     
 def get_item_status(doc):

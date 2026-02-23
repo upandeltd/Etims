@@ -43,7 +43,7 @@ class eTIMSItemInformation(Document):
             self.save()
             return {"Success":response_json.get("resultMsg")}
 
-        except:
+        except Exception:
             eTIMS.log_errors("Item Classification Search", traceback.format_exc())
             return {"Error":"Oops Bad Request!"}	        
     
@@ -85,7 +85,7 @@ class eTIMSItemInformation(Document):
             self.save()
             return {"Success":response_json.get("resultMsg")}
 
-        except:
+        except Exception:
             eTIMS.log_errors("Item Search", traceback.format_exc())
 
             return {"Error":"Oops Bad Request!"}	
@@ -131,7 +131,7 @@ class eTIMSItemInformation(Document):
                     self.itemSaveComposition()
                     return {"Success":response_json.get("resultMsg")}
 
-                except:
+                except Exception:
                     eTIMS.log_errors("Item Save Composition", traceback.format_exc())
                     return {"Error":"Oops Bad Request!"}
 
@@ -174,7 +174,6 @@ def process_item_cls_info(response_result):
                 new_doc.usedunused = item.get("useYn")
                 new_doc.insert()
                 
-                frappe.db.commit()
     else:
         frappe.throw("No code data found for this period please try an earlier date")
         
@@ -262,7 +261,7 @@ def check_if_item_has_bom(item_code):
             return valid_bom[0].get('name')
         else:
             frappe.throw("BOM for {} is not defined".format(item_code))
-    except:
+    except Exception:
         frappe.throw("BOM for {} is not defined".format(item_code))
         
 def get_exploded_items(bom_name):
@@ -331,7 +330,6 @@ def create_new_item_doctype(item):
         create_selling_price(item.get("itemNm"), item.get("dftPrc"))
         
         new_item_doc.save()
-        frappe.db.commit()
     
 def create_selling_price(item_code, prc):
     prc_list = frappe.db.get_all("Item Price", filters={"item_code": item_code, "selling":1}, fields=["name"])
@@ -343,7 +341,6 @@ def create_selling_price(item_code, prc):
         new_item_prc.price_list_rate = prc
         
         new_item_prc.insert()
-        frappe.db.commit()
     
 def check_if_item_exits(item_code):
     item_exists = frappe.db.exists({"doctype": "Item", "item_code": item_code})

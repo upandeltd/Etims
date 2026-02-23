@@ -50,7 +50,7 @@ class eTIMSImportItemInformation(Document):
                 
             return {"Success": response_json.get("resultMsg")}
 
-        except:
+        except Exception:
             eTIMS.log_errors("Search Import Item", traceback.format_exc())
             return {"Error":"Oops Bad Request!"}
     
@@ -140,7 +140,7 @@ def map_import_item(item):
     
     try:
         item_price_ksh = (item.get("invoice_foreign_currency_amount")/item.get("quantity"))*item.get("invoice_foreign_currency_crt")
-    except:
+    except Exception:
         item_price_ksh = 0
         
     
@@ -224,8 +224,6 @@ def update_import_item_doctype(item, item_price_ksh):
     create_import_item_entry(item)
     create_or_update_price_list(item.get("item_name"), item_price_ksh)  
     
-    frappe.db.commit()  
-
 def get_etims_country(country_code):
     country_code_list = frappe.db.get_all("eTIMS Country", filters={"code_name": country_code}, fields=["country_name"])
     
@@ -250,4 +248,3 @@ def create_or_update_price_list(item_code, item_price):
         
         price_list.save()
         
-    frappe.db.commit()

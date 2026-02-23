@@ -2,6 +2,7 @@ import requests, segno, traceback  #pyqrcode
 from datetime import datetime, timedelta, time
 
 import frappe
+from frappe import _
 from kenya_etims_compliance.utils.etims_utils import eTIMS
 
 
@@ -103,10 +104,9 @@ def insert_tax_amounts(doc):
                                                         'custom_code_name': tax_templates[0].get("custom_code_name")
                                                     }, update_modified=True)
                                 
-                                frappe.db.commit()
                                 doc.reload()
-            except:
-                frappe.throw(Exception)
+            except Exception as e:
+                frappe.throw(_("Error calculating tax amounts: {0}").format(str(e)))
             
 def get_total_discount(doc):
     discount_amount = 0
@@ -129,8 +129,8 @@ def get_taxable_amounts(doc):
                     taxable_amounts_dict[item.get("custom_tax_code")] = 0
                 
                 taxable_amounts_dict[item.get("custom_tax_code")] += item.base_net_amount
-    except:
-        frappe.throw(Exception)
+    except Exception as e:
+        frappe.throw(_("Error getting taxable amounts: {0}").format(str(e)))
         
     return taxable_amounts_dict      
 
@@ -317,11 +317,11 @@ def trnsSalesSaveWrReq(doc, method):
                 
             stockIOSaveReq(doc, date_str)
             doc.custom_update_sales_to_etims = 1
-            print(payload)
+            frappe.logger().debug("Sales payload: {0}".format(payload))
             
             frappe.msgprint(response_json.get("resultMsg"))
 
-        except:
+        except Exception:
             frappe.throw("Oops Bad Request!")
     else:
         # print(payload)
@@ -377,7 +377,7 @@ def stockIOSaveReq(doc, date_str):
 
             if doc.custom_update_invoice_in_tims:
                 try:
-                    print(payload)
+                    frappe.logger().debug("Stock IO payload: {0}".format(payload))
                     response = requests.request(
                                 "POST", 
                                 eTIMS.tims_base_url() + 'insertStockIO',
@@ -394,7 +394,7 @@ def stockIOSaveReq(doc, date_str):
                             
                     frappe.msgprint(response_json.get("resultMsg"))
 
-                except:
+                except Exception:
                     frappe.throw("Oops Bad Request!")
             else:
                 return
@@ -413,10 +413,9 @@ def get_etims_sar_no(doc):
         new_doc.sr_number = new_sar_no
         new_doc.orginal_sr_number = get_org_etims_sar_no(doc)
         new_doc.insert()
-        frappe.db.commit()
 
         return new_sar_no
-    except:
+    except Exception:
         new_doc = frappe.new_doc("eTIMS Stock Release Number") 
         new_doc.reference_type = doc.doctype
         new_doc.reference = doc.name
@@ -425,7 +424,6 @@ def get_etims_sar_no(doc):
         new_doc.orginal_sr_number = get_org_etims_sar_no(doc)
         
         new_doc.insert()
-        frappe.db.commit()
 
         return etims_sar_no
     
@@ -478,7 +476,7 @@ def get_last_inv_number(doc, branch_id):
                 
             cur_number = last_inv_no + 1
             
-        except:
+        except Exception:
 
             cur_number = last_inv_no + 1
     
@@ -594,8 +592,6 @@ def create_sales_receipt(data, doc_name):
    
     new_rcpt_doc.insert()
     
-    frappe.db.commit()
-    
 # def create_qr_codedd(pin, branch_id, rcpt_signature):
 #     header_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id, "active":1}, fields=["api_mode"])
 
@@ -620,7 +616,7 @@ def create_sales_receipt(data, doc_name):
                 
 #                 return file_name
                 
-#             except:
+#             except Exception:
 #                 frappe.throw("QR Code Not Generated!")
 
 def create_qr_code(pin, branch_id, rcpt_signature):     
@@ -648,7 +644,7 @@ def create_qr_code(pin, branch_id, rcpt_signature):
                 
                 return file_name
                 
-            except:
+            except Exception:
                 frappe.throw("QR Code Not Generated!")
             
     
@@ -661,7 +657,6 @@ def create_attachment(file_name, inv_name):
     new_attachment.is_private = 1
     
     new_attachment.save()
-    frappe.db.commit()
     
     return new_attachment.get("file_url")
 

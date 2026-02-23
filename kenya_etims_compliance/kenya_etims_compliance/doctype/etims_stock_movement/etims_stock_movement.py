@@ -43,8 +43,7 @@ class eTIMSStockMovement(Document):
                             frappe.db.set_value('eTIMS Stock Movement Item', item.name, {'stock_updated': 1}, update_modified=True)
                             frappe.db.set_value('eTIMS Stock Movement', self.name, {'stock_updated': 1, "stock_entry": new_stock_doc.name}, update_modified=True)
                             
-                            frappe.db.commit()
-                        except:
+                        except Exception:
                             frappe.throw(traceback.format_exc())
             else:
                 print("()"*89)

@@ -46,7 +46,7 @@ class eTIMSBranchInformation(Document):
 
             return {"Success":response_json.get("resultMsg")}
 
-        except:
+        except Exception:
             eTIMS.log_errors("Branch Information", traceback.format_exc())
             return {"Error":"Oops Bad Request!"}
     

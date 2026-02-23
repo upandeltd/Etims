@@ -8,7 +8,7 @@ frappe.ui.form.on("eTIMS Item Information", {
             method: 'itemClsSearchReq',
             doc: frm.doc,
             // // disable the button until the request is completed
-            btn: $('.primary-action'),
+            btn: frm.page.btn_primary,
             // // freeze the screen until the request is completed
             freeze: true,
             callback: function(r)   {
@@ -36,7 +36,7 @@ frappe.ui.form.on("eTIMS Item Information", {
             method: 'consolidate_item_bom',
             doc: frm.doc,
             // // disable the button until the request is completed
-            btn: $('.primary-action'),
+            btn: frm.page.btn_primary,
             // // freeze the screen until the request is completed
             freeze: true,
             callback: function(r)   {
@@ -53,7 +53,7 @@ frappe.ui.form.on("eTIMS Item Information", {
             method: 'itemSearchReq',
             doc: frm.doc,
             // // disable the button until the request is completed
-            btn: $('.primary-action'),
+            btn: frm.page.btn_primary,
             // // freeze the screen until the request is completed
             freeze: true,
             callback: function(r)   {
@@ -78,7 +78,7 @@ frappe.ui.form.on("eTIMS Item Information", {
             method: 'itemSaveComposition',
             doc: frm.doc,
             // // disable the button until the request is completed
-            btn: $('.primary-action'),
+            btn: frm.page.btn_primary,
             // // freeze the screen until the request is completed
             freeze: true,
             callback: function(r)   {

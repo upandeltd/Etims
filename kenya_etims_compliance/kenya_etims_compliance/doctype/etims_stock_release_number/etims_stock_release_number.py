@@ -10,7 +10,7 @@ class eTIMSStockReleaseNumber(Document):
 	def validate(self):
 		"""Validate before saving"""
 		# Check branch access if RBAC is enabled
-		from kenya_etims_compliance.doctype.etims_settings.etims_settings import is_rbac_enabled
+		from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import is_rbac_enabled
 		from kenya_etims_compliance.utils.permissions import validate_branch_access
 
 		if is_rbac_enabled():
@@ -19,7 +19,7 @@ class eTIMSStockReleaseNumber(Document):
 	def on_submit(self):
 		"""Sync to KRA on submit"""
 		from kenya_etims_compliance.custom_methods.stock_release import sync_stock_release_number
-		from kenya_etims_compliance.doctype.etims_settings.etims_settings import (
+		from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import (
 			get_etims_settings,
 			get_sar_type_for_doctype,
 			is_rbac_enabled

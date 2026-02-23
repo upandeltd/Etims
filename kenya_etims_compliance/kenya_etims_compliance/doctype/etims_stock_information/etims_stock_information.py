@@ -45,7 +45,7 @@ class eTIMSStockInformation(Document):
             
             return {"Success":response_json.get("resultMsg")}
 
-        except:
+        except Exception:
             print(traceback.format_exc())
             return {"Error":"Oops Bad Request!"}	
  
@@ -81,7 +81,7 @@ class eTIMSStockInformation(Document):
                     self.stockMasterSaveReq()
                     return {"Success":response_json.get("resultMsg")}
 
-                except:
+                except Exception:
                     return {"Error":"Oops Bad Request!"}	
 
     @frappe.whitelist()

@@ -332,7 +332,7 @@ def log_permission_check(doctype, action, result):
 		action: Action being performed (read, write, delete, etc.)
 		result: Whether permission was granted
 	"""
-	from kenya_etims_compliance.doctype.etims_settings.etims_settings import get_etims_settings
+	from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import get_etims_settings
 	
 	settings = get_etims_settings()
 	if not settings.get("enable_error_logging", 1):
@@ -366,7 +366,7 @@ def log_permission_check(doctype, action, result):
 			f"Branch: {log_entry.get('branch', 'N/A')}"
 		)
 		log_doc.insert()
-	except:
+	except Exception:
 		pass  # Silently fail if logging fails
 
 

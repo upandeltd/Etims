@@ -16,7 +16,7 @@ def sync_stock_release_number(sar_no, org_sar_no=0, sar_type=None):
     """
     # Use settings to get default SAR type if not provided
     if sar_type is None:
-        from kenya_etims_compliance.doctype.etims_settings.etims_settings import get_etims_settings
+        from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import get_etims_settings
         settings = get_etims_settings()
         sar_type = settings.get("default_sar_type_sales", "11")
 

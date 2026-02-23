@@ -41,6 +41,6 @@ class eTIMSInsurance(Document):
                 self.save()
                 return {"Success":response_json.get("resultMsg")}
 
-            except:
+            except Exception:
                 eTIMS.log_errors("Insurance", traceback.format_exc())
                 return {"Error":"Oops Bad Request!"}

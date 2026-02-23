@@ -1,14 +1,8 @@
 # Copyright (c) 2026, Upande Ltd and contributors
 # For license information, please see license.txt
 
-from __future__ import unicode_literals
 import frappe
 from frappe.model.document import Document
-from frappe.model.db import Database
-
-# noinspection PyUnresolvedReferences
-from frappe.desk.form.meta import build_custom_fields
-from frappe.custom import customize
 
 
 class eTIMSPurchaseOrderTrackingControllers:

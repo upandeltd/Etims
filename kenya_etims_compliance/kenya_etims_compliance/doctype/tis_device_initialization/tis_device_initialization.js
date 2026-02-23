@@ -13,7 +13,7 @@ frappe.ui.form.on("TIS Device Initialization", {
                 method: 'deviceVerificationReq',
                 doc: frm.doc,
                 // // disable the button until the request is completed
-                btn: $('.primary-action'),
+                btn: frm.page.btn_primary,
                 // // freeze the screen until the request is completed
                 freeze: true,
                 callback: function(r)   {

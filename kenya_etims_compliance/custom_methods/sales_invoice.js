@@ -2,16 +2,16 @@ frappe.ui.form.on("Sales Invoice",{
     is_return:function(frm){
         updateSalesType(frm)
 
-        refresh_field("custom_receipt_type_code")
-        refresh_field("custom_invoice_status_code")
-        refresh_field("custom_credit_note_reason_code")
+        frm.refresh_field("custom_receipt_type_code")
+        frm.refresh_field("custom_invoice_status_code")
+        frm.refresh_field("custom_credit_note_reason_code")
     },
     onload:function(frm){
         updateSalesType(frm)
 
-        refresh_field("custom_receipt_type_code")
-        refresh_field("custom_invoice_status_code")
-        refresh_field("custom_credit_note_reason_code")
+        frm.refresh_field("custom_receipt_type_code")
+        frm.refresh_field("custom_invoice_status_code")
+        frm.refresh_field("custom_credit_note_reason_code")
     },
 
     after_save:function(frm){

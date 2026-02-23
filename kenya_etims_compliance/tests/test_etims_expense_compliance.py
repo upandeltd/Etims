@@ -80,7 +80,7 @@ class TestEtimsExpenseCompliance(FrappeTestCase):
     def test_payment_validation_enforcement_setting(self):
         """Test that payment validation respects settings"""
         # Get eTIMS settings
-        from kenya_etims_compliance.doctype.etims_settings.etims_settings import get_etims_settings
+        from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import get_etims_settings
         settings = get_etims_settings()
 
         # Settings should have enforce_invoice_verification key
@@ -218,7 +218,7 @@ class TestEtimsSettingsIntegration(FrappeTestCase):
 
     def test_etims_settings_exist(self):
         """Test that eTIMS Settings single doc exists"""
-        from kenya_etims_compliance.doctype.etims_settings.etims_settings import get_etims_settings
+        from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import get_etims_settings
 
         settings = get_etims_settings()
 
@@ -227,7 +227,7 @@ class TestEtimsSettingsIntegration(FrappeTestCase):
 
     def test_compliance_settings_keys(self):
         """Test that compliance settings keys exist"""
-        from kenya_etims_compliance.doctype.etims_settings.etims_settings import get_etims_settings
+        from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import get_etims_settings
 
         settings = get_etims_settings()
 

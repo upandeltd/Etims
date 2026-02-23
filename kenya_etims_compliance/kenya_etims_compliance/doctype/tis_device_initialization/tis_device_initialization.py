@@ -43,7 +43,7 @@ class TISDeviceInitialization(Document):
             self.save()
             return {"Success":response_json.get("resultMsg")}
 
-        except:
+        except Exception:
             eTIMS.log_errors("TIS Device Verification", traceback.format_exc())
             return {"Error":"Oops Bad Request!"}
 

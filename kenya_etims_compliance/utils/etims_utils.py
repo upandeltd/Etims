@@ -5,6 +5,7 @@ import requests, traceback
 import frappe
 
 class eTIMS():
+    @staticmethod
     def get_headers():
         branch_id = eTIMS.get_user_branch_id()
         header_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id, "active":1}, fields=["pin", "branch_id", "communication_key"])
@@ -18,17 +19,20 @@ class eTIMS():
             
             return headers
         
+    @staticmethod
     def get_base_url():
         base_url = frappe.utils.get_url()
         
         return base_url
 
+    @staticmethod
     def strf_datetime_object(datetime_data):
         datetime_object = datetime.strptime(datetime_data, '%Y-%m-%d %H:%M:%S')
         date_time_str = datetime_object.strftime("%Y%m%d%H%M%S")
         
         return date_time_str
     
+    @staticmethod
     def strf_datetime_format(datetime_data):
         date_time_str  = ""
         if type(datetime_data) == str:
@@ -36,7 +40,7 @@ class eTIMS():
                 datetime_object = datetime.strptime(datetime_data, '%Y-%m-%d %H:%M:%S.%f')
                 date_time_str = datetime_object.strftime("%Y%m%d%H%M%S")
           
-            except:
+            except Exception:
                 datetime_object = datetime.strptime(datetime_data, '%Y-%m-%d %H:%M:%S')
                 date_time_str = datetime_object.strftime("%Y%m%d%H%M%S")
       
@@ -45,37 +49,41 @@ class eTIMS():
         
         return date_time_str
     
+    @staticmethod
     def strf_date_object(date_data):
         date_str = ""
         try:
             date_object = datetime.strptime(date_data, '%Y-%m-%d')
             date_str = date_object.strftime("%Y%m%d")
                     
-        except:
+        except Exception:
             date_str = date_data.strftime("%Y%m%d")
         
         return date_str
     
+    @staticmethod
     def strf_time(time_data):
         time_str = ""
         try:
             time_object = datetime.strptime(time_data, '%H:%M:%S')
             time_str = time_object.strftime("%H%M%S")
-        except:
+        except Exception:
             time_object = datetime.strptime(time_data, '%H:%M:%S.%f')
             time_str = time_object.strftime("%H%M%S")
    
         return time_str
     
+    @staticmethod
     def get_response_data(response):    
         if response.get("message"):
             return response.get("message")
         else:
             return response
     
+    @staticmethod
     def tims_base_url():
         """Get TIS base URL from settings"""
-        from kenya_etims_compliance.doctype.etims_settings.etims_settings import get_api_url
+        from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import get_api_url
 
         branch_id = eTIMS.get_user_branch_id()
         settings_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id, "active":1}, fields=["*"])
@@ -87,21 +95,25 @@ class eTIMS():
             t_base_url = get_api_url(api_mode)
             return t_base_url
         
+    @staticmethod
     def strp_datetime_object(date_time_str):
         datetime_object = datetime.strptime(date_time_str, '%Y%m%d%H%M%S')
         
         return datetime_object
     
+    @staticmethod
     def strp_date_object(date_str):
         date_object = datetime.strptime(date_str, '%Y%m%d')
         
         return date_object.date()
     
+    @staticmethod
     def strp_time_object(time_str):
         time_object = datetime.strptime(time_str, '%H%M%S')
         
         return time_object.time()
     
+    @staticmethod
     def get_item_barcode(item_code, uom):
         item_barcodes = frappe.db.get_all("Item Barcode", filters={"parent": item_code, "uom": uom}, fields=["barcode"])
         
@@ -109,9 +121,10 @@ class eTIMS():
             
             return item_barcodes[0].get("barcode")
         
+    @staticmethod
     def log_errors(title, description):
         """Log errors to Error Logging doctype if enabled in settings"""
-        from kenya_etims_compliance.doctype.etims_settings.etims_settings import get_etims_settings
+        from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import get_etims_settings
 
         settings = get_etims_settings()
         if not settings.get("enable_error_logging", 1):
@@ -123,6 +136,7 @@ class eTIMS():
 
         new_doc.insert()
 
+    @staticmethod
     def handle_api_response(response_json):
         """Handle API response with proper error code mapping"""
         result_cd = response_json.get("resultCd")
@@ -145,6 +159,7 @@ class eTIMS():
         else:
             return {"Error": f"Error {result_cd}: {result_msg}"}
             
+    @staticmethod
     def get_etims_sar_no(doc):
         etims_sar_no = 1
         try:
@@ -159,10 +174,9 @@ class eTIMS():
             new_doc.sr_number = new_sar_no
             new_doc.orginal_sr_number = eTIMS.get_org_etims_sar_no(doc)
             new_doc.insert()
-            frappe.db.commit()
 
             return new_sar_no
-        except:
+        except Exception:
             new_doc = frappe.new_doc("eTIMS Stock Release Number") 
             new_doc.reference_type = doc.doctype
             new_doc.reference = doc.name
@@ -171,11 +185,11 @@ class eTIMS():
             new_doc.orginal_sr_number = eTIMS.get_org_etims_sar_no(doc)
             
             new_doc.insert()
-            frappe.db.commit()
 
             return etims_sar_no
 
         
+    @staticmethod
     def get_org_etims_sar_no(doc):
         org_etims_sar_no = 0
         
@@ -223,7 +237,7 @@ class eTIMS():
                 
     #         cur_number = last_inv_no + 1
             
-    #     except:
+    #     except Exception:
 
     #         cur_number = last_inv_no + 1
         
@@ -242,12 +256,13 @@ class eTIMS():
             
     #         etims_sar_no = etims_sar_docs.get("sr_number") + 1
             
-    #     except:
+    #     except Exception:
     #         etims_sar_no += 1
         
     #     return etims_sar_no
      
         
+    @staticmethod
     def get_user_branch_id():
         current_user = frappe.session.user
             
@@ -259,6 +274,7 @@ class eTIMS():
             return  tax_branch_id_current_user
 
         
+    @staticmethod
     def itemSaveReq(doc_name):
         headers = eTIMS.get_headers()
         
@@ -314,7 +330,7 @@ class eTIMS():
 
                 return {"Success":response_json.get("resultMsg")}
 
-            except:
+            except Exception:
                 
                 eTIMS.log_errors("Item Registration", traceback.format_exc())
                 return {"Error":"Oops Bad Request!"}
@@ -322,6 +338,7 @@ class eTIMS():
             frappe.throw("Missing Item Classification Code!")
     
         
+    @staticmethod
     def map_new_item(item):
         item_exists = check_if_item_exits(item.get("itemNm"))
     
@@ -332,6 +349,7 @@ class eTIMS():
         else:
             pass
         
+    @staticmethod
     def get_name_of_user(user):
         user_full_name = frappe.db.get_value("User", user, 'full_name')
 
@@ -339,6 +357,7 @@ class eTIMS():
 
     # Search Endpoints - Phase 1.2
 
+    @staticmethod
     def searchItem(item_code=None, item_name=None, last_req_dt=None):
         """Search items in eTIMS (Section 7.13)"""
         headers = eTIMS.get_headers()
@@ -361,10 +380,11 @@ class eTIMS():
             response_json = response.json()
             return eTIMS.handle_api_response(response_json)
 
-        except:
+        except Exception:
             eTIMS.log_errors("Item Search", traceback.format_exc())
             return {"Error": "Oops Bad Request!"}
 
+    @staticmethod
     def searchStockMove(sar_no=None, last_req_dt=None):
         """Search stock movements in eTIMS (Section 7.15)"""
         headers = eTIMS.get_headers()
@@ -385,10 +405,11 @@ class eTIMS():
             response_json = response.json()
             return eTIMS.handle_api_response(response_json)
 
-        except:
+        except Exception:
             eTIMS.log_errors("Stock Move Search", traceback.format_exc())
             return {"Error": "Oops Bad Request!"}
 
+    @staticmethod
     def searchTrns(invoice_no=None, last_req_dt=None, trns_type=None):
         """Search transactions in eTIMS (Section 7.14/7.20)
         trns_type: 'sales' or 'purchase'
@@ -421,12 +442,13 @@ class eTIMS():
             response_json = response.json()
             return eTIMS.handle_api_response(response_json)
 
-        except:
+        except Exception:
             eTIMS.log_errors("Transaction Search", traceback.format_exc())
             return {"Error": "Oops Bad Request!"}
 
     # Stock Release Number Management - Phase 2.1
 
+    @staticmethod
     def stockReleaseNoSaveReq(sar_no, org_sar_no=0, sar_type=None):
         """Save stock release number to eTIMS (Section 7.16)
 
@@ -435,7 +457,7 @@ class eTIMS():
             org_sar_no: Original stock release number (default: 0)
             sar_type: SAR type code (default: from settings, typically '11')
         """
-        from kenya_etims_compliance.doctype.etims_settings.etims_settings import get_etims_settings
+        from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import get_etims_settings
 
         if sar_type is None:
             settings = get_etims_settings()
@@ -459,10 +481,11 @@ class eTIMS():
             response_json = response.json()
             return eTIMS.handle_api_response(response_json)
 
-        except:
+        except Exception:
             eTIMS.log_errors("Stock Release Number Save", traceback.format_exc())
             return {"Error": "Oops Bad Request!"}
 
+    @staticmethod
     def searchStockReleaseNo(sar_no=None, last_req_dt=None):
         """Search stock release numbers in eTIMS (Section 7.17)"""
         headers = eTIMS.get_headers()
@@ -483,10 +506,11 @@ class eTIMS():
             response_json = response.json()
             return eTIMS.handle_api_response(response_json)
 
-        except:
+        except Exception:
             eTIMS.log_errors("Stock Release Number Search", traceback.format_exc())
             return {"Error": "Oops Bad Request!"}
 
+    @staticmethod
     def selectStockReleaseNoList(last_req_dt=None):
         """Get stock release number list from eTIMS (Section 7.18)"""
         headers = eTIMS.get_headers()
@@ -505,12 +529,13 @@ class eTIMS():
             response_json = response.json()
             return eTIMS.handle_api_response(response_json)
 
-        except:
+        except Exception:
             eTIMS.log_errors("Stock Release Number List", traceback.format_exc())
             return {"Error": "Oops Bad Request!"}
 
     # Detail Query Endpoints - Phase 3.1
 
+    @staticmethod
     def selectItem(item_code):
         """Get item details from eTIMS (Section 7.9)"""
         headers = eTIMS.get_headers()
@@ -529,10 +554,11 @@ class eTIMS():
             response_json = response.json()
             return eTIMS.handle_api_response(response_json)
 
-        except:
+        except Exception:
             eTIMS.log_errors("Item Details", traceback.format_exc())
             return {"Error": "Oops Bad Request!"}
 
+    @staticmethod
     def selectTrnsSalesInfo(invoice_no):
         """Get sales transaction details from eTIMS (Section 7.21)"""
         headers = eTIMS.get_headers()
@@ -551,10 +577,11 @@ class eTIMS():
             response_json = response.json()
             return eTIMS.handle_api_response(response_json)
 
-        except:
+        except Exception:
             eTIMS.log_errors("Sales Transaction Details", traceback.format_exc())
             return {"Error": "Oops Bad Request!"}
 
+    @staticmethod
     def selectTrnsPurchaseInfo(invoice_no):
         """Get purchase transaction details from eTIMS (Section 7.21)"""
         headers = eTIMS.get_headers()
@@ -573,12 +600,13 @@ class eTIMS():
             response_json = response.json()
             return eTIMS.handle_api_response(response_json)
 
-        except:
+        except Exception:
             eTIMS.log_errors("Purchase Transaction Details", traceback.format_exc())
             return {"Error": "Oops Bad Request!"}
 
     # Medium Priority Features - Phase 4
 
+    @staticmethod
     def selectNoticeInfo(notice_no):
         """Get notice details from eTIMS (Section 7.23)"""
         headers = eTIMS.get_headers()
@@ -597,10 +625,11 @@ class eTIMS():
             response_json = response.json()
             return eTIMS.handle_api_response(response_json)
 
-        except:
+        except Exception:
             eTIMS.log_errors("Notice Info", traceback.format_exc())
             return {"Error": "Oops Bad Request!"}
 
+    @staticmethod
     def selectOrgUsrInfo():
         """Get organization/user info from eTIMS (Section 7.5)"""
         headers = eTIMS.get_headers()
@@ -615,12 +644,13 @@ class eTIMS():
             response_json = response.json()
             return eTIMS.handle_api_response(response_json)
 
-        except:
+        except Exception:
             eTIMS.log_errors("Organization User Info", traceback.format_exc())
             return {"Error": "Oops Bad Request!"}
 
     # Invoice Verification - Phase 1: Invoice Checker API Integration
 
+    @staticmethod
     def invoiceCheckerReq(invoice_no, supplier_pin, invoice_date, total_amount):
         """Check invoice validity via KRA Invoice Checker API
 
@@ -756,7 +786,7 @@ def get_country_of_origin(item_code):
             country_name = etims_country_list[0].get("country_name")
                         
             return country_name
-    except:
+    except Exception:
         return "KE", "Kenya"
     
 def get_item_type(item_code):

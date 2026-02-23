@@ -33,7 +33,7 @@ def on_submit(doc, method):
 
                 else:
                     frappe.throw("Missing Value For Warehouse Id")
-        except:
+        except Exception:
             frappe.throw("Error saving Master Stock")        
     
 def get_bin_qty(item_code, branch_id):
@@ -78,12 +78,11 @@ def save_stock_master(doc, payload, branch_id):
             
             return {"Success":response_json.get("resultMsg")}
 
-        except:
+        except Exception:
             return {"Error":"Oops Bad Request!"}
     
     else:
-        print("**Stock Master - Stock***")
-        print(payload)
+        frappe.logger().debug("Stock Master - Stock: {0}".format(payload))
         
 def get_headers(branch_id):
     header_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id, "active":1}, fields=["pin", "branch_id", "communication_key"])

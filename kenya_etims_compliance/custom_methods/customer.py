@@ -35,7 +35,7 @@ def bhfCustSaveReq(doc_name):
         response_json = response.json()
 
         if not response_json.get("resultCd") == '000':
-            print(response_json.get("resultMsg"))
+            frappe.logger().debug("Customer registration error: {0}".format(response_json.get("resultMsg")))
             return {"Error":response_json.get("resultMsg")}
 
         item.custom_is_registered = 1
@@ -43,6 +43,6 @@ def bhfCustSaveReq(doc_name):
 
         return {"Success":response_json.get("resultMsg")}
 
-    except:
+    except Exception:
         return {"Error":"Oops Bad Request!"}	
 

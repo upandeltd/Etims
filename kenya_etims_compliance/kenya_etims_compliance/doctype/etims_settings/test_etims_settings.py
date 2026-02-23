@@ -3,7 +3,7 @@
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
-from kenya_etims_compliance.doctype.etims_settings.etims_settings import (
+from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import (
 	get_etims_settings,
 	get_api_timeout,
 	get_sar_type_for_doctype,

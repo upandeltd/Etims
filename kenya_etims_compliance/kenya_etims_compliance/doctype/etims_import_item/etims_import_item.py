@@ -33,8 +33,7 @@ def create_and_link_erpnext_stock_entry(item):
                 # update etims purchase item
                 frappe.db.set_value('eTIMS Import Item', item.name, {'stock_entry_created': 1, 'stock_entry': new_stk_entry_doc.name}, update_modified=True)
                 
-                frappe.db.commit()
-            except:
+            except Exception:
                 frappe.throw(traceback.format_exc())
                     
 def create_supplier(supplier_name):
@@ -46,7 +45,6 @@ def create_supplier(supplier_name):
         # new_supplier.supplier_group = "All Suppliers Group"
     
         new_supplier.insert()
-        frappe.db.commit()
             
 def create_buying_price_list(item):
     item_price_ksh = (item.get("invoice_foreign_currency_amount")/item.get("package"))*item.get("invoice_foreign_currency_crt")
@@ -60,7 +58,6 @@ def create_buying_price_list(item):
         new_price_list.price_list_rate = item_price_ksh
         new_price_list.insert()
         
-        frappe.db.commit()
         
             
 def assign_stock_item(item):  

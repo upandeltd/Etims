@@ -57,9 +57,8 @@ class eTIMSPurchaseInvoice(Document):
                     frappe.db.set_value('eTIMS Purchase Invoice', self.name, {'erpnext_purchase_invoice_updated': 1, "erpnext_purchase_invoice": new_purchase_doc.name}, update_modified=True)
                     
                     new_purchase_doc.save()
-                    frappe.db.commit()
 
-                except:
+                except Exception:
                     frappe.throw(traceback.format_exc())
         
     def create_supplier(self):
@@ -76,7 +75,6 @@ class eTIMSPurchaseInvoice(Document):
             new_supplier.custom_branch_id = self.supplier_branch_id
         
             new_supplier.insert()
-            frappe.db.commit()
             
 def create_buying_price_list(item):
     price_list_exists = frappe.db.exists("Item Price", {"item_code": item.item_name, "price_list": "Standard Buying"})
@@ -93,7 +91,6 @@ def create_buying_price_list(item):
         price_list.price_list_rate = item.get("unit_price")
         price_list.save()
         
-    frappe.db.commit()
             
 def assign_purchase_item(item_detail):        
     item_dict = {

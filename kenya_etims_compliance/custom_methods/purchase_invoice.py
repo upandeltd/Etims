@@ -2,9 +2,8 @@ import requests, json, traceback
 from datetime import datetime
 
 import frappe
-from frappe.utils import (flt)
+from frappe.utils import flt
 from kenya_etims_compliance.utils.etims_utils import eTIMS
-from erpnext.stock.get_item_details import _get_item_tax_template
 from frappe import _, scrub
 
 
@@ -121,8 +120,8 @@ def insert_tax_amounts(doc):
                 for item in doc.taxes:
                     if item.get("custom_code") == key:
                         frappe.db.set_value('Purchase Taxes and Charges', item.get("name"), 'custom_total_taxable_amount', round(value, 2), update_modified=True)
-        except:
-            frappe.throw(Exception)
+        except Exception as e:
+            frappe.throw(_("Error calculating tax amounts: {0}").format(str(e)))
 
 def get_taxable_amounts(doc):
     taxable_amounts_dict = {}
@@ -134,8 +133,8 @@ def get_taxable_amounts(doc):
                     taxable_amounts_dict[item.get("custom_tax_code")] = 0
                 
                 taxable_amounts_dict[item.get("custom_tax_code")] += item.net_amount
-    except:
-        frappe.throw(Exception)
+    except Exception as e:
+        frappe.throw(_("Error getting taxable amounts: {0}").format(str(e)))
         
     return taxable_amounts_dict
 
@@ -294,11 +293,11 @@ def trnsPurchaseSaveReq(doc, method):
             
             frappe.msgprint(response_json.get("resultMsg"))
 
-        except:
+        except Exception:
             frappe.throw("Error")
         
     else:
-        print(payload)
+        frappe.logger().debug("Purchase payload (not sent to eTIMS): {0}".format(payload))
         stockIOSaveReq(doc, date_str)
         return
     
@@ -364,10 +363,10 @@ def stockIOSaveReq(doc, date_str):
                     
             return {"Success": response_json.get("resultMsg")}
 
-        except:
+        except Exception:
                 return {"Error":"Oops Bad Request!"}
     else:
-        print(payload)
+        frappe.logger().debug("Purchase stock IO payload (not sent): {0}".format(payload))
         return
         
 def get_etims_sar_no(doc):
@@ -384,10 +383,9 @@ def get_etims_sar_no(doc):
         new_doc.sr_number = new_sar_no
         new_doc.orginal_sr_number = get_org_etims_sar_no(doc)
         new_doc.insert()
-        frappe.db.commit()
 
         return new_sar_no
-    except:
+    except Exception:
         new_doc = frappe.new_doc("eTIMS Stock Release Number") 
         new_doc.reference_type = doc.doctype
         new_doc.reference = doc.name
@@ -396,7 +394,6 @@ def get_etims_sar_no(doc):
         new_doc.orginal_sr_number = get_org_etims_sar_no(doc)
         
         new_doc.insert()
-        frappe.db.commit()
 
         return etims_sar_no
     
@@ -448,7 +445,7 @@ def get_last_inv_number(doc, branch_id):
             
         cur_number = last_inv_no + 1
         
-    except:
+    except Exception:
 
         cur_number = last_inv_no + 1
     
@@ -712,7 +709,7 @@ def auto_verify_invoice(doc, method):
         "on_submit": "kenya_etims_compliance.custom_methods.purchase_invoice.auto_verify_invoice"
     }
     """
-    from kenya_etims_compliance.doctype.etims_settings.etims_settings import get_etims_settings
+    from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import get_etims_settings
 
     settings = get_etims_settings()
 

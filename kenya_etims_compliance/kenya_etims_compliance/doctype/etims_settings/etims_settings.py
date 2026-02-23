@@ -39,7 +39,7 @@ class eTIMSSettings(Document):
 @frappe.whitelist()
 def get_etims_settings():
 	"""Get eTIMS settings with defaults"""
-	settings = frappe.get_single("eTIMS Settings", cache=True)
+	settings = frappe.get_cached_doc("eTIMS Settings")
 
 	if not settings:
 		# Return default values if settings don't exist

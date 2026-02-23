@@ -27,7 +27,7 @@ def validate_payment_for_etims_invoice(doc, method):
     Raises:
         frappe.ValidationError: If any invoice is not verified
     """
-    from kenya_etims_compliance.doctype.etims_settings.etims_settings import get_etims_settings
+    from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import get_etims_settings
 
     # Get eTIMS settings
     settings = get_etims_settings()

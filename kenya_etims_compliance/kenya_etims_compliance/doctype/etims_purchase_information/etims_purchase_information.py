@@ -43,7 +43,7 @@ class eTIMSPurchaseInformation(Document):
      
             return {"Success":response_json.get("resultMsg")}
 
-        except:
+        except Exception:
             return {"Oops!":"An error occured on TIS server!"}	
         # self.item_classification_data = response_result
     
@@ -101,8 +101,7 @@ def process_purchases(response_json):
                     
                         new_doc.append("items", item_dict)
 
-                        frappe.db.commit()
-                    except:
+                    except Exception:
                         frappe.throw(traceback.format_exc())
                 
                 new_doc.insert()

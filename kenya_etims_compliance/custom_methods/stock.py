@@ -119,7 +119,7 @@ def stockIOSaveReq(doc, date_str, item_count, sar_type, branch_id):
             response_json = response.json()
 
             if not response_json.get("resultCd") == '000':
-                print(response_json.get("resultMsg"))
+                frappe.logger().debug("Stock entry error: {0}".format(response_json.get("resultMsg")))
                 # eTIMS.log_errors("Stock Entry", response_json.get("resultMsg"))
                 frappe.throw(response_json.get("resultMsg"))
                 
@@ -127,12 +127,11 @@ def stockIOSaveReq(doc, date_str, item_count, sar_type, branch_id):
             doc.custom_updated_in_etims = 1   
             frappe.msgprint(response_json.get("resultMsg"))
 
-        except:
+        except Exception:
             
             frappe.throw("Error: Oops Bad Request!")
     else:
-        print(branch_id)
-        print(payload)
+        frappe.logger().debug("Stock IO not sent - branch: {0}, payload: {1}".format(branch_id, payload))
 
 def get_etims_sar_no(doc, branch_id):
     etims_sar_no = 1
@@ -153,7 +152,6 @@ def get_etims_sar_no(doc, branch_id):
         new_doc.sr_number = new_sar_no
         # new_doc.orginal_sr_number = get_org_etims_sar_no(doc)
         new_doc.insert()
-        frappe.db.commit()
 
         return new_sar_no
     
@@ -166,7 +164,6 @@ def get_etims_sar_no(doc, branch_id):
         # new_doc.orginal_sr_number = eTIMS.get_org_etims_sar_no(doc)
         
         new_doc.insert()
-        frappe.db.commit()
 
         return etims_sar_no
     
@@ -207,7 +204,7 @@ def get_warehouse_branch(warehouse_name):
         warehouse_doc = frappe.get_doc("Warehouse", warehouse_name)
         
         return warehouse_doc.get("custom_tax_branch_office")
-    except:
+    except Exception:
         frappe.throw("No tax branch id")
     
     

@@ -44,7 +44,7 @@ class eTIMSCodeInformation(Document):
 
             return {"Success": response_json.get("resultMsg")}
 
-        except:
+        except Exception:
             eTIMS.log_errors("Code Search", traceback.format_exc())
             return {"Error":"Oops Bad Request!"}
 
@@ -92,7 +92,7 @@ class eTIMSCodeInformation(Document):
 
             return {"Success": response_json.get("resultMsg")}
 
-        except:
+        except Exception:
             eTIMS.log_errors("Customer Search", traceback.format_exc())
             return {"Error":"Oops Bad Request!"}
     
@@ -139,7 +139,7 @@ class eTIMSCodeInformation(Document):
                     self.save()
             return {"Success": response_json.get("resultMsg")}
 
-        except:
+        except Exception:
             eTIMS.log_errors("Notice Search", traceback.format_exc())
             return {"Error":"Oops Bad Request!"}
 
@@ -183,7 +183,6 @@ class eTIMSCodeInformation(Document):
             new_customer.customer_group = "Individual"
         
             new_customer.insert()
-            frappe.db.commit()
         
 
 
@@ -218,7 +217,6 @@ def process_code_information(response_result):
 
                 new_doc.save()
 
-                frappe.db.commit()
     else:
         frappe.throw("No code data found for this period please try an earlier date!")
 
@@ -297,7 +295,6 @@ def create_packing_units(response_result):
                         new_doc.use_yes_or_no = code_item.get("useYn")
                         new_doc.insert()
 
-                        frappe.db.commit()
 
 def create_quantity_units(response_result):
     data = response_result.get("data")
@@ -320,7 +317,6 @@ def create_quantity_units(response_result):
                         new_doc.use_yes_or_no = code_item.get("useYn")
                         new_doc.insert()
 
-                        frappe.db.commit()
 #method to create etims country codes and contry names, to keep consistency                    
 def create_country_code(response_result):
     data = response_result.get("data")
@@ -338,7 +334,6 @@ def create_country_code(response_result):
                        
                         new_doc.insert()
 
-                        frappe.db.commit()
                         
                         
 def check_if_doc_exists(doc, doc_filter, doc_value):
@@ -385,4 +380,3 @@ def create_notice_record(notice):
         
         notice_doc.save()
         
-    frappe.db.commit()

@@ -8,16 +8,16 @@ frappe.ui.form.on("Purchase Invoice",{
             frm.doc.custom_purchase_status_code = "02"
         }
 
-        refresh_field("custom_receipt_type_code")
-        refresh_field("custom_purchase_status_code")
+        frm.refresh_field("custom_receipt_type_code")
+        frm.frm.refresh_field("custom_purchase_status_code")
     },
 
     onload:function(frm){
         if(frm.doc.is_return == 1){
             is_return_doc(frm)
 
-            refresh_field("custom_receipt_type_code")
-            refresh_field("custom_purchase_status_code")
+            frm.refresh_field("custom_receipt_type_code")
+            frm.refresh_field("custom_purchase_status_code")
         }
 
     },
@@ -47,7 +47,7 @@ frappe.ui.form.on("Purchase Invoice",{
                 // Show verification status indicator
                 if (frm.dashboard) {
                     frm.dashboard.add_indicator(
-                        __('Verified with KRA: {0}', frm.doc.custom_verification_date),
+                        __('Verified with KRA: {0}', [frm.doc.custom_verification_date]),
                         'green'
                     );
                 }

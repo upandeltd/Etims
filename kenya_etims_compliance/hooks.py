@@ -44,7 +44,7 @@ doctype_js = {
 # Svg Icons
 # ------------------
 # include app icons in desk
-# app_include_icons = "kenya_etims_compliance/public/icons.svg"
+app_include_icons = "kenya_etims_compliance/public/icons.svg"
 
 # Home Pages
 # ----------
@@ -253,4 +253,6 @@ doc_events = {
 #	"kenya_etims_compliance.auth.validate"
 # ]
 
-fixtures = ["Custom Field"]
+fixtures = [
+    {"dt": "Custom Field", "filters": [["module", "=", "Kenya Etims Compliance"]]}
+]
