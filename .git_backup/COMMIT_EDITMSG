@@ -1,0 +1,7 @@
+feat: eTIMS Kenya compliance module with API v2 support
+
+- Custom methods for items, purchase/sales invoices, and stock
+- DocTypes: eTIMS Code Information, Purchase Invoice, Stock Release Number, TIS Device Initialization
+- eTIMS utilities and hooks integration
+- Role-based access control guide
+- Hardcoded values analysis and API v2 endpoints documentation

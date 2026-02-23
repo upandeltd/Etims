@@ -1,0 +1,387 @@
+{
+ "charts": [],
+ "content": "[{\"id\":\"hdr001\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>eTIMS Compliance</b></span>\",\"col\":12}},{\"id\":\"spc001\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"hdr002\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h5\\\">Quick Access</span>\",\"col\":12}},{\"id\":\"sc001\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"eTIMS Settings\",\"col\":3}},{\"id\":\"sc002\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"TIS Device Initialization\",\"col\":3}},{\"id\":\"sc003\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"eTIMS Sales Receipt\",\"col\":3}},{\"id\":\"sc004\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"eTIMS Purchase Invoice\",\"col\":3}},{\"id\":\"spc002\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"hdr003\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h5\\\">Setup & Configuration</span>\",\"col\":12}},{\"id\":\"crd001\",\"type\":\"card\",\"data\":{\"card_name\":\"Configuration & Setup\",\"col\":4}},{\"id\":\"crd002\",\"type\":\"card\",\"data\":{\"card_name\":\"Master Data & Codes\",\"col\":4}},{\"id\":\"crd003\",\"type\":\"card\",\"data\":{\"card_name\":\"User Management\",\"col\":4}},{\"id\":\"spc003\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"hdr004\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h5\\\">Data Search & Sync</span>\",\"col\":12}},{\"id\":\"crd004\",\"type\":\"card\",\"data\":{\"card_name\":\"Data Search Interfaces\",\"col\":6}},{\"id\":\"crd005\",\"type\":\"card\",\"data\":{\"card_name\":\"Logging & Notifications\",\"col\":6}},{\"id\":\"spc004\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"hdr005\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h5\\\">Transaction Documents</span>\",\"col\":12}},{\"id\":\"crd006\",\"type\":\"card\",\"data\":{\"card_name\":\"Sales & Purchases\",\"col\":4}},{\"id\":\"crd007\",\"type\":\"card\",\"data\":{\"card_name\":\"Stock & Inventory\",\"col\":4}},{\"id\":\"crd008\",\"type\":\"card\",\"data\":{\"card_name\":\"Imports\",\"col\":4}}]",
+ "creation": "2024-02-17 12:49:27.432630",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "money-coins-1",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "eTIMS Compliance",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Configuration & Setup",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "eTIMS Settings",
+   "link_count": 0,
+   "link_to": "eTIMS Settings",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link",
+   "description": "Global configuration for eTIMS integration"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "TIS Device Initialization",
+   "link_count": 0,
+   "link_to": "TIS Device Initialization",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link",
+   "description": "Device registration with KRA"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "TIS Communication Key",
+   "link_count": 0,
+   "link_to": "TIS Communication Key",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "description": "Communication keys for branch offices"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Tax Branch Office",
+   "link_count": 0,
+   "link_to": "Tax Branch Office",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "description": "Branch office IDs"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Master Data & Codes",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "eTIMS Code Classification",
+   "link_count": 0,
+   "link_to": "eTIMS Code Classification",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "description": "KRA code classifications (payment types, receipt types, etc.)"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "eTIMS Item Classification",
+   "link_count": 0,
+   "link_to": "eTIMS Item Classification",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "description": "HS Code-based item classification categories"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "eTIMS Country",
+   "link_count": 0,
+   "link_to": "eTIMS Country",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "description": "Country codes from KRA"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "eTIMS Packing Unit",
+   "link_count": 0,
+   "link_to": "eTIMS Packing Unit",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "description": "Packaging unit codes"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "eTIMS Quantity Unit",
+   "link_count": 0,
+   "link_to": "eTIMS Quantity Unit",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "description": "Quantity/measurement unit codes"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "eTIMS Insurance",
+   "link_count": 0,
+   "link_to": "eTIMS Insurance",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "description": "Insurance provider information"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "User Management",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "eTIMS Branch User",
+   "link_count": 0,
+   "link_to": "eTIMS Branch User",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "description": "Users registered with KRA eTIMS"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Data Search Interfaces",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "eTIMS Code Information",
+   "link_count": 0,
+   "link_to": "eTIMS Code Information",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "description": "Search codes, customers, and notices from KRA"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "eTIMS Branch Information",
+   "link_count": 0,
+   "link_to": "eTIMS Branch Information",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "description": "Search and retrieve branch office details"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "eTIMS Item Information",
+   "link_count": 0,
+   "link_to": "eTIMS Item Information",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "description": "Search item classifications and registered items"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "eTIMS Import Item Information",
+   "link_count": 0,
+   "link_to": "eTIMS Import Item Information",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "description": "Search imported items from KRA customs"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "eTIMS Purchase Information",
+   "link_count": 0,
+   "link_to": "eTIMS Purchase Information",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "description": "Search purchase invoices from suppliers via KRA"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "eTIMS Stock Information",
+   "link_count": 0,
+   "link_to": "eTIMS Stock Information",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "description": "Search stock movements and save stock data to KRA"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Logging & Notifications",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Error Logging",
+   "link_count": 0,
+   "link_to": "Error Logging",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "description": "API errors and issues for troubleshooting"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "eTIMS Notice",
+   "link_count": 0,
+   "link_to": "eTIMS Notice",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "description": "Official notices from KRA"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Sales & Purchases",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "eTIMS Sales Receipt",
+   "link_count": 0,
+   "link_to": "eTIMS Sales Receipt",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "description": "Sales receipts with KRA receipt numbers"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "eTIMS Purchase Invoice",
+   "link_count": 0,
+   "link_to": "eTIMS Purchase Invoice",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "description": "Purchase invoices from KRA"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Stock & Inventory",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "eTIMS Stock Movement",
+   "link_count": 0,
+   "link_to": "eTIMS Stock Movement",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "description": "Stock movement records from KRA"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "eTIMS Stock Release Number",
+   "link_count": 0,
+   "link_to": "eTIMS Stock Release Number",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "description": "Stock release numbers (SAR) for transactions"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Imports",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "eTIMS Import Item",
+   "link_count": 0,
+   "link_to": "eTIMS Import Item",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "description": "Imported items from KRA customs"
+  }
+ ],
+ "modified": "2026-02-03 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS Compliance",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 1.0,
+ "shortcuts": [
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "eTIMS Settings",
+   "link_to": "eTIMS Settings",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "TIS Device Initialization",
+   "link_to": "TIS Device Initialization",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "eTIMS Sales Receipt",
+   "link_to": "eTIMS Sales Receipt",
+   "type": "DocType"
+  },
+  {
+   "color": "Yellow",
+   "doc_view": "List",
+   "label": "eTIMS Purchase Invoice",
+   "link_to": "eTIMS Purchase Invoice",
+   "type": "DocType"
+  }
+ ],
+ "title": "eTIMS Compliance"
+}

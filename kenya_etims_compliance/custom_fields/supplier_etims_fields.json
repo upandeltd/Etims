@@ -1,0 +1,72 @@
+[
+  {
+    "dt": "Supplier",
+    "fieldname": "custom_etims_section",
+    "fieldtype": "Section Break",
+    "label": "eTIMS Information",
+    "insert_after": "supplier_group",
+    "read_only": 0,
+    "is_custom_field": 1
+  },
+  {
+    "dt": "Supplier",
+    "fieldname": "custom_supplier_pin",
+    "fieldtype": "Data",
+    "label": "Tax PIN",
+    "length": 11,
+    "description": "Supplier KRA Tax PIN for invoice verification (Format: A000000000)",
+    "insert_after": "custom_etims_section",
+    "read_only": 0,
+    "is_custom_field": 1
+  },
+  {
+    "dt": "Supplier",
+    "fieldname": "custom_branch_id",
+    "fieldtype": "Data",
+    "label": "Branch ID",
+    "length": 2,
+    "description": "Supplier KRA Branch ID (if applicable)",
+    "insert_after": "custom_supplier_pin",
+    "read_only": 0,
+    "is_custom_field": 1
+  },
+  {
+    "dt": "Supplier",
+    "fieldname": "column_break_etims_1",
+    "fieldtype": "Column Break",
+    "insert_after": "custom_branch_id",
+    "is_custom_field": 1
+  },
+  {
+    "dt": "Supplier",
+    "fieldname": "custom_registered_in_etims",
+    "fieldtype": "Check",
+    "label": "Registered in eTIMS",
+    "default": "0",
+    "description": "Supplier is registered in KRA eTIMS system",
+    "insert_after": "column_break_etims_1",
+    "read_only": 0,
+    "is_custom_field": 1
+  },
+  {
+    "dt": "Supplier",
+    "fieldname": "custom_auto_verify_invoices",
+    "fieldtype": "Check",
+    "label": "Auto-Verify Invoices",
+    "default": "0",
+    "description": "Automatically verify invoices from this supplier (only if registered in eTIMS)",
+    "insert_after": "custom_registered_in_etims",
+    "read_only": 0,
+    "is_custom_field": 1
+  },
+  {
+    "dt": "Supplier",
+    "fieldname": "custom_verification_notes",
+    "fieldtype": "Small Text",
+    "label": "Verification Notes",
+    "description": "Notes about supplier's eTIMS registration status or verification issues",
+    "insert_after": "custom_auto_verify_invoices",
+    "read_only": 0,
+    "is_custom_field": 1
+  }
+]

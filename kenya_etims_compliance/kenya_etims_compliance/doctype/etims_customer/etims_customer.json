@@ -1,0 +1,77 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-02-16 18:32:02.561877",
+ "default_view": "List",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "taxpayer_pin",
+  "taxpayer_name",
+  "taxpayer_status_code",
+  "county_name",
+  "sub_county_name",
+  "tax_locality_name",
+  "location_description"
+ ],
+ "fields": [
+  {
+   "fieldname": "taxpayer_pin",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Taxpayer PIN",
+   "length": 11
+  },
+  {
+   "fieldname": "taxpayer_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Taxpayer Name",
+   "length": 60
+  },
+  {
+   "fieldname": "taxpayer_status_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Taxpayer Status Code",
+   "length": 5
+  },
+  {
+   "fieldname": "county_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "County Name",
+   "length": 100
+  },
+  {
+   "fieldname": "sub_county_name",
+   "fieldtype": "Data",
+   "label": "Sub County Name",
+   "length": 100
+  },
+  {
+   "fieldname": "tax_locality_name",
+   "fieldtype": "Data",
+   "label": "Tax Locality Name",
+   "length": 100
+  },
+  {
+   "fieldname": "location_description",
+   "fieldtype": "Data",
+   "label": "Location Description",
+   "length": 100
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2024-02-16 18:32:02.561877",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS Customer",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

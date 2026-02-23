@@ -1,0 +1,203 @@
+{
+ "actions": [],
+ "autoname": "format: {tax_branch_office}-{sr_number}",
+ "creation": "2024-02-17 07:53:54.294388",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "tax_branch_office",
+  "reference_type",
+  "reference",
+  "column_break_tawp",
+  "sr_number",
+  "orginal_sr_number",
+  "sar_type",
+  "section_break_sync",
+  "synced_to_etims",
+  "sync_date",
+  "sync_status"
+ ],
+ "fields": [
+  {
+   "fieldname": "reference_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Reference Type",
+   "options": "DocType"
+  },
+  {
+   "fieldname": "reference",
+   "fieldtype": "Dynamic Link",
+   "in_list_view": 1,
+   "label": "Reference",
+   "options": "reference_type"
+  },
+  {
+   "fieldname": "column_break_tawp",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sr_number",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "SR Number"
+  },
+  {
+   "fieldname": "orginal_sr_number",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Orginal SR Number"
+  },
+  {
+   "default": "11",
+   "fieldname": "sar_type",
+   "fieldtype": "Select",
+   "label": "SAR Type",
+   "options": "11\n02\n03\n04\n06\n12\n13",
+   "description": "11: Sales, 02: Purchase, 03: Sales Return (Full), 04: Stock Transfer (In), 06: Material Receipt, 12: Purchase Return, 13: Inter-Branch Transfer (Out)"
+  },
+  {
+   "fieldname": "tax_branch_office",
+   "fieldtype": "Link",
+   "label": "Tax Branch Office",
+   "options": "Tax Branch Office"
+  },
+  {
+   "fieldname": "section_break_sync",
+   "fieldtype": "Section Break",
+   "label": "eTIMS Sync"
+  },
+  {
+   "default": "0",
+   "fieldname": "synced_to_etims",
+   "fieldtype": "Check",
+   "label": "Synced to eTIMS",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sync_date",
+   "fieldtype": "Datetime",
+   "label": "Sync Date",
+   "read_only": 1
+  },
+  {
+   "default": "Pending",
+   "fieldname": "sync_status",
+   "fieldtype": "Select",
+   "label": "Sync Status",
+   "options": "Pending\nSuccess\nFailed",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-12-06 19:27:23.547199",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS Stock Release Number",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "eTIMS Administrator",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "eTIMS Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "eTIMS Store Keeper",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 0,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "eTIMS Auditor",
+   "share": 0,
+   "write": 0
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Purchase User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Stock User",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

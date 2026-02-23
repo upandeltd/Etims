@@ -1,0 +1,80 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-02-16 18:27:07.371271",
+ "default_view": "List",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "code",
+  "code_name",
+  "code_description",
+  "sort_order",
+  "column_break_endd",
+  "user_define_code_1",
+  "user_define_code_2",
+  "user_define_code_3",
+  "use_yes_or_no"
+ ],
+ "fields": [
+  {
+   "fieldname": "code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Code"
+  },
+  {
+   "fieldname": "code_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Code Name"
+  },
+  {
+   "fieldname": "code_description",
+   "fieldtype": "Small Text",
+   "label": "Code Description"
+  },
+  {
+   "fieldname": "sort_order",
+   "fieldtype": "Data",
+   "label": "Sort Order"
+  },
+  {
+   "fieldname": "column_break_endd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "user_define_code_1",
+   "fieldtype": "Data",
+   "label": "User Define Code 1"
+  },
+  {
+   "fieldname": "user_define_code_2",
+   "fieldtype": "Data",
+   "label": "User Define Code 2"
+  },
+  {
+   "fieldname": "user_define_code_3",
+   "fieldtype": "Data",
+   "label": "User Define Code 3"
+  },
+  {
+   "fieldname": "use_yes_or_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Use Yes or No"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2024-02-16 18:27:07.371271",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS Code Classification Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

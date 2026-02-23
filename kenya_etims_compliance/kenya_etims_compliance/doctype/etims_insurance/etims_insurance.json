@@ -1,0 +1,142 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-04-18 16:58:44.857656",
+ "default_view": "List",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "insurance_code",
+  "insurance_name",
+  "premium_rate",
+  "usedunused",
+  "column_break_xcgr",
+  "registration_id",
+  "registration_name",
+  "modifier_id",
+  "modifier_name",
+  "saved",
+  "update_branch_insurance_info"
+ ],
+ "fields": [
+  {
+   "fieldname": "insurance_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Insurance Code",
+   "length": 10,
+   "reqd": 1
+  },
+  {
+   "fieldname": "insurance_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Insurance Name",
+   "length": 100,
+   "reqd": 1
+  },
+  {
+   "fieldname": "premium_rate",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Premium Rate",
+   "length": 3,
+   "reqd": 1
+  },
+  {
+   "fieldname": "usedunused",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": " Used/UnUsed",
+   "length": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_xcgr",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "registration_id",
+   "fieldtype": "Link",
+   "label": "Registration ID",
+   "length": 20,
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "registration_id.full_name",
+   "fetch_if_empty": 1,
+   "fieldname": "registration_name",
+   "fieldtype": "Data",
+   "label": "Registration Name",
+   "length": 60,
+   "read_only": 1
+  },
+  {
+   "fieldname": "modifier_id",
+   "fieldtype": "Link",
+   "label": "Modifier ID",
+   "length": 20,
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "modifier_id.full_name",
+   "fetch_if_empty": 1,
+   "fieldname": "modifier_name",
+   "fieldtype": "Data",
+   "label": "Modifier Name",
+   "length": 60,
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.saved == 1",
+   "fieldname": "saved",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Saved"
+  },
+  {
+   "fieldname": "update_branch_insurance_info",
+   "fieldtype": "Button",
+   "label": "Update Branch Insurance Info"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-12-06 20:24:48.263741",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS Insurance",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales User",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

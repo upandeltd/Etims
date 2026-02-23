@@ -1,0 +1,71 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-03-20 14:46:03.910784",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "item_name",
+  "etims_item_code",
+  "quantity",
+  "stock_uom",
+  "parent_bom",
+  "saved_in_etims"
+ ],
+ "fields": [
+  {
+   "fieldname": "item_name",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Item Name",
+   "options": "Item"
+  },
+  {
+   "fetch_from": "item_name.custom_item_code",
+   "fetch_if_empty": 1,
+   "fieldname": "etims_item_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "eTIMS Item Code"
+  },
+  {
+   "fieldname": "quantity",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Quantity"
+  },
+  {
+   "fieldname": "stock_uom",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Stock UOM",
+   "options": "UOM"
+  },
+  {
+   "fieldname": "parent_bom",
+   "fieldtype": "Link",
+   "label": "Parent BOM",
+   "options": "BOM"
+  },
+  {
+   "default": "0",
+   "fieldname": "saved_in_etims",
+   "fieldtype": "Check",
+   "label": "Saved In eTIMS"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2024-03-20 16:43:27.861653",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS BOM Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

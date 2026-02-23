@@ -1,0 +1,290 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "autoname": "eTIMS Settings",
+ "creation": "2024-02-03 00:00:00.000000",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "sb_general",
+  "default_sar_type_sales",
+  "default_sar_type_purchase",
+  "default_sar_type_stock_entry",
+  "enable_auto_sync",
+  "sb_role",
+  "enable_rbac",
+  "enforce_branch_isolation",
+  "allow_cross_branch_operations",
+  "sb_api",
+  "api_timeout",
+  "production_api_url",
+  "sandbox_api_url",
+  "sb_retry",
+  "enable_retry_logic",
+  "max_retry_attempts",
+  "retry_delay",
+  "sb_search",
+  "default_search_limit",
+  "max_search_limit",
+  "sb_error",
+  "enable_error_logging",
+  "enable_permission_logging",
+  "error_notification_email",
+  "sb_compliance",
+  "enforce_invoice_verification",
+  "auto_verify_invoices",
+  "allow_payment_unverified",
+  "verification_amount_threshold",
+  "sb_po_tracking",
+  "enable_po_tracking",
+  "auto_reconcile_invoices",
+  "po_notification_enabled"
+ ],
+ "fields": [
+  {
+   "fieldname": "sb_general",
+   "fieldtype": "Section Break",
+   "label": "General Settings"
+  },
+  {
+   "default": "11",
+   "fieldname": "default_sar_type_sales",
+   "fieldtype": "Select",
+   "label": "Default SAR Type - Sales",
+   "options": "11\n02\n03\n04\n06\n12\n13",
+   "description": "Default Stock Release Number type for Sales transactions. 11=Sales, 02=Purchase, 03=Sales Return, 04=Stock Transfer In, 06=Material Receipt, 12=Purchase Return, 13=Inter-Branch Transfer Out"
+  },
+  {
+   "default": "02",
+   "fieldname": "default_sar_type_purchase",
+   "fieldtype": "Select",
+   "label": "Default SAR Type - Purchase",
+   "options": "11\n02\n03\n04\n06\n12\n13",
+   "description": "Default Stock Release Number type for Purchase transactions"
+  },
+  {
+   "default": "06",
+   "fieldname": "default_sar_type_stock_entry",
+   "fieldtype": "Select",
+   "label": "Default SAR Type - Stock Entry",
+   "options": "11\n02\n03\n04\n06\n12\n13",
+   "description": "Default Stock Release Number type for Stock Entry transactions"
+  },
+  {
+   "default": "1",
+   "fieldname": "enable_auto_sync",
+   "fieldtype": "Check",
+   "label": "Enable Auto Sync",
+   "description": "Automatically sync Stock Release Numbers to KRA on submit"
+  },
+  {
+   "fieldname": "sb_role",
+   "fieldtype": "Section Break",
+   "label": "Role Based Access Control"
+  },
+  {
+   "default": "1",
+   "fieldname": "enable_rbac",
+   "fieldtype": "Check",
+   "label": "Enable RBAC",
+   "description": "Enable Role-Based Access Control for eTIMS operations (recommended for production)"
+  },
+  {
+   "default": "1",
+   "fieldname": "enforce_branch_isolation",
+   "fieldtype": "Check",
+   "label": "Enforce Branch Isolation",
+   "description": "Users can only access documents from their assigned branch (Admin/Manager exempt)"
+  },
+  {
+   "default": "0",
+   "fieldname": "allow_cross_branch_operations",
+   "fieldtype": "Check",
+   "label": "Allow Cross-Branch Operations",
+   "description": "Allow Managers to perform operations across all branches"
+  },
+  {
+   "fieldname": "sb_api",
+   "fieldtype": "Section Break",
+   "label": "API Settings"
+  },
+  {
+   "default": "30",
+   "fieldname": "api_timeout",
+   "fieldtype": "Int",
+   "label": "API Timeout (seconds)",
+   "description": "Request timeout in seconds (default: 30, max: 300)"
+  },
+  {
+   "default": "https://etims-api.kra.go.ke/etims-api/",
+   "fieldname": "production_api_url",
+   "fieldtype": "Data",
+   "label": "Production API URL",
+   "description": "KRA eTIMS Production API endpoint"
+  },
+  {
+   "default": "https://etims-api-sbx.kra.go.ke/etims-api/",
+   "fieldname": "sandbox_api_url",
+   "fieldtype": "Data",
+   "label": "Sandbox API URL",
+   "description": "KRA eTIMS Sandbox API endpoint"
+  },
+  {
+   "fieldname": "sb_retry",
+   "fieldtype": "Section Break",
+   "label": "Retry Settings"
+  },
+  {
+   "default": "1",
+   "fieldname": "enable_retry_logic",
+   "fieldtype": "Check",
+   "label": "Enable Retry Logic",
+   "description": "Automatically retry failed API requests"
+  },
+  {
+   "default": "3",
+   "fieldname": "max_retry_attempts",
+   "fieldtype": "Int",
+   "label": "Max Retry Attempts",
+   "description": "Maximum number of retry attempts for failed requests (default: 3)"
+  },
+  {
+   "default": "2",
+   "fieldname": "retry_delay",
+   "fieldtype": "Int",
+   "label": "Retry Delay (seconds)",
+   "description": "Delay between retry attempts in seconds (default: 2)"
+  },
+  {
+   "fieldname": "sb_search",
+   "fieldtype": "Section Break",
+   "label": "Search Settings"
+  },
+  {
+   "default": "100",
+   "fieldname": "default_search_limit",
+   "fieldtype": "Int",
+   "label": "Default Search Limit",
+   "description": "Default number of results to return from search endpoints (default: 100)"
+  },
+  {
+   "default": "1000",
+   "fieldname": "max_search_limit",
+   "fieldtype": "Int",
+   "label": "Max Search Limit",
+   "description": "Maximum number of results allowed from search endpoints (default: 1000)"
+  },
+  {
+   "fieldname": "sb_error",
+   "fieldtype": "Section Break",
+   "label": "Error Handling"
+  },
+  {
+   "default": "1",
+   "fieldname": "enable_error_logging",
+   "fieldtype": "Check",
+   "label": "Enable Error Logging",
+   "description": "Log API errors to Error Logging doctype"
+  },
+  {
+   "default": "1",
+   "fieldname": "enable_permission_logging",
+   "fieldtype": "Check",
+   "label": "Enable Permission Logging",
+   "description": "Log all permission checks for audit trail"
+  },
+  {
+   "fieldname": "error_notification_email",
+   "fieldtype": "Data",
+   "label": "Error Notification Email",
+   "options": "Email",
+   "description": "Send error notifications to this email address (optional)"
+  },
+  {
+   "fieldname": "sb_compliance",
+   "fieldtype": "Section Break",
+   "label": "Purchase Compliance Settings (2026)"
+  },
+  {
+   "default": "1",
+   "fieldname": "enforce_invoice_verification",
+   "fieldtype": "Check",
+   "label": "Enforce Invoice Verification",
+   "description": "Require all supplier invoices to be verified with KRA before payment. Critical for 2026 tax compliance."
+  },
+  {
+   "default": "0",
+   "fieldname": "auto_verify_invoices",
+   "fieldtype": "Check",
+   "label": "Auto-Verify Invoices",
+   "description": "Automatically verify invoices when they are created (if supplier is registered in eTIMS)"
+  },
+  {
+   "default": "0",
+   "fieldname": "allow_payment_unverified",
+   "fieldtype": "Check",
+   "label": "Allow Payment Without Verification",
+   "description": "Allow payments for unverified invoices with approval (not recommended - may affect tax deductibility)"
+  },
+  {
+   "default": "0",
+   "fieldname": "verification_amount_threshold",
+   "fieldtype": "Currency",
+   "label": "Verification Amount Threshold",
+   "description": "Only verify invoices above this amount. Set to 0 to verify all invoices."
+  },
+  {
+   "fieldname": "sb_po_tracking",
+   "fieldtype": "Section Break",
+   "label": "Purchase Order Tracking"
+  },
+  {
+   "default": "1",
+   "fieldname": "enable_po_tracking",
+   "fieldtype": "Check",
+   "label": "Enable PO Tracking",
+   "description": "Track Purchase Orders for audit trail and invoice reconciliation"
+  },
+  {
+   "default": "1",
+   "fieldname": "auto_reconcile_invoices",
+   "fieldtype": "Check",
+   "label": "Auto-Reconcile Invoices",
+   "description": "Automatically reconcile Purchase Invoices with original Purchase Orders"
+  },
+  {
+   "default": "0",
+   "fieldname": "po_notification_enabled",
+   "fieldtype": "Check",
+   "label": "Enable PO Notifications",
+   "description": "Send notifications when Purchase Orders are pending invoice for extended periods"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-02-03 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -1,0 +1,17 @@
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+	ignorecase = true
+	precomposeunicode = true
+[remote "upstream"]
+	url = https://github.com/upandeltd/Etims.git
+	fetch = +refs/heads/version-1.0.1:refs/remotes/upstream/version-1.0.1
+[branch "main"]
+	remote = upstream
+	merge = refs/heads/version-1.0.1
+	vscode-merge-base = upstream/version-1.0.1
+[remote "origin"]
+	url = https://github.com/CoaleTech/Coale-Tax.git
+	fetch = +refs/heads/*:refs/remotes/origin/*

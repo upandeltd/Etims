@@ -1,0 +1,94 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:{notice_number}",
+ "creation": "2024-02-16 18:31:25.076027",
+ "default_view": "List",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "notice_number",
+  "title",
+  "contents",
+  "column_break_hqd4",
+  "detail_url",
+  "registration_name",
+  "registration_date_and_time"
+ ],
+ "fields": [
+  {
+   "fieldname": "notice_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Notice Number"
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Title"
+  },
+  {
+   "fieldname": "contents",
+   "fieldtype": "Long Text",
+   "label": "Contents"
+  },
+  {
+   "fieldname": "column_break_hqd4",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "detail_url",
+   "fieldtype": "Data",
+   "label": "Detail Url"
+  },
+  {
+   "fieldname": "registration_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Registration Name"
+  },
+  {
+   "fieldname": "registration_date_and_time",
+   "fieldtype": "Datetime",
+   "label": "Registration Date And Time"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-12-06 20:24:29.628831",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS Notice",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales User",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

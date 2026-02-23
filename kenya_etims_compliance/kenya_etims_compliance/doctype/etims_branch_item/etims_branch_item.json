@@ -1,0 +1,109 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-02-17 07:16:18.194621",
+ "default_view": "List",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "pin",
+  "branch_office_id",
+  "branch_office_name",
+  "branch_status_code",
+  "county_name",
+  "sub_county_name",
+  "column_break_zryf",
+  "tax_locality_name",
+  "location_description",
+  "manager_name",
+  "manager_contact",
+  "manager_email",
+  "head_office_yesno"
+ ],
+ "fields": [
+  {
+   "fieldname": "pin",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "PIN",
+   "length": 11
+  },
+  {
+   "fieldname": "branch_office_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Branch Office ID",
+   "length": 2
+  },
+  {
+   "fieldname": "branch_office_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Branch Office Name"
+  },
+  {
+   "fieldname": "branch_status_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Branch Status Code"
+  },
+  {
+   "fieldname": "county_name",
+   "fieldtype": "Data",
+   "label": "County Name"
+  },
+  {
+   "fieldname": "sub_county_name",
+   "fieldtype": "Data",
+   "label": "Sub County Name"
+  },
+  {
+   "fieldname": "column_break_zryf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "tax_locality_name",
+   "fieldtype": "Data",
+   "label": "Tax Locality Name"
+  },
+  {
+   "fieldname": "location_description",
+   "fieldtype": "Data",
+   "label": "Location Description"
+  },
+  {
+   "fieldname": "manager_name",
+   "fieldtype": "Data",
+   "label": "Manager Name"
+  },
+  {
+   "fieldname": "manager_contact",
+   "fieldtype": "Data",
+   "label": "Manager Contact "
+  },
+  {
+   "fieldname": "manager_email",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Manager Email"
+  },
+  {
+   "fieldname": "head_office_yesno",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Head Office Yes/No"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2024-02-17 07:16:18.194621",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS Branch Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

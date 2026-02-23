@@ -1,0 +1,80 @@
+[
+  {
+    "dt": "Purchase Invoice",
+    "fieldname": "custom_etims_verification_section",
+    "fieldtype": "Section Break",
+    "label": "eTIMS Invoice Verification",
+    "insert_after": "more_info",
+    "read_only": 0,
+    "depends_on": "eval:doc.docstatus!=2",
+    "is_custom_field": 1
+  },
+  {
+    "dt": "Purchase Invoice",
+    "fieldname": "custom_invoice_verified",
+    "fieldtype": "Check",
+    "label": "Invoice Verified",
+    "default": "0",
+    "description": "Invoice has been verified with KRA eTIMS system",
+    "insert_after": "custom_etims_verification_section",
+    "read_only": 1,
+    "is_custom_field": 1
+  },
+  {
+    "dt": "Purchase Invoice",
+    "fieldname": "custom_verification_date",
+    "fieldtype": "Datetime",
+    "label": "Verification Date",
+    "description": "Date and time when invoice was verified",
+    "insert_after": "custom_invoice_verified",
+    "read_only": 1,
+    "is_custom_field": 1
+  },
+  {
+    "dt": "Purchase Invoice",
+    "fieldname": "column_break_etims_verify",
+    "fieldtype": "Column Break",
+    "insert_after": "custom_verification_date",
+    "is_custom_field": 1
+  },
+  {
+    "dt": "Purchase Invoice",
+    "fieldname": "custom_qr_code",
+    "fieldtype": "Small Text",
+    "label": "QR Code",
+    "description": "KRA eTIMS QR Code for verified invoice",
+    "insert_after": "column_break_etims_verify",
+    "read_only": 1,
+    "is_custom_field": 1
+  },
+  {
+    "dt": "Purchase Invoice",
+    "fieldname": "custom_kra_invoice_number",
+    "fieldtype": "Data",
+    "label": "KRA Invoice Number",
+    "description": "Invoice number in KRA eTIMS system",
+    "insert_after": "custom_qr_code",
+    "read_only": 1,
+    "is_custom_field": 1
+  },
+  {
+    "dt": "Purchase Invoice",
+    "fieldname": "custom_supplier_pin_verified",
+    "fieldtype": "Data",
+    "label": "Verified Supplier PIN",
+    "description": "Supplier PIN used for verification",
+    "insert_after": "custom_kra_invoice_number",
+    "read_only": 1,
+    "is_custom_field": 1
+  },
+  {
+    "dt": "Purchase Invoice",
+    "fieldname": "custom_verification_override_reason",
+    "fieldtype": "Small Text",
+    "label": "Manual Verification Reason",
+    "description": "Reason for manual verification override (if applicable)",
+    "insert_after": "custom_supplier_pin_verified",
+    "read_only": 1,
+    "is_custom_field": 1
+  }
+]
