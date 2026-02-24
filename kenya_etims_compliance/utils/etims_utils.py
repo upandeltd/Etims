@@ -88,12 +88,12 @@ class eTIMS():
         branch_id = eTIMS.get_user_branch_id()
         settings_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id, "active":1}, fields=["*"])
 
-        t_base_url = eTIMS.get_base_url() + '/api/method/kenya_etims_compliance.utils.etims_response.'
-
         if settings_docs:
             api_mode = settings_docs[0].api_mode
-            t_base_url = get_api_url(api_mode)
-            return t_base_url
+            return get_api_url(api_mode)
+
+        # Fallback: use default sandbox URL when no active device found
+        return get_api_url("Sandbox")
         
     @staticmethod
     def strp_datetime_object(date_time_str):

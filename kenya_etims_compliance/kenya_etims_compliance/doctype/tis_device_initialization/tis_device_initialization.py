@@ -5,6 +5,7 @@ import requests, traceback
 import frappe
 from frappe.model.document import Document
 from kenya_etims_compliance.utils.etims_utils import eTIMS
+from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import get_api_url
 
 class TISDeviceInitialization(Document):
 	# Method to initialize and verify a device with etims
@@ -15,21 +16,27 @@ class TISDeviceInitialization(Document):
             "bhfId": self.branch_id,
             "dvcSrlNo" : self.device_serial_number
         }
-       
+
         try:
+            # Get API URL directly from settings using this document's api_mode
+            # Cannot use eTIMS.tims_base_url() here because it looks up
+            # an active TIS Device Initialization, which doesn't exist yet
+            # during first-time device initialization.
+            api_url = get_api_url(self.api_mode or "Sandbox")
+
             response = requests.request(
                         "POST",
-                        eTIMS.tims_base_url() + 'selectInitOsdcInfo',
+                        api_url + 'selectInitOsdcInfo',
                         json = payload
                     )
             response_data = response.json()
             response_json = eTIMS.get_response_data(response_data)
-            
-            
+
+
             if not response_json.get("resultCd") == '000':
-            
+
                 return {"Error":response_json.get("resultMsg")}
-         
+
             data = response_json.get("data")
             if data:
                 info = data.get("info")
@@ -38,14 +45,16 @@ class TISDeviceInitialization(Document):
                 self.sales_control_unit_id = info.get("sdcId")
                 self.mrc_no = info.get("mrcNo")
                 save_communication_key(info.get("cmcKey"), self.branch_id)
-                
+
 
             self.save()
             return {"Success":response_json.get("resultMsg")}
 
         except Exception:
-            eTIMS.log_errors("TIS Device Verification", traceback.format_exc())
-            return {"Error":"Oops Bad Request!"}
+            error_msg = traceback.format_exc()
+            eTIMS.log_errors("TIS Device Verification", error_msg)
+            frappe.logger().error(f"TIS Device Verification failed: {error_msg}")
+            return {"Error": f"Device initialization failed. Check Error Log for details."}
 
     @frappe.whitelist()
     def refresh_org_info(self):

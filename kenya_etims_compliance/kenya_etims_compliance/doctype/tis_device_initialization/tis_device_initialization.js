@@ -22,14 +22,14 @@ frappe.ui.form.on("TIS Device Initialization", {
                     let values = Object.values(r.message)
                     frappe.msgprint({
                         title: __(keys[0]),
-                        indicator: 'green',
+                        indicator: keys[0] === 'Success' ? 'green' : 'red',
                         message: __(values[0])
                     });
 
-                    refresh_field("communication_key")
-                    refresh_field("device_id")
-                    refresh_field("sales_control_unit_id")
-                    refresh_field("mrc_no")
+                    frm.refresh_field("communication_key")
+                    frm.refresh_field("device_id")
+                    frm.refresh_field("sales_control_unit_id")
+                    frm.refresh_field("mrc_no")
                 }
             })
         },
