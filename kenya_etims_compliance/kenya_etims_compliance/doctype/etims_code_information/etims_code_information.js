@@ -7,8 +7,6 @@ frappe.ui.form.on("eTIMS Code Information", {
         frappe.call({
             method: 'codeSearchReq',
             doc: frm.doc,
-            // // disable the button until the request is completed
-            btn: frm.page.btn_primary,
             // // freeze the screen until the request is completed
             freeze: true,
             callback: function(r)  {
@@ -20,13 +18,13 @@ frappe.ui.form.on("eTIMS Code Information", {
                     message: __(values[0])
                 });
 
-                refresh_field("last_search_date_and_time")
+                frm.refresh_field("last_search_date_and_time")
             }
         })
     },
     
     code_response_url: function(frm){
-        frappe.set_route("List/eTIMS Code Classification/List")
+        frappe.set_route("List", "eTIMS Code Classification")
     },
 
     search_customer: function(frm){
@@ -34,8 +32,6 @@ frappe.ui.form.on("eTIMS Code Information", {
         frappe.call({
             method: 'custSearchReq',
             doc: frm.doc,
-            // // disable the button until the request is completed
-            btn: frm.page.btn_primary,
             // // freeze the screen until the request is completed
             freeze: true,
             callback: function(r)   {
@@ -47,7 +43,7 @@ frappe.ui.form.on("eTIMS Code Information", {
                     message: __(values[0])
                 });
 
-                refresh_field("customer_details")
+                frm.refresh_field("customer_details")
             }
         })
     },
@@ -57,8 +53,6 @@ frappe.ui.form.on("eTIMS Code Information", {
         frappe.call({
             method: 'noticeSearchReq',
             doc: frm.doc,
-            // // disable the button until the request is completed
-            btn: frm.page.btn_primary,
             // // freeze the screen until the request is completed
             freeze: true,
             callback: function(r)   {
@@ -70,8 +64,8 @@ frappe.ui.form.on("eTIMS Code Information", {
                     message: __(values[0])
                 });
 
-                refresh_field("notices")
-                refresh_field("last_request_date")
+                frm.refresh_field("notices")
+                frm.refresh_field("last_request_date")
             }
         })
 

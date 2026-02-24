@@ -1,7 +1,7 @@
 frappe.ui.form.on('BOM',{
     custom_save_item_composition: function(frm) {
         console.log("hello")
-        if(!frm.doc.custom_updated_to_etims == 1){
+        if(frm.doc.custom_updated_to_etims != 1){
             frappe.call({
                 "method": "kenya_etims_compliance.custom_methods.bom.itemSaveComposition",
                 args: { doc_name: frm.doc.name },

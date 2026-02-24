@@ -35,7 +35,7 @@ class eTIMS():
     @staticmethod
     def strf_datetime_format(datetime_data):
         date_time_str  = ""
-        if type(datetime_data) == str:
+        if isinstance(datetime_data, str):
             try:
                 datetime_object = datetime.strptime(datetime_data, '%Y-%m-%d %H:%M:%S.%f')
                 date_time_str = datetime_object.strftime("%Y%m%d%H%M%S")

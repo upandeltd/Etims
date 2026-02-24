@@ -7,8 +7,6 @@ frappe.ui.form.on("eTIMS Stock Information", {
         frappe.call({
             method: 'stockMoveReq',
             doc: frm.doc,
-            // // disable the button until the request is completed
-            btn: frm.page.btn_primary,
             // // freeze the screen until the request is completed
             freeze: true,
             callback: function(r)   {
@@ -21,13 +19,13 @@ frappe.ui.form.on("eTIMS Stock Information", {
                     message: __(values[0])
                 });
 
-                refresh_field("last_search_date_and_time")
+                frm.refresh_field("last_search_date_and_time")
             }
         })
     },
 
     view_stock_movement: function(frm){
-        frappe.set_route("List/eTIMS Stock Movement/List")
+        frappe.set_route("List", "eTIMS Stock Movement")
     },
 
     consolidate_stock: function(frm){
@@ -35,29 +33,25 @@ frappe.ui.form.on("eTIMS Stock Information", {
         frappe.call({
             method: 'insert_items',
             doc: frm.doc,
-            // // disable the button until the request is completed
-            btn: frm.page.btn_primary,
             // // freeze the screen until the request is completed
             freeze: true,
             callback: function(r)   {
 
-                refresh_field("items")
+                frm.refresh_field("items")
             }
         })
     },
-    
+
     save_stock: function(frm) {
         // call with all options
         frappe.call({
             method: 'stockMasterSaveReq',
             doc: frm.doc,
-            // // disable the button until the request is completed
-            btn: frm.page.btn_primary,
             // // freeze the screen until the request is completed
             freeze: true,
             callback: function(r)   {
                 // console.log(r.message)
-                refresh_field("items")
+                frm.refresh_field("items")
                 let keys = Object.keys(r.message)
                 let values = Object.values(r.message)
                 frappe.msgprint({

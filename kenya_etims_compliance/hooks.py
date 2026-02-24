@@ -11,7 +11,7 @@ app_license = "mit"
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/kenya_etims_compliance/css/kenya_etims_compliance.css"
-# app_include_js = "/assets/kenya_etims_compliance/js/kenya_etims_compliance.js"
+app_include_js = "/assets/kenya_etims_compliance/js/etims_icons.js"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/kenya_etims_compliance/css/kenya_etims_compliance.css"
@@ -43,8 +43,8 @@ doctype_js = {
 
 # Svg Icons
 # ------------------
-# include app icons in desk
-app_include_icons = "kenya_etims_compliance/icons.svg"
+# include app icons in desk (loaded via app_include_js instead for compatibility)
+# app_include_icons = "kenya_etims_compliance/icons.svg"
 
 # Home Pages
 # ----------

@@ -7,8 +7,6 @@ frappe.ui.form.on("eTIMS Insurance", {
         frappe.call({
             method: 'bhfInsuranceSaveReq',
             doc: frm.doc,
-            // // disable the button until the request is completed
-            btn: frm.page.btn_primary,
             // // freeze the screen until the request is completed
             freeze: true,
             callback: function(r)   {
@@ -21,7 +19,7 @@ frappe.ui.form.on("eTIMS Insurance", {
                     message: __(values[0])
                 });
 
-                refresh_field("saved")
+                frm.refresh_field("saved")
             }
         })
     }

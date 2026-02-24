@@ -7,8 +7,6 @@ frappe.ui.form.on("eTIMS Purchase Information", {
         frappe.call({
             method: 'trnsPurchaseSalesReq',
             doc: frm.doc,
-            // // disable the button until the request is completed
-            btn: frm.page.btn_primary,
             // // freeze the screen until the request is completed
             freeze: true,
             callback: function(r)   {
@@ -21,12 +19,12 @@ frappe.ui.form.on("eTIMS Purchase Information", {
                     message: __(values[0])
                 });
 
-                refresh_field("last_search_date_and_time")
+                frm.refresh_field("last_search_date_and_time")
             }
         })
     },
 
     view_purchase_invoices: function(frm){
-        frappe.set_route("List/eTIMS Purchase Invoice/List")
+        frappe.set_route("List", "eTIMS Purchase Invoice")
     },
 });

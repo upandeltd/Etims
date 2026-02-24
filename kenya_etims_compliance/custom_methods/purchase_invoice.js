@@ -9,7 +9,7 @@ frappe.ui.form.on("Purchase Invoice",{
         }
 
         frm.refresh_field("custom_receipt_type_code")
-        frm.frm.refresh_field("custom_purchase_status_code")
+        frm.refresh_field("custom_purchase_status_code")
     },
 
     onload:function(frm){

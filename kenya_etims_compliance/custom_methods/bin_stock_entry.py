@@ -38,7 +38,10 @@ def on_submit(doc, method):
     
 def get_bin_qty(item_code, branch_id):
         store_warehouse = frappe.db.get_all("Warehouse", filters={"warehouse_type": "Stores", "is_group": 0, "custom_tax_branch_office": branch_id}, fields=["warehouse_name", "name"])
-            
+
+        if not store_warehouse:
+            return 0
+
         bin_docs = frappe.db.get_all("Bin", filters={"item_code":item_code, "warehouse": store_warehouse[0].get("name")}, fields=["actual_qty"])
 
         if bin_docs:

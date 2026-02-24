@@ -500,6 +500,8 @@ def etims_sale_item_list_sales(doc):
     for item in doc.items:
         item_tax_code = get_tax_template_details(item.get("item_tax_template"))
         item_detail = frappe.db.get_all("Item", filters={"disabled": 0, "item_code": item.get("item_code")}, fields = ["*"])
+        if not item_detail:
+            frappe.throw(f"Item {item.get('item_code')} not found or is disabled")
         item_etims_data = {
 					"itemSeq": item.get("idx"),
 					"itemCd": item_detail[0].get("custom_item_code"),
@@ -536,6 +538,8 @@ def etims_sale_item_list_stock(doc):
         if item.custom_maintain_stock:
             item_tax_code = get_tax_template_details(item.get("item_tax_template"))
             item_detail = frappe.db.get_all("Item", filters={"disabled": 0, "item_code": item.get("item_code")}, fields = ["*"])
+            if not item_detail:
+                frappe.throw(f"Item {item.get('item_code')} not found or is disabled")
             item_etims_data = {
                         "itemSeq": item.get("idx"),
                         "itemCd": item_detail[0].get("custom_item_code"),

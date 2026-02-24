@@ -7,8 +7,6 @@ frappe.ui.form.on("eTIMS Item Information", {
         frappe.call({
             method: 'itemClsSearchReq',
             doc: frm.doc,
-            // // disable the button until the request is completed
-            btn: frm.page.btn_primary,
             // // freeze the screen until the request is completed
             freeze: true,
             callback: function(r)   {
@@ -21,13 +19,13 @@ frappe.ui.form.on("eTIMS Item Information", {
                     message: __(values[0])
                 });
 
-                refresh_field("last_search_date_and_time")
+                frm.refresh_field("last_search_date_and_time")
             }
         })
     },
 
     view_itemcls_search_response: function(frm){
-        frappe.set_route("List/eTIMS Item Classification/List")
+        frappe.set_route("List", "eTIMS Item Classification")
     },
 
     consolidate_bom_items: function(frm){
@@ -35,14 +33,12 @@ frappe.ui.form.on("eTIMS Item Information", {
         frappe.call({
             method: 'consolidate_item_bom',
             doc: frm.doc,
-            // // disable the button until the request is completed
-            btn: frm.page.btn_primary,
             // // freeze the screen until the request is completed
             freeze: true,
             callback: function(r)   {
 
-                refresh_field("bom_items")
-                refresh_field("etims_item_code")
+                frm.refresh_field("bom_items")
+                frm.refresh_field("etims_item_code")
             }
         })
     },
@@ -52,8 +48,6 @@ frappe.ui.form.on("eTIMS Item Information", {
         frappe.call({
             method: 'itemSearchReq',
             doc: frm.doc,
-            // // disable the button until the request is completed
-            btn: frm.page.btn_primary,
             // // freeze the screen until the request is completed
             freeze: true,
             callback: function(r)   {
@@ -66,8 +60,8 @@ frappe.ui.form.on("eTIMS Item Information", {
                     message: __(values[0])
                 });
 
-                refresh_field("registered_items")
-                refresh_field("item_last_search_date_and_time")
+                frm.refresh_field("registered_items")
+                frm.refresh_field("item_last_search_date_and_time")
             }
         })
     },
@@ -77,8 +71,6 @@ frappe.ui.form.on("eTIMS Item Information", {
         frappe.call({
             method: 'itemSaveComposition',
             doc: frm.doc,
-            // // disable the button until the request is completed
-            btn: frm.page.btn_primary,
             // // freeze the screen until the request is completed
             freeze: true,
             callback: function(r)   {
@@ -91,10 +83,9 @@ frappe.ui.form.on("eTIMS Item Information", {
                     message: __(values[0])
                 });
 
-                refresh_field("saved_in_etims")
-                // refresh_field("bom_items")
+                frm.refresh_field("saved_in_etims")
+                // frm.refresh_field("bom_items")
             }
         })
     },
 });
-

@@ -7,8 +7,6 @@ frappe.ui.form.on("eTIMS Import Item Information", {
         frappe.call({
             method: 'importItemSearchReq',
             doc: frm.doc,
-            // // disable the button until the request is completed
-            btn: frm.page.btn_primary,
             // // freeze the screen until the request is completed
             freeze: true,
             callback: function(r)   {
@@ -21,8 +19,8 @@ frappe.ui.form.on("eTIMS Import Item Information", {
                     message: __(values[0])
                 });
 
-                refresh_field("import_items")
-                refresh_field("last_search_date_and_time")
+                frm.refresh_field("import_items")
+                frm.refresh_field("last_search_date_and_time")
             }
         })
     },
@@ -32,13 +30,11 @@ frappe.ui.form.on("eTIMS Import Item Information", {
         frappe.call({
             method: 'insert_items',
             doc: frm.doc,
-            // // disable the button until the request is completed
-            btn: frm.page.btn_primary,
             // // freeze the screen until the request is completed
             freeze: true,
             callback: function(r)   {
 
-                refresh_field("import_items_for_update")
+                frm.refresh_field("import_items_for_update")
             }
         })
     },
@@ -48,8 +44,6 @@ frappe.ui.form.on("eTIMS Import Item Information", {
         frappe.call({
             method: 'importItemUpdateReq',
             doc: frm.doc,
-            // // disable the button until the request is completed
-            btn: frm.page.btn_primary,
             // // freeze the screen until the request is completed
             freeze: true,
             callback: function(r)   {
@@ -62,7 +56,7 @@ frappe.ui.form.on("eTIMS Import Item Information", {
                     message: __(values[0])
                 });
 
-                refresh_field("import_items_for_update")
+                frm.refresh_field("import_items_for_update")
             }
         })
     },
