@@ -44,7 +44,7 @@ doctype_js = {
 # Svg Icons
 # ------------------
 # include app icons in desk
-app_include_icons = "kenya_etims_compliance/public/icons.svg"
+app_include_icons = "kenya_etims_compliance/icons.svg"
 
 # Home Pages
 # ----------
