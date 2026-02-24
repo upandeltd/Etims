@@ -6,6 +6,16 @@ app_email = "dev@upande.com"
 app_license = "mit"
 # required_apps = []
 
+# App screen tile (v16 desk home)
+add_to_apps_screen = [
+    {
+        "name": "kenya_etims_compliance",
+        "logo": "/assets/kenya_etims_compliance/images/etims-logo.svg",
+        "title": "eTIMS Compliance",
+        "route": "/app/etims-compliance",
+    }
+]
+
 # Includes in <head>
 # ------------------
 

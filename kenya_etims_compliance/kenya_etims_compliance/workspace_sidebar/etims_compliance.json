@@ -1,0 +1,171 @@
+{
+ "app": "kenya_etims_compliance",
+ "creation": "2024-02-17 12:49:27.432630",
+ "docstatus": 0,
+ "doctype": "Workspace Sidebar",
+ "header_icon": "file-text",
+ "module": "Kenya Etims Compliance",
+ "modified": "2026-02-24 12:00:00.000000",
+ "modified_by": "Administrator",
+ "name": "eTIMS Compliance",
+ "owner": "Administrator",
+ "standard": 1,
+ "title": "eTIMS Compliance",
+ "items": [
+  {
+   "child": 0, "collapsible": 1, "indent": 0, "keep_closed": 0,
+   "label": "Dashboard", "link_to": "eTIMS Compliance", "link_type": "Workspace",
+   "show_arrow": 0, "type": "Link", "icon": "home"
+  },
+  {
+   "child": 0, "collapsible": 1, "icon": "settings",
+   "indent": 1, "keep_closed": 0,
+   "label": "Configuration", "link_type": "DocType",
+   "show_arrow": 0, "type": "Section Break"
+  },
+  {
+   "child": 1, "collapsible": 1, "indent": 0, "keep_closed": 0,
+   "label": "eTIMS Settings", "link_to": "eTIMS Settings", "link_type": "DocType",
+   "show_arrow": 0, "type": "Link"
+  },
+  {
+   "child": 1, "collapsible": 1, "indent": 0, "keep_closed": 0,
+   "label": "TIS Device Initialization", "link_to": "TIS Device Initialization", "link_type": "DocType",
+   "show_arrow": 0, "type": "Link"
+  },
+  {
+   "child": 1, "collapsible": 1, "indent": 0, "keep_closed": 0,
+   "label": "TIS Communication Key", "link_to": "TIS Communication Key", "link_type": "DocType",
+   "show_arrow": 0, "type": "Link"
+  },
+  {
+   "child": 1, "collapsible": 1, "indent": 0, "keep_closed": 0,
+   "label": "Tax Branch Office", "link_to": "Tax Branch Office", "link_type": "DocType",
+   "show_arrow": 0, "type": "Link"
+  },
+  {
+   "child": 0, "collapsible": 1, "icon": "database",
+   "indent": 1, "keep_closed": 1,
+   "label": "Master Data", "link_type": "DocType",
+   "show_arrow": 0, "type": "Section Break"
+  },
+  {
+   "child": 1, "collapsible": 1, "indent": 0, "keep_closed": 0,
+   "label": "eTIMS Code Classification", "link_to": "eTIMS Code Classification", "link_type": "DocType",
+   "show_arrow": 0, "type": "Link"
+  },
+  {
+   "child": 1, "collapsible": 1, "indent": 0, "keep_closed": 0,
+   "label": "eTIMS Item Classification", "link_to": "eTIMS Item Classification", "link_type": "DocType",
+   "show_arrow": 0, "type": "Link"
+  },
+  {
+   "child": 1, "collapsible": 1, "indent": 0, "keep_closed": 0,
+   "label": "eTIMS Country", "link_to": "eTIMS Country", "link_type": "DocType",
+   "show_arrow": 0, "type": "Link"
+  },
+  {
+   "child": 1, "collapsible": 1, "indent": 0, "keep_closed": 0,
+   "label": "eTIMS Packing Unit", "link_to": "eTIMS Packing Unit", "link_type": "DocType",
+   "show_arrow": 0, "type": "Link"
+  },
+  {
+   "child": 1, "collapsible": 1, "indent": 0, "keep_closed": 0,
+   "label": "eTIMS Quantity Unit", "link_to": "eTIMS Quantity Unit", "link_type": "DocType",
+   "show_arrow": 0, "type": "Link"
+  },
+  {
+   "child": 1, "collapsible": 1, "indent": 0, "keep_closed": 0,
+   "label": "eTIMS Insurance", "link_to": "eTIMS Insurance", "link_type": "DocType",
+   "show_arrow": 0, "type": "Link"
+  },
+  {
+   "child": 0, "collapsible": 1, "icon": "search",
+   "indent": 1, "keep_closed": 1,
+   "label": "Data Search", "link_type": "DocType",
+   "show_arrow": 0, "type": "Section Break"
+  },
+  {
+   "child": 1, "collapsible": 1, "indent": 0, "keep_closed": 0,
+   "label": "eTIMS Code Information", "link_to": "eTIMS Code Information", "link_type": "DocType",
+   "show_arrow": 0, "type": "Link"
+  },
+  {
+   "child": 1, "collapsible": 1, "indent": 0, "keep_closed": 0,
+   "label": "eTIMS Branch Information", "link_to": "eTIMS Branch Information", "link_type": "DocType",
+   "show_arrow": 0, "type": "Link"
+  },
+  {
+   "child": 1, "collapsible": 1, "indent": 0, "keep_closed": 0,
+   "label": "eTIMS Item Information", "link_to": "eTIMS Item Information", "link_type": "DocType",
+   "show_arrow": 0, "type": "Link"
+  },
+  {
+   "child": 1, "collapsible": 1, "indent": 0, "keep_closed": 0,
+   "label": "eTIMS Import Item Information", "link_to": "eTIMS Import Item Information", "link_type": "DocType",
+   "show_arrow": 0, "type": "Link"
+  },
+  {
+   "child": 1, "collapsible": 1, "indent": 0, "keep_closed": 0,
+   "label": "eTIMS Purchase Information", "link_to": "eTIMS Purchase Information", "link_type": "DocType",
+   "show_arrow": 0, "type": "Link"
+  },
+  {
+   "child": 1, "collapsible": 1, "indent": 0, "keep_closed": 0,
+   "label": "eTIMS Stock Information", "link_to": "eTIMS Stock Information", "link_type": "DocType",
+   "show_arrow": 0, "type": "Link"
+  },
+  {
+   "child": 0, "collapsible": 1, "icon": "file-text",
+   "indent": 1, "keep_closed": 1,
+   "label": "Transactions", "link_type": "DocType",
+   "show_arrow": 0, "type": "Section Break"
+  },
+  {
+   "child": 1, "collapsible": 1, "indent": 0, "keep_closed": 0,
+   "label": "eTIMS Sales Receipt", "link_to": "eTIMS Sales Receipt", "link_type": "DocType",
+   "show_arrow": 0, "type": "Link"
+  },
+  {
+   "child": 1, "collapsible": 1, "indent": 0, "keep_closed": 0,
+   "label": "eTIMS Purchase Invoice", "link_to": "eTIMS Purchase Invoice", "link_type": "DocType",
+   "show_arrow": 0, "type": "Link"
+  },
+  {
+   "child": 1, "collapsible": 1, "indent": 0, "keep_closed": 0,
+   "label": "eTIMS Stock Movement", "link_to": "eTIMS Stock Movement", "link_type": "DocType",
+   "show_arrow": 0, "type": "Link"
+  },
+  {
+   "child": 1, "collapsible": 1, "indent": 0, "keep_closed": 0,
+   "label": "eTIMS Stock Release Number", "link_to": "eTIMS Stock Release Number", "link_type": "DocType",
+   "show_arrow": 0, "type": "Link"
+  },
+  {
+   "child": 1, "collapsible": 1, "indent": 0, "keep_closed": 0,
+   "label": "eTIMS Import Item", "link_to": "eTIMS Import Item", "link_type": "DocType",
+   "show_arrow": 0, "type": "Link"
+  },
+  {
+   "child": 0, "collapsible": 1, "icon": "users",
+   "indent": 1, "keep_closed": 1,
+   "label": "Users & Logging", "link_type": "DocType",
+   "show_arrow": 0, "type": "Section Break"
+  },
+  {
+   "child": 1, "collapsible": 1, "indent": 0, "keep_closed": 0,
+   "label": "eTIMS Branch User", "link_to": "eTIMS Branch User", "link_type": "DocType",
+   "show_arrow": 0, "type": "Link"
+  },
+  {
+   "child": 1, "collapsible": 1, "indent": 0, "keep_closed": 0,
+   "label": "Error Logging", "link_to": "Error Logging", "link_type": "DocType",
+   "show_arrow": 0, "type": "Link"
+  },
+  {
+   "child": 1, "collapsible": 1, "indent": 0, "keep_closed": 0,
+   "label": "eTIMS Notice", "link_to": "eTIMS Notice", "link_type": "DocType",
+   "show_arrow": 0, "type": "Link"
+  }
+ ]
+}
