@@ -39,25 +39,27 @@ class eTIMSSettings(Document):
 @frappe.whitelist()
 def get_etims_settings():
 	"""Get eTIMS settings with defaults"""
-	settings = frappe.get_cached_doc("eTIMS Settings")
+	_defaults = {
+		"default_sar_type_sales": "11",
+		"default_sar_type_purchase": "02",
+		"default_sar_type_stock_entry": "06",
+		"api_timeout": 30,
+		"production_api_url": "https://etims-api.kra.go.ke/etims-api/",
+		"sandbox_api_url": "https://etims-api-sbx.kra.go.ke/etims-api/",
+		"enable_retry_logic": 1,
+		"max_retry_attempts": 3,
+		"retry_delay": 2,
+		"default_search_limit": 100,
+		"max_search_limit": 1000,
+		"enable_error_logging": 1,
+		"enable_auto_sync": 1,
+	}
 
-	if not settings:
-		# Return default values if settings don't exist
-		return {
-			"default_sar_type_sales": "11",
-			"default_sar_type_purchase": "02",
-			"default_sar_type_stock_entry": "06",
-			"api_timeout": 30,
-			"production_api_url": "https://etims-api.kra.go.ke/etims-api/",
-			"sandbox_api_url": "https://etims-api-sbx.kra.go.ke/etims-api/",
-			"enable_retry_logic": 1,
-			"max_retry_attempts": 3,
-			"retry_delay": 2,
-			"default_search_limit": 100,
-			"max_search_limit": 1000,
-			"enable_error_logging": 1,
-			"enable_auto_sync": 1,
-		}
+	try:
+		settings = frappe.get_cached_doc("eTIMS Settings")
+	except Exception:
+		# Return defaults if the Single record has not been saved yet
+		return _defaults
 
 	return {
 		"default_sar_type_sales": settings.default_sar_type_sales or "11",
