@@ -2,7 +2,7 @@
  "actions": [],
  "allow_import": 1,
  "autoname": "eTIMS Settings",
- "creation": "2024-02-03 00:00:00.000000",
+ "creation": "2024-02-03 00:00:00",
  "default_view": "List",
  "doctype": "DocType",
  "editable_grid": 1,
@@ -50,34 +50,34 @@
   },
   {
    "default": "11",
+   "description": "Default Stock Release Number type for Sales transactions. 11=Sales, 02=Purchase, 03=Sales Return, 04=Stock Transfer In, 06=Material Receipt, 12=Purchase Return, 13=Inter-Branch Transfer Out",
    "fieldname": "default_sar_type_sales",
    "fieldtype": "Select",
    "label": "Default SAR Type - Sales",
-   "options": "11\n02\n03\n04\n06\n12\n13",
-   "description": "Default Stock Release Number type for Sales transactions. 11=Sales, 02=Purchase, 03=Sales Return, 04=Stock Transfer In, 06=Material Receipt, 12=Purchase Return, 13=Inter-Branch Transfer Out"
+   "options": "11\n02\n03\n04\n06\n12\n13"
   },
   {
    "default": "02",
+   "description": "Default Stock Release Number type for Purchase transactions",
    "fieldname": "default_sar_type_purchase",
    "fieldtype": "Select",
    "label": "Default SAR Type - Purchase",
-   "options": "11\n02\n03\n04\n06\n12\n13",
-   "description": "Default Stock Release Number type for Purchase transactions"
+   "options": "11\n02\n03\n04\n06\n12\n13"
   },
   {
    "default": "06",
+   "description": "Default Stock Release Number type for Stock Entry transactions",
    "fieldname": "default_sar_type_stock_entry",
    "fieldtype": "Select",
    "label": "Default SAR Type - Stock Entry",
-   "options": "11\n02\n03\n04\n06\n12\n13",
-   "description": "Default Stock Release Number type for Stock Entry transactions"
+   "options": "11\n02\n03\n04\n06\n12\n13"
   },
   {
    "default": "1",
+   "description": "Automatically sync Stock Release Numbers to KRA on submit",
    "fieldname": "enable_auto_sync",
    "fieldtype": "Check",
-   "label": "Enable Auto Sync",
-   "description": "Automatically sync Stock Release Numbers to KRA on submit"
+   "label": "Enable Auto Sync"
   },
   {
    "fieldname": "sb_role",
@@ -86,24 +86,24 @@
   },
   {
    "default": "1",
+   "description": "Enable Role-Based Access Control for eTIMS operations (recommended for production)",
    "fieldname": "enable_rbac",
    "fieldtype": "Check",
-   "label": "Enable RBAC",
-   "description": "Enable Role-Based Access Control for eTIMS operations (recommended for production)"
+   "label": "Enable RBAC"
   },
   {
    "default": "1",
+   "description": "Users can only access documents from their assigned branch (Admin/Manager exempt)",
    "fieldname": "enforce_branch_isolation",
    "fieldtype": "Check",
-   "label": "Enforce Branch Isolation",
-   "description": "Users can only access documents from their assigned branch (Admin/Manager exempt)"
+   "label": "Enforce Branch Isolation"
   },
   {
    "default": "0",
+   "description": "Allow Managers to perform operations across all branches",
    "fieldname": "allow_cross_branch_operations",
    "fieldtype": "Check",
-   "label": "Allow Cross-Branch Operations",
-   "description": "Allow Managers to perform operations across all branches"
+   "label": "Allow Cross-Branch Operations"
   },
   {
    "fieldname": "sb_api",
@@ -112,24 +112,24 @@
   },
   {
    "default": "30",
+   "description": "Request timeout in seconds (default: 30, max: 300)",
    "fieldname": "api_timeout",
    "fieldtype": "Int",
-   "label": "API Timeout (seconds)",
-   "description": "Request timeout in seconds (default: 30, max: 300)"
+   "label": "API Timeout (seconds)"
   },
   {
    "default": "https://etims-api.kra.go.ke/etims-api/",
+   "description": "KRA eTIMS Production API endpoint",
    "fieldname": "production_api_url",
    "fieldtype": "Data",
-   "label": "Production API URL",
-   "description": "KRA eTIMS Production API endpoint"
+   "label": "Production API URL"
   },
   {
    "default": "https://etims-api-sbx.kra.go.ke/etims-api/",
+   "description": "KRA eTIMS Sandbox API endpoint",
    "fieldname": "sandbox_api_url",
    "fieldtype": "Data",
-   "label": "Sandbox API URL",
-   "description": "KRA eTIMS Sandbox API endpoint"
+   "label": "Sandbox API URL"
   },
   {
    "fieldname": "sb_retry",
@@ -138,24 +138,24 @@
   },
   {
    "default": "1",
+   "description": "Automatically retry failed API requests",
    "fieldname": "enable_retry_logic",
    "fieldtype": "Check",
-   "label": "Enable Retry Logic",
-   "description": "Automatically retry failed API requests"
+   "label": "Enable Retry Logic"
   },
   {
    "default": "3",
+   "description": "Maximum number of retry attempts for failed requests (default: 3)",
    "fieldname": "max_retry_attempts",
    "fieldtype": "Int",
-   "label": "Max Retry Attempts",
-   "description": "Maximum number of retry attempts for failed requests (default: 3)"
+   "label": "Max Retry Attempts"
   },
   {
    "default": "2",
+   "description": "Delay between retry attempts in seconds (default: 2)",
    "fieldname": "retry_delay",
    "fieldtype": "Int",
-   "label": "Retry Delay (seconds)",
-   "description": "Delay between retry attempts in seconds (default: 2)"
+   "label": "Retry Delay (seconds)"
   },
   {
    "fieldname": "sb_search",
@@ -164,17 +164,17 @@
   },
   {
    "default": "100",
+   "description": "Default number of results to return from search endpoints (default: 100)",
    "fieldname": "default_search_limit",
    "fieldtype": "Int",
-   "label": "Default Search Limit",
-   "description": "Default number of results to return from search endpoints (default: 100)"
+   "label": "Default Search Limit"
   },
   {
    "default": "1000",
+   "description": "Maximum number of results allowed from search endpoints (default: 1000)",
    "fieldname": "max_search_limit",
    "fieldtype": "Int",
-   "label": "Max Search Limit",
-   "description": "Maximum number of results allowed from search endpoints (default: 1000)"
+   "label": "Max Search Limit"
   },
   {
    "fieldname": "sb_error",
@@ -183,24 +183,24 @@
   },
   {
    "default": "1",
+   "description": "Log API errors to Error Logging doctype",
    "fieldname": "enable_error_logging",
    "fieldtype": "Check",
-   "label": "Enable Error Logging",
-   "description": "Log API errors to Error Logging doctype"
+   "label": "Enable Error Logging"
   },
   {
    "default": "1",
+   "description": "Log all permission checks for audit trail",
    "fieldname": "enable_permission_logging",
    "fieldtype": "Check",
-   "label": "Enable Permission Logging",
-   "description": "Log all permission checks for audit trail"
+   "label": "Enable Permission Logging"
   },
   {
+   "description": "Send error notifications to this email address (optional)",
    "fieldname": "error_notification_email",
    "fieldtype": "Data",
    "label": "Error Notification Email",
-   "options": "Email",
-   "description": "Send error notifications to this email address (optional)"
+   "options": "Email"
   },
   {
    "fieldname": "sb_compliance",
@@ -209,31 +209,31 @@
   },
   {
    "default": "1",
+   "description": "Require all supplier invoices to be verified with KRA before payment. Critical for 2026 tax compliance.",
    "fieldname": "enforce_invoice_verification",
    "fieldtype": "Check",
-   "label": "Enforce Invoice Verification",
-   "description": "Require all supplier invoices to be verified with KRA before payment. Critical for 2026 tax compliance."
+   "label": "Enforce Invoice Verification"
   },
   {
    "default": "0",
+   "description": "Automatically verify invoices when they are created (if supplier is registered in eTIMS)",
    "fieldname": "auto_verify_invoices",
    "fieldtype": "Check",
-   "label": "Auto-Verify Invoices",
-   "description": "Automatically verify invoices when they are created (if supplier is registered in eTIMS)"
+   "label": "Auto-Verify Invoices"
   },
   {
    "default": "0",
+   "description": "Allow payments for unverified invoices with approval (not recommended - may affect tax deductibility)",
    "fieldname": "allow_payment_unverified",
    "fieldtype": "Check",
-   "label": "Allow Payment Without Verification",
-   "description": "Allow payments for unverified invoices with approval (not recommended - may affect tax deductibility)"
+   "label": "Allow Payment Without Verification"
   },
   {
    "default": "0",
+   "description": "Only verify invoices above this amount. Set to 0 to verify all invoices.",
    "fieldname": "verification_amount_threshold",
    "fieldtype": "Currency",
-   "label": "Verification Amount Threshold",
-   "description": "Only verify invoices above this amount. Set to 0 to verify all invoices."
+   "label": "Verification Amount Threshold"
   },
   {
    "fieldname": "sb_po_tracking",
@@ -242,30 +242,29 @@
   },
   {
    "default": "1",
+   "description": "Track Purchase Orders for audit trail and invoice reconciliation",
    "fieldname": "enable_po_tracking",
    "fieldtype": "Check",
-   "label": "Enable PO Tracking",
-   "description": "Track Purchase Orders for audit trail and invoice reconciliation"
+   "label": "Enable PO Tracking"
   },
   {
    "default": "1",
+   "description": "Automatically reconcile Purchase Invoices with original Purchase Orders",
    "fieldname": "auto_reconcile_invoices",
    "fieldtype": "Check",
-   "label": "Auto-Reconcile Invoices",
-   "description": "Automatically reconcile Purchase Invoices with original Purchase Orders"
+   "label": "Auto-Reconcile Invoices"
   },
   {
    "default": "0",
+   "description": "Send notifications when Purchase Orders are pending invoice for extended periods",
    "fieldname": "po_notification_enabled",
    "fieldtype": "Check",
-   "label": "Enable PO Notifications",
-   "description": "Send notifications when Purchase Orders are pending invoice for extended periods"
+   "label": "Enable PO Notifications"
   }
  ],
  "index_web_pages_for_search": 1,
- "is_single": 1,
  "links": [],
- "modified": "2026-02-03 00:00:00.000000",
+ "modified": "2026-02-25 22:23:59.768993",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Settings",
@@ -282,10 +281,30 @@
    "role": "System Manager",
    "share": 1,
    "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "eTIMS Administrator",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "eTIMS Auditor"
   }
  ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": [],
- "issingle": 1
+ "states": []
 }
