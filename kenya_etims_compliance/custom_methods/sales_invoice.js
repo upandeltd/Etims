@@ -20,9 +20,17 @@ frappe.ui.form.on("Sales Invoice",{
 
             // Search Sales Transaction on eTIMS
             frm.add_custom_button(__('Search Sales Transaction'), function() {
+                if (!frm.doc.custom_invoice_number) {
+                    frappe.msgprint({
+                        title: __('No Invoice Number'),
+                        indicator: 'orange',
+                        message: __('This invoice does not have an eTIMS invoice number assigned yet.')
+                    });
+                    return;
+                }
                 frappe.call({
                     method: 'kenya_etims_compliance.custom_methods.sales_invoice.searchSalesTrnsReq',
-                    args: { invoice_no: frm.doc.custom_invoice_number || null },
+                    args: { invoice_no: frm.doc.custom_invoice_number },
                     freeze: true,
                     freeze_message: __('Searching eTIMS...'),
                     callback: function(r) {

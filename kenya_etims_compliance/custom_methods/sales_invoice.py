@@ -42,7 +42,7 @@ def validate(doc, method):
         if doc_exists:
             if doc.custom_update_invoice_in_tims:
                 invoice_numbers = validate_inv_number(doc)
-        
+
                 if doc.custom_invoice_number in invoice_numbers:
                     insert_invoice_number(doc, method)
     
@@ -59,17 +59,23 @@ def insert_invoice_number(doc,method):
         if init_docs:
             scu = init_docs[0].get("sales_control_unit_id")
             sales_warehouse = init_docs[0].get("default_sales_warehouse")
-        
+
         if doc.items:
-            item_count = len(doc.items) 
+            item_count = len(doc.items)
             insert_tax_amounts(doc)
 
         total_discount_amount = get_total_discount(doc)
-        
+
         total_vat_amount = fetch_total_vat(doc)
         total_non_vat_amount = fetch_total_non_vat(doc)
-        
-        last_inv_number = get_last_inv_number(doc, branch_id)
+
+        # Only assign a new invoice number if one hasn't been set yet
+        # This prevents duplicate number errors when eTIMS already has the number
+        existing_inv_number = frappe.db.get_value("Sales Invoice", doc.name, "custom_invoice_number")
+        if existing_inv_number:
+            last_inv_number = existing_inv_number
+        else:
+            last_inv_number = get_last_inv_number(doc, branch_id)
         
         frappe.db.set_value('Sales Invoice', doc.name, {
             "custom_invoice_number": last_inv_number,
@@ -157,7 +163,8 @@ def fetch_total_non_vat(doc):
 @frappe.whitelist()
 def trnsSalesSaveWrReq(doc, method):
     '''
-    Method that collects sales information and updates it to tims server
+    Method that collects sales information and updates it to tims server.
+    Called during before_submit — assigns invoice number first, then sends to eTIMS.
     '''
     if doc.custom_update_invoice_in_tims:
         tax_code_list = []
@@ -321,8 +328,9 @@ def trnsSalesSaveWrReq(doc, method):
             
             frappe.msgprint(response_json.get("resultMsg"))
 
-        except Exception:
-            frappe.throw("Oops Bad Request!")
+        except Exception as e:
+            frappe.log_error(title="eTIMS Sales Invoice Error", message=traceback.format_exc())
+            frappe.throw(f"eTIMS Error: {str(e)}")
     else:
         # print(payload)
         # stockIOSaveReq(doc, date_str)
@@ -394,8 +402,9 @@ def stockIOSaveReq(doc, date_str):
                             
                     frappe.msgprint(response_json.get("resultMsg"))
 
-                except Exception:
-                    frappe.throw("Oops Bad Request!")
+                except Exception as e:
+                    frappe.log_error(title="eTIMS Stock IO Error", message=traceback.format_exc())
+                    frappe.throw(f"eTIMS Stock IO Error: {str(e)}")
             else:
                 return
 
