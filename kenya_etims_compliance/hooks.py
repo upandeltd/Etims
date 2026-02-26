@@ -12,7 +12,7 @@ add_to_apps_screen = [
         "name": "kenya_etims_compliance",
         "logo": "/assets/kenya_etims_compliance/images/etims-logo.svg",
         "title": "eTIMS Compliance",
-        "route": "/app/etims-compliance",
+        "route": "/desk/etims-compliance",
     }
 ]
 
@@ -264,5 +264,6 @@ doc_events = {
 # ]
 
 fixtures = [
-    {"dt": "Custom Field", "filters": [["module", "=", "Kenya Etims Compliance"]]}
+    {"dt": "Custom Field", "filters": [["module", "=", "Kenya Etims Compliance"]]},
+    {"dt": "Workspace Sidebar", "filters": [["module", "=", "Kenya Etims Compliance"]]}
 ]

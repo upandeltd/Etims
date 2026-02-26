@@ -1,6 +1,6 @@
 {
  "app": "kenya_etims_compliance",
- "creation": "2024-02-17 12:49:27.432630",
+ "creation": "2026-02-26 09:01:16.138085",
  "docstatus": 0,
  "doctype": "Workspace Sidebar",
  "header_icon": "file-text",
@@ -364,7 +364,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-02-26 12:00:00.000000",
+ "modified": "2026-02-26 09:01:16.138085",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Compliance",
