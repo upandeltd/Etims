@@ -86,7 +86,7 @@ doctype_js = {
 # ------------
 
 before_install = "kenya_etims_compliance.installation.etims_roles.before_install"
-# after_install = "kenya_etims_compliance.install.after_install"
+after_install = "kenya_etims_compliance.installation.after_install.after_install"
 
 # Uninstallation
 # ------------
