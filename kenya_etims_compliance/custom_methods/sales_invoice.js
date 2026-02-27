@@ -14,6 +14,19 @@ frappe.ui.form.on("Sales Invoice",{
         frm.refresh_field("custom_credit_note_reason_code")
     },
 
+    pos_profile: function(frm) {
+        // Auto-set eTIMS signing based on POS Profile setting
+        if (frm.doc.pos_profile) {
+            frappe.db.get_value('POS Profile', frm.doc.pos_profile,
+                'custom_enable_etims_signing', (r) => {
+                    if (r && r.custom_enable_etims_signing) {
+                        frm.set_value('custom_update_invoice_in_tims', 1);
+                    }
+                }
+            );
+        }
+    },
+
     refresh: function(frm) {
         // eTIMS Actions button group — shown for saved/submitted invoices
         if (frm.doc.name && frm.doc.name !== 'New Sales Invoice') {

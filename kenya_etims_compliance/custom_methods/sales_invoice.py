@@ -36,6 +36,12 @@ def validate(doc, method):
     '''
     Method validate invoice number before submitting invoice
     '''
+    # Auto-enable eTIMS signing from POS Profile (server-side fallback)
+    if doc.pos_profile and not doc.custom_update_invoice_in_tims:
+        enable_etims = frappe.db.get_value("POS Profile", doc.pos_profile, "custom_enable_etims_signing")
+        if enable_etims:
+            doc.custom_update_invoice_in_tims = 1
+
     if doc.custom_invoice_number and doc.name:
         doc_exists = frappe.db.exists("Sales Invoice", {"name": doc.name})
 
