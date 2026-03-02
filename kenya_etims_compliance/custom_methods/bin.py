@@ -3,6 +3,10 @@ import frappe
 from kenya_etims_compliance.utils.etims_utils import eTIMS
 
 def on_submit(doc, method):
+    # Skip eTIMS stock master update if the current user has no Tax Branch Office configured
+    if not eTIMS.get_user_branch_id():
+        return
+
     mod_user_name = eTIMS.get_name_of_user(doc.modified_by)
     reg_user_name = eTIMS.get_name_of_user(doc.owner)
     
@@ -20,6 +24,9 @@ def get_bin_qty(item_code):
         tax_branch = eTIMS.get_user_branch_id()
 
         store_warehouse = frappe.db.get_all("Warehouse", filters={"warehouse_type": "Stores", "is_group": 0, "custom_tax_branch_office": tax_branch}, fields=["warehouse_name", "name"])
+
+        if not store_warehouse:
+            frappe.throw(f"No Stores warehouse found for tax branch: {tax_branch}")
             
         bin_docs = frappe.db.get_all("Bin", filters={"item_code":item_code, "warehouse": store_warehouse[0].get("name")}, fields=["actual_qty"])
 
