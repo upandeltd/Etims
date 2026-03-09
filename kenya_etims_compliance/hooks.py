@@ -6,6 +6,9 @@ app_email = "dev@upande.com"
 app_license = "mit"
 # required_apps = []
 
+setup_wizard_requires_login = 0
+setup_wizard_not_required = 1
+
 # App screen tile (v16 desk home)
 add_to_apps_screen = [
     {
