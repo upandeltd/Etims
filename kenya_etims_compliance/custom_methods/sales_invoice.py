@@ -190,8 +190,10 @@ def trnsSalesSaveWrReq(doc, method):
         request_date = doc.posting_date
         date_str = eTIMS.strf_date_object(request_date)
             
-        count = doc.custom_item_count   
-                    
+        count = doc.custom_item_count or len(doc.items) or 0
+        if count < 1:
+            frappe.throw(_("Sales Invoice must have at least one item to submit to eTIMS"))
+
         payload = {
             "trdInvcNo": doc.name,
             "invcNo": doc.custom_invoice_number,
