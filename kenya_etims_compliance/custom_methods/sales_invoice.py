@@ -56,6 +56,9 @@ def insert_invoice_number(doc,method):
     '''
     Method sets increment for invoice number and orginal invoice number before submitting invoice
     '''
+    if not doc.items:
+        frappe.throw(_("Sales Invoice must have at least one item to submit to eTIMS"))
+
     scu = ""
     item_count = 0
     if doc.name and doc.custom_update_invoice_in_tims:
@@ -208,10 +211,10 @@ def trnsSalesSaveWrReq(doc, method):
             "totAmt": abs(doc.base_grand_total),
             "prchrAcptcYn":"N",
             "remark": doc.remarks,
-            "regrId": doc.owner,
-            "regrNm": doc.owner,
-            "modrId": doc.modified_by,
-            "modrNm": doc.modified_by,
+            "regrId": (doc.owner or "")[:20],
+            "regrNm": (doc.owner or "")[:20],
+            "modrId": (doc.modified_by or "")[:20],
+            "modrNm": (doc.modified_by or "")[:20],
             "receipt":{
                 "custTin": doc.tax_id,
                 # "custMblNo":null,
@@ -320,11 +323,12 @@ def trnsSalesSaveWrReq(doc, method):
             doc.custom_control_unit_date = control_unit_date
             doc.custom_control_unit_time = control_unit_time
             
-            file_name = create_qr_code(headers.get("tin"), headers.get("bhfId"), data.get("rcptSign"))
-            
+            file_name, qr_url = create_qr_code(headers.get("tin"), headers.get("bhfId"), data.get("rcptSign"))
+
             attachment_url = create_attachment(file_name, doc.name)
 
             doc.custom_receipt_qr_code = attachment_url
+            doc.custom_receipt_qr_url = qr_url
             
             create_sales_receipt(data, doc.name)
                 
@@ -370,10 +374,10 @@ def stockIOSaveReq(doc, date_str):
                 "totTaxAmt": abs(round(taxAmt, 2)),
                 "totAmt": abs(doc.base_grand_total),
                 "remark": doc.remarks,
-                "regrId": doc.owner,
-                "regrNm": doc.owner,
-                "modrId": doc.modified_by,
-                "modrNm": doc.modified_by,
+                "regrId": (doc.owner or "")[:20],
+                "regrNm": (doc.owner or "")[:20],
+                "modrId": (doc.modified_by or "")[:20],
+                "modrNm": (doc.modified_by or "")[:20],
                 "itemList": stock_list
                 }
             
@@ -660,9 +664,9 @@ def create_qr_code(pin, branch_id, rcpt_signature):
             try:
                 qrcode = segno.make_qr(url)
                 qrcode.save(file_path, scale=5)
-                
-                return file_name
-                
+
+                return file_name, url
+
             except Exception:
                 frappe.throw("QR Code Not Generated!")
             
