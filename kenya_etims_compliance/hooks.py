@@ -13,6 +13,7 @@ add_to_apps_screen = [
         "logo": "/assets/kenya_etims_compliance/images/etims-logo.svg",
         "title": "eTIMS Compliance",
         "route": "/desk/etims-compliance",
+        "has_permission": "kenya_etims_compliance.check_app_permission",
     }
 ]
 
