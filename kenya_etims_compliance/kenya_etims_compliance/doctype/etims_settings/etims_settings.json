@@ -1,12 +1,11 @@
 {
  "actions": [],
  "allow_import": 1,
- "autoname": "eTIMS Settings",
  "creation": "2024-02-03 00:00:00",
- "default_view": "List",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
+ "issingle": 1,
  "field_order": [
   "sb_general",
   "default_sar_type_sales",
@@ -302,9 +301,5 @@
    "role": "eTIMS Auditor"
   }
  ],
- "row_format": "Dynamic",
- "rows_threshold_for_grid_search": 20,
- "sort_field": "modified",
- "sort_order": "DESC",
  "states": []
 }
