@@ -148,6 +148,7 @@ doc_events = {
         "Sales Invoice": {
             "before_save": "kenya_etims_compliance.custom_methods.sales_invoice.validate",
             "before_submit": "kenya_etims_compliance.custom_methods.sales_invoice.trnsSalesSaveWrReq",
+            "on_update": "kenya_etims_compliance.custom_methods.sales_invoice.insert_invoice_number",
             "on_submit": "kenya_etims_compliance.custom_methods.bin.on_submit"
         },
         "Stock Entry": {

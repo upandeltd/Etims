@@ -78,13 +78,7 @@ def insert_invoice_number(doc,method):
         total_vat_amount = fetch_total_vat(doc)
         total_non_vat_amount = fetch_total_non_vat(doc)
 
-        # Only assign a new invoice number if one hasn't been set yet
-        # This prevents duplicate number errors when eTIMS already has the number
-        existing_inv_number = frappe.db.get_value("Sales Invoice", doc.name, "custom_invoice_number")
-        if existing_inv_number:
-            last_inv_number = existing_inv_number
-        else:
-            last_inv_number = get_last_inv_number(doc, branch_id)
+        last_inv_number = get_last_inv_number(doc, branch_id)
         
         frappe.db.set_value('Sales Invoice', doc.name, {
             "custom_invoice_number": last_inv_number,
