@@ -1,8 +1,7 @@
 from datetime  import datetime
-import requests, traceback
 
-    
 import frappe
+from kenya_etims_compliance.utils.kra_client import KRAClient
 
 class eTIMS():
     @staticmethod
@@ -276,66 +275,49 @@ class eTIMS():
         
     @staticmethod
     def itemSaveReq(doc_name):
-        headers = eTIMS.get_headers()
-        
         item = frappe.get_doc("Item", doc_name)
-        
-        if item.get("custom_item_classification_code"):
-        
-            payload = {
-                "itemCd":item.get("custom_item_code"),
-                "itemClsCd":item.get("custom_item_classification_code"),
-                "itemClsNm":item.get("custom_item_classification_name"),
-                "itemTyCd":item.get("custom_item_type_code"),
-                "itemNm":item.get("custom_item_name"),
-                "itemStdNm":item.get("custom_item_standard_name"),
-                "orgnNatCd":item.get("custom_origin_place_code_nation"),
-                "pkgUnitCd":item.get("custom_packaging_unit_code"),
-                "qtyUnitCd":item.get("custom_quantity_unit_code"),
-                "taxTyCd":item.get("custom_taxation_type_code"),
-                "btchNo":item.get("custom_batch_number"),
-                "bcd":item.get("custom_barcode"),
-                "dftPrc":item.get("custom_default_unit_price"),
-                "grpPrcL1":item.get("custom_group1_unit_price"),
-                "grpPrcL2":item.get("custom_group2_unit_price"),
-                "grpPrcL3": item.get("custom_group3_unit_price"),
-                "grpPrcL4":item.get("custom_group4_unit_price"),
-                "grpPrcL5":item.get("custom_group5_unit_price"),
-                "addInfo":item.get("custom_additional_information"),
-                "sftyQty":item.get("custom_safety_quantity"),
-                "isrcAplcbYn":item.get("custom_insurance_appicableyn"),
-                "useYn":item.get("custom_used__unused"),
-                "regrId":item.get("custom_registration_id"),
-                "regrNm":item.get("custom_registration_name"), 
-                "modrId":item.get("custom_modifier_id"), 
-                "modrNm":item.get("custom_modifier_name")
-            }
-            
-            try:
-                response = requests.request(
-                    "POST", 
-                    eTIMS.tims_base_url() + 'saveItem', 
-                    json = payload,
-                    headers=headers
-                )
 
-                response_json = response.json()
-                
-                if not response_json.get("resultCd") == '000':
-                    
-                    return {"Error":response_json.get("resultMsg")}
-                
-                item.custom_registered_in_tims = 1
-                item.save()
-
-                return {"Success":response_json.get("resultMsg")}
-
-            except Exception:
-                
-                eTIMS.log_errors("Item Registration", traceback.format_exc())
-                return {"Error":"Oops Bad Request!"}
-        else:
+        if not item.get("custom_item_classification_code"):
             frappe.throw("Missing Item Classification Code!")
+
+        payload = {
+            "itemCd":item.get("custom_item_code"),
+            "itemClsCd":item.get("custom_item_classification_code"),
+            "itemClsNm":item.get("custom_item_classification_name"),
+            "itemTyCd":item.get("custom_item_type_code"),
+            "itemNm":item.get("custom_item_name"),
+            "itemStdNm":item.get("custom_item_standard_name"),
+            "orgnNatCd":item.get("custom_origin_place_code_nation"),
+            "pkgUnitCd":item.get("custom_packaging_unit_code"),
+            "qtyUnitCd":item.get("custom_quantity_unit_code"),
+            "taxTyCd":item.get("custom_taxation_type_code"),
+            "btchNo":item.get("custom_batch_number"),
+            "bcd":item.get("custom_barcode"),
+            "dftPrc":item.get("custom_default_unit_price"),
+            "grpPrcL1":item.get("custom_group1_unit_price"),
+            "grpPrcL2":item.get("custom_group2_unit_price"),
+            "grpPrcL3": item.get("custom_group3_unit_price"),
+            "grpPrcL4":item.get("custom_group4_unit_price"),
+            "grpPrcL5":item.get("custom_group5_unit_price"),
+            "addInfo":item.get("custom_additional_information"),
+            "sftyQty":item.get("custom_safety_quantity"),
+            "isrcAplcbYn":item.get("custom_insurance_appicableyn"),
+            "useYn":item.get("custom_used__unused"),
+            "regrId":item.get("custom_registration_id"),
+            "regrNm":item.get("custom_registration_name"),
+            "modrId":item.get("custom_modifier_id"),
+            "modrNm":item.get("custom_modifier_name")
+        }
+
+        client = KRAClient()
+        result = client.save_item(payload)
+
+        if "Success" in result:
+            item.custom_registered_in_tims = 1
+            item.save()
+            return {"Success": "Item registered successfully"}
+
+        return result
     
         
     @staticmethod
@@ -360,8 +342,6 @@ class eTIMS():
     @staticmethod
     def searchItem(item_code=None, item_name=None, last_req_dt=None):
         """Search items in eTIMS (Section 7.13)"""
-        headers = eTIMS.get_headers()
-
         payload = {}
         if item_code:
             payload["itemCd"] = item_code
@@ -370,81 +350,41 @@ class eTIMS():
         if last_req_dt:
             payload["lastReqDt"] = eTIMS.strf_datetime_format(last_req_dt)
 
-        try:
-            response = requests.request(
-                "POST",
-                eTIMS.tims_base_url() + 'searchItem',
-                json=payload,
-                headers=headers
-            )
-            response_json = response.json()
-            return eTIMS.handle_api_response(response_json)
-
-        except Exception:
-            eTIMS.log_errors("Item Search", traceback.format_exc())
-            return {"Error": "Oops Bad Request!"}
+        client = KRAClient()
+        return client.search_item(payload)
 
     @staticmethod
     def searchStockMove(sar_no=None, last_req_dt=None):
         """Search stock movements in eTIMS (Section 7.15)"""
-        headers = eTIMS.get_headers()
-
         payload = {}
         if sar_no:
             payload["sarNo"] = sar_no
         if last_req_dt:
             payload["lastReqDt"] = eTIMS.strf_datetime_format(last_req_dt)
 
-        try:
-            response = requests.request(
-                "POST",
-                eTIMS.tims_base_url() + 'searchStockMove',
-                json=payload,
-                headers=headers
-            )
-            response_json = response.json()
-            return eTIMS.handle_api_response(response_json)
-
-        except Exception:
-            eTIMS.log_errors("Stock Move Search", traceback.format_exc())
-            return {"Error": "Oops Bad Request!"}
+        client = KRAClient()
+        return client.search_stock_move(payload)
 
     @staticmethod
     def searchTrns(invoice_no=None, last_req_dt=None, trns_type=None):
         """Search transactions in eTIMS (Section 7.14/7.20)
         trns_type: 'sales' or 'purchase'
         """
-        headers = eTIMS.get_headers()
-
         payload = {}
         if invoice_no:
-            if trns_type == 'sales':
-                payload["invcNo"] = invoice_no
-            elif trns_type == 'purchase':
-                payload["invcNo"] = invoice_no
+            payload["invcNo"] = invoice_no
         if last_req_dt:
             payload["lastReqDt"] = eTIMS.strf_datetime_format(last_req_dt)
 
-        try:
-            if trns_type == 'sales':
-                endpoint = 'searchTrnsSales'
-            elif trns_type == 'purchase':
-                endpoint = 'searchTrnsPurchase'
-            else:
-                return {"Error": "Invalid transaction type. Use 'sales' or 'purchase'"}
+        if trns_type == 'sales':
+            endpoint = 'searchTrnsSales'
+        elif trns_type == 'purchase':
+            endpoint = 'searchTrnsPurchase'
+        else:
+            return {"Error": "Invalid transaction type. Use 'sales' or 'purchase'"}
 
-            response = requests.request(
-                "POST",
-                eTIMS.tims_base_url() + endpoint,
-                json=payload,
-                headers=headers
-            )
-            response_json = response.json()
-            return eTIMS.handle_api_response(response_json)
-
-        except Exception:
-            eTIMS.log_errors("Transaction Search", traceback.format_exc())
-            return {"Error": "Oops Bad Request!"}
+        client = KRAClient()
+        return client.search_trns(endpoint, payload)
 
     # Stock Release Number Management - Phase 2.1
 
@@ -457,13 +397,10 @@ class eTIMS():
             org_sar_no: Original stock release number (default: 0)
             sar_type: SAR type code (default: from settings, typically '11')
         """
-        from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import get_etims_settings
+        client = KRAClient()
 
         if sar_type is None:
-            settings = get_etims_settings()
-            sar_type = settings.get("default_sar_type_sales", "11")
-
-        headers = eTIMS.get_headers()
+            sar_type = client.settings.get("default_sar_type_sales", "11")
 
         payload = {
             "sarNo": sar_no,
@@ -471,182 +408,63 @@ class eTIMS():
             "sarTyCd": sar_type
         }
 
-        try:
-            response = requests.request(
-                "POST",
-                eTIMS.tims_base_url() + 'stockReleaseNoSaveReq',
-                json=payload,
-                headers=headers
-            )
-            response_json = response.json()
-            return eTIMS.handle_api_response(response_json)
-
-        except Exception:
-            eTIMS.log_errors("Stock Release Number Save", traceback.format_exc())
-            return {"Error": "Oops Bad Request!"}
+        return client.stock_release_no_save(payload)
 
     @staticmethod
     def searchStockReleaseNo(sar_no=None, last_req_dt=None):
         """Search stock release numbers in eTIMS (Section 7.17)"""
-        headers = eTIMS.get_headers()
-
         payload = {}
         if sar_no:
             payload["sarNo"] = sar_no
         if last_req_dt:
             payload["lastReqDt"] = eTIMS.strf_datetime_format(last_req_dt)
 
-        try:
-            response = requests.request(
-                "POST",
-                eTIMS.tims_base_url() + 'searchStockReleaseNo',
-                json=payload,
-                headers=headers
-            )
-            response_json = response.json()
-            return eTIMS.handle_api_response(response_json)
-
-        except Exception:
-            eTIMS.log_errors("Stock Release Number Search", traceback.format_exc())
-            return {"Error": "Oops Bad Request!"}
+        client = KRAClient()
+        return client.search_stock_release_no(payload)
 
     @staticmethod
     def selectStockReleaseNoList(last_req_dt=None):
         """Get stock release number list from eTIMS (Section 7.18)"""
-        headers = eTIMS.get_headers()
-
         payload = {}
         if last_req_dt:
             payload["lastReqDt"] = eTIMS.strf_datetime_format(last_req_dt)
 
-        try:
-            response = requests.request(
-                "POST",
-                eTIMS.tims_base_url() + 'selectStockReleaseNoList',
-                json=payload,
-                headers=headers
-            )
-            response_json = response.json()
-            return eTIMS.handle_api_response(response_json)
-
-        except Exception:
-            eTIMS.log_errors("Stock Release Number List", traceback.format_exc())
-            return {"Error": "Oops Bad Request!"}
+        client = KRAClient()
+        return client.select_stock_release_no_list(payload)
 
     # Detail Query Endpoints - Phase 3.1
 
     @staticmethod
     def selectItem(item_code):
         """Get item details from eTIMS (Section 7.9)"""
-        headers = eTIMS.get_headers()
-
-        payload = {
-            "itemCd": item_code
-        }
-
-        try:
-            response = requests.request(
-                "POST",
-                eTIMS.tims_base_url() + 'selectItem',
-                json=payload,
-                headers=headers
-            )
-            response_json = response.json()
-            return eTIMS.handle_api_response(response_json)
-
-        except Exception:
-            eTIMS.log_errors("Item Details", traceback.format_exc())
-            return {"Error": "Oops Bad Request!"}
+        client = KRAClient()
+        return client.select_item({"itemCd": item_code})
 
     @staticmethod
     def selectTrnsSalesInfo(invoice_no):
         """Get sales transaction details from eTIMS (Section 7.21)"""
-        headers = eTIMS.get_headers()
-
-        payload = {
-            "invcNo": invoice_no
-        }
-
-        try:
-            response = requests.request(
-                "POST",
-                eTIMS.tims_base_url() + 'selectTrnsSalesInfo',
-                json=payload,
-                headers=headers
-            )
-            response_json = response.json()
-            return eTIMS.handle_api_response(response_json)
-
-        except Exception:
-            eTIMS.log_errors("Sales Transaction Details", traceback.format_exc())
-            return {"Error": "Oops Bad Request!"}
+        client = KRAClient()
+        return client.select_trns_sales_info({"invcNo": invoice_no})
 
     @staticmethod
     def selectTrnsPurchaseInfo(invoice_no):
         """Get purchase transaction details from eTIMS (Section 7.21)"""
-        headers = eTIMS.get_headers()
-
-        payload = {
-            "invcNo": invoice_no
-        }
-
-        try:
-            response = requests.request(
-                "POST",
-                eTIMS.tims_base_url() + 'selectTrnsPurchaseInfo',
-                json=payload,
-                headers=headers
-            )
-            response_json = response.json()
-            return eTIMS.handle_api_response(response_json)
-
-        except Exception:
-            eTIMS.log_errors("Purchase Transaction Details", traceback.format_exc())
-            return {"Error": "Oops Bad Request!"}
+        client = KRAClient()
+        return client.select_trns_purchase_info({"invcNo": invoice_no})
 
     # Medium Priority Features - Phase 4
 
     @staticmethod
     def selectNoticeInfo(notice_no):
         """Get notice details from eTIMS (Section 7.23)"""
-        headers = eTIMS.get_headers()
-
-        payload = {
-            "ntcNo": notice_no
-        }
-
-        try:
-            response = requests.request(
-                "POST",
-                eTIMS.tims_base_url() + 'selectNoticeInfo',
-                json=payload,
-                headers=headers
-            )
-            response_json = response.json()
-            return eTIMS.handle_api_response(response_json)
-
-        except Exception:
-            eTIMS.log_errors("Notice Info", traceback.format_exc())
-            return {"Error": "Oops Bad Request!"}
+        client = KRAClient()
+        return client.select_notice_info({"ntcNo": notice_no})
 
     @staticmethod
     def selectOrgUsrInfo():
         """Get organization/user info from eTIMS (Section 7.5)"""
-        headers = eTIMS.get_headers()
-
-        try:
-            response = requests.request(
-                "POST",
-                eTIMS.tims_base_url() + 'selectOrgUsrInfo',
-                json={},
-                headers=headers
-            )
-            response_json = response.json()
-            return eTIMS.handle_api_response(response_json)
-
-        except Exception:
-            eTIMS.log_errors("Organization User Info", traceback.format_exc())
-            return {"Error": "Oops Bad Request!"}
+        client = KRAClient()
+        return client.select_org_usr_info()
 
     # Invoice Verification - Phase 1: Invoice Checker API Integration
 
@@ -664,23 +482,8 @@ class eTIMS():
             total_amount: Total invoice amount (float/decimal)
 
         Returns:
-            {
-                "Success": {
-                    "invcNo": "...",
-                    "qrCode": "...",
-                    "spplrTin": "...",
-                    "invcDt": "...",
-                    "totAmt": "...",
-                    ...
-                }
-            }
-            or
-            {
-                "Error": "Error message"
-            }
+            {"Success": {...}} or {"Error": "..."}
         """
-        headers = eTIMS.get_headers()
-
         payload = {
             "invcNo": invoice_no,
             "spplrTin": supplier_pin,
@@ -688,30 +491,16 @@ class eTIMS():
             "totAmt": str(total_amount)
         }
 
-        try:
-            response = requests.request(
-                "POST",
-                eTIMS.tims_base_url() + 'selectTrnsPurchaseInfo',
-                json=payload,
-                headers=headers
-            )
-            response_json = response.json()
+        client = KRAClient()
+        result = client.select_trns_purchase_info(payload)
 
-            result = eTIMS.handle_api_response(response_json)
+        # If successful, verify the invoice details match
+        if "Success" in result:
+            invoice_data = result["Success"]
+            if invoice_data and invoice_data.get("invcNo") != invoice_no:
+                return {"Error": "Invoice number mismatch in KRA system"}
 
-            # If successful, extract and verify the invoice details match
-            if "Success" in result:
-                invoice_data = result["Success"]
-                # Verify the details match what was requested
-                if invoice_data.get("invcNo") == invoice_no:
-                    return {"Success": invoice_data}
-                else:
-                    return {"Error": "Invoice number mismatch in KRA system"}
-            return result
-
-        except Exception as e:
-            eTIMS.log_errors("Invoice Checker", traceback.format_exc())
-            return {"Error": f"Failed to verify invoice: {str(e)}"}
+        return result
 
 def check_if_item_exits(item_code):
     item_exists = frappe.db.exists({"doctype": "Item", "item_code": item_code})
@@ -805,8 +594,49 @@ def get_item_type(item_code):
 
 def get_item_tax_template(tax_type_code):
     item_tax_doc = frappe.db.get_all("Item Tax Template", filters={"custom_code": tax_type_code}, fields=["name"])
-    
+
     if item_tax_doc:
-        
+
         return  item_tax_doc[0].get("name")
-    
+
+
+def get_next_sar_number(doc, branch_id):
+    """Get next SAR number with database locking to prevent duplicates.
+
+    Uses SELECT ... FOR UPDATE to lock rows. MUST be called BEFORE the
+    KRA API call (during payload construction) to minimize lock hold time.
+    Lock is released when the enclosing transaction commits.
+    """
+    last_sar = frappe.db.sql("""
+        SELECT sr_number FROM `tabeTIMS Stock Release Number`
+        WHERE tax_branch_office = %s
+        ORDER BY sr_number DESC
+        LIMIT 1
+        FOR UPDATE
+    """, (branch_id,), as_dict=True)
+
+    next_number = (last_sar[0].sr_number + 1) if last_sar else 1
+
+    new_doc = frappe.new_doc("eTIMS Stock Release Number")
+    new_doc.reference_type = doc.doctype
+    new_doc.reference = doc.name
+    new_doc.tax_branch_office = branch_id
+    new_doc.sr_number = next_number
+    new_doc.orginal_sr_number = get_org_sar_number(doc)
+    new_doc.insert()
+
+    return next_number
+
+
+def get_org_sar_number(doc):
+    """Get original SAR number for returns/amendments."""
+    if not doc.get("custom_original_invoice_number"):
+        return 0
+
+    prev = frappe.db.get_all(
+        "eTIMS Stock Release Number",
+        filters={"reference": doc.return_against},
+        fields=["sr_number"],
+        page_length=1
+    )
+    return prev[0].sr_number if prev else 0

@@ -91,6 +91,10 @@ doctype_js = {
 
 before_install = "kenya_etims_compliance.installation.etims_roles.before_install"
 after_install = "kenya_etims_compliance.installation.after_install.after_install"
+after_migrate = [
+    "kenya_etims_compliance.installation.after_install.setup_workspace_sidebar",
+    "kenya_etims_compliance.custom_methods.install_queue_fields.install_queue_fields",
+]
 
 # Uninstallation
 # ------------
@@ -180,23 +184,13 @@ doc_events = {
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-#	"all": [
-#		"kenya_etims_compliance.tasks.all"
-#	],
-#	"daily": [
-#		"kenya_etims_compliance.tasks.daily"
-#	],
-#	"hourly": [
-#		"kenya_etims_compliance.tasks.hourly"
-#	],
-#	"weekly": [
-#		"kenya_etims_compliance.tasks.weekly"
-#	],
-#	"monthly": [
-#		"kenya_etims_compliance.tasks.monthly"
-#	],
-# }
+scheduler_events = {
+    "cron": {
+        "*/5 * * * *": [
+            "kenya_etims_compliance.custom_methods.queue_processor.retry_failed_invoices"
+        ]
+    }
+}
 
 # Testing
 # -------
@@ -269,5 +263,4 @@ doc_events = {
 
 fixtures = [
     {"dt": "Custom Field", "filters": [["module", "=", "Kenya Etims Compliance"]]},
-    {"dt": "Workspace Sidebar", "filters": [["module", "=", "Kenya Etims Compliance"]]}
 ]

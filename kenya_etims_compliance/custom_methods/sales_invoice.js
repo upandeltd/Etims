@@ -28,6 +28,36 @@ frappe.ui.form.on("Sales Invoice",{
     },
 
     refresh: function(frm) {
+        // eTIMS Queue Status indicator
+        if (frm.doc.custom_etims_queue_status) {
+            let color = {
+                "Queued": "blue",
+                "Processing": "orange",
+                "Sent": "green",
+                "Failed": "red"
+            }[frm.doc.custom_etims_queue_status] || "grey";
+
+            frm.dashboard.set_headline(
+                __("eTIMS Status: {0}", [frm.doc.custom_etims_queue_status]),
+                color
+            );
+
+            if (frm.doc.custom_etims_queue_status === "Failed" && frm.doc.custom_etims_queue_entry) {
+                frm.add_custom_button(__("Retry eTIMS"), function() {
+                    frappe.call({
+                        method: "kenya_etims_compliance.custom_methods.queue_processor.retry_single_entry",
+                        args: { queue_entry_name: frm.doc.custom_etims_queue_entry },
+                        callback: function(r) {
+                            if (r.message) {
+                                frappe.show_alert({message: __("Invoice re-queued for eTIMS"), indicator: "green"});
+                                frm.reload_doc();
+                            }
+                        }
+                    });
+                }, __("eTIMS Actions"));
+            }
+        }
+
         // eTIMS Actions button group — shown for saved/submitted invoices
         if (frm.doc.name && frm.doc.name !== 'New Sales Invoice') {
 
@@ -59,6 +89,27 @@ frappe.ui.form.on("Sales Invoice",{
                     }
                 });
             }, __('eTIMS Actions'));
+
+            // Print Copy (Spec 4.1.2)
+            if (frm.doc.docstatus === 1 && frm.doc.custom_update_sales_to_etims) {
+                frm.add_custom_button(__('Print Copy'), function() {
+                    frappe.call({
+                        method: 'kenya_etims_compliance.custom_methods.device_status.increment_copy_count',
+                        args: { invoice_name: frm.doc.name },
+                        callback: function(r) {
+                            if (r.message) {
+                                frm.reload_doc();
+                                frappe.show_alert({
+                                    message: __('Copy #{0} — printing with COPY watermark', [r.message.count]),
+                                    indicator: 'blue'
+                                });
+                                // Trigger print with copy flag
+                                frm.print_doc();
+                            }
+                        }
+                    });
+                }, __('eTIMS Actions'));
+            }
 
             // Show QR Code if available
             if (frm.doc.custom_receipt_qr_code) {

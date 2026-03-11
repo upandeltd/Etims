@@ -1,8 +1,10 @@
-import requests, traceback
+import traceback
 from datetime import datetime
 
 import frappe
 from kenya_etims_compliance.utils.etims_utils import eTIMS
+from kenya_etims_compliance.utils.kra_client import KRAClient
+from kenya_etims_compliance.utils.etims_utils import get_next_sar_number
 
 
 @frappe.whitelist()
@@ -14,7 +16,6 @@ def searchStockMoveReq(sar_no=None, last_req_dt=None):
         if key == "Success":
             return {"Success": value}
         else:
-            eTIMS.log_errors("Stock Move Search", value)
             return {"Error": value}
 
 def insert_tax_rate_and_amount(doc, method):
@@ -45,52 +46,94 @@ def insert_tax_rate_and_amount(doc, method):
         doc.custom_total_taxable_amount = total_taxable_amount
 
 def update_stock_to_etims(doc, method):
-    item_count = 0
-    request_date = doc.posting_date
-    request_time = doc.posting_time
-    
-    date_str = eTIMS.strf_date_object(request_date)
-    time_str = eTIMS.strf_time(request_time)
-    
-    for item in doc.items:
-            item_count += 1
-    
-    # if doc.custom_send_stock_info_to_tims:
-    if doc.stock_entry_type == "Material Receipt":
-        if doc.custom_is_import_stock == 1:
-            stockIOSaveReq(doc, date_str, item_count, "01", doc.custom_target_tax_branch_office)
-        else:
-            stockIOSaveReq(doc, date_str, item_count, "06", doc.custom_target_tax_branch_office)
+    if not doc.custom_send_stock_info_to_etims:
+        return
 
-            
-    if doc.stock_entry_type == "Material Transfer":
-        is_inter_branch = check_if_interbranch(doc)
-        
-        if is_inter_branch:
-            if doc.custom_update_both_branches:
+    from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import get_etims_settings
+    settings = get_etims_settings()
+    use_queue = settings.get("enable_queue", 1)
+
+    item_count = len(doc.items) if doc.items else 0
+    date_str = eTIMS.strf_date_object(doc.posting_date)
+
+    if not use_queue:
+        # Synchronous fallback (original behavior)
+        if doc.stock_entry_type == "Material Receipt":
+            sar_type = "01" if doc.custom_is_import_stock == 1 else "06"
+            stockIOSaveReq(doc, date_str, item_count, sar_type, doc.custom_target_tax_branch_office)
+        elif doc.stock_entry_type == "Material Transfer":
+            is_inter_branch = check_if_interbranch(doc)
+            if is_inter_branch and doc.custom_update_both_branches:
                 stockIOSaveReq(doc, date_str, item_count, "13", doc.custom_source_tax_branch_office)
-                
                 stockIOSaveReq(doc, date_str, item_count, "04", doc.custom_target_tax_branch_office)
-                # if not doc.custom_is_return:
-                #     stockIOSaveReq(doc, date_str, item_count, "13", doc.custom_source_tax_branch_office)
-                
-                #     stockIOSaveReq(doc, date_str, item_count, "04", doc.custom_target_tax_branch_office)
-                # else:
-                #     stockIOSaveReq(doc, date_str, item_count, "12", doc.custom_source_tax_branch_office)
-                
-                #     stockIOSaveReq(doc, date_str, item_count, "03", doc.custom_target_tax_branch_office)
-    
-        
-def stockIOSaveReq(doc, date_str, item_count, sar_type, branch_id):    
-    # headers = get_headers(branch_id)
-    headers = get_headers(branch_id)
-   
-    payload = {
-        "sarNo": get_etims_sar_no(doc, branch_id),
+        return
+
+    from kenya_etims_compliance.custom_methods.queue_processor import enqueue_invoice
+
+    if doc.stock_entry_type == "Material Receipt":
+        branch_id = doc.custom_target_tax_branch_office
+        if not branch_id:
+            return
+
+        sar_type = "01" if doc.custom_is_import_stock == 1 else "06"
+        payload = _build_stock_io_payload(doc, branch_id, sar_type)
+        if payload:
+            enqueue_invoice(doc=doc, payload=payload, api_endpoint="insert_stock_io", branch_id=branch_id)
+
+    elif doc.stock_entry_type == "Material Transfer":
+        is_inter_branch = check_if_interbranch(doc)
+
+        if is_inter_branch and doc.custom_update_both_branches:
+            source_branch = doc.custom_source_tax_branch_office
+            target_branch = doc.custom_target_tax_branch_office
+
+            # Source branch (transfer out)
+            payload_out = _build_stock_io_payload(doc, source_branch, "13")
+            if payload_out:
+                enqueue_invoice(doc=doc, payload=payload_out, api_endpoint="insert_stock_io", branch_id=source_branch)
+
+            # Target branch (transfer in)
+            payload_in = _build_stock_io_payload(doc, target_branch, "04")
+            if payload_in:
+                enqueue_invoice(doc=doc, payload=payload_in, api_endpoint="insert_stock_io", branch_id=target_branch)
+
+
+def _build_stock_io_payload(doc, branch_id, sar_type):
+    """Build stock IO payload without calling the API. Returns dict or None."""
+    item_count = len(doc.items) if doc.items else 0
+    if item_count == 0:
+        return None
+
+    request_date = doc.posting_date
+    date_str = eTIMS.strf_date_object(request_date)
+
+    return {
+        "sarNo": get_next_sar_number(doc, branch_id),
         "orgSarNo": 0,
         "regTyCd": "A",
-        # "custTin": headers.get("tin"),
-        # "custNm": doc.customer,
+        "custBhfId": "01",
+        "ocrnDt": date_str,
+        "totItemCnt": item_count,
+        "totTaxblAmt": doc.custom_total_taxable_amount,
+        "totTaxAmt": doc.custom_total_tax_amount,
+        "totAmt": round(doc.total_incoming_value, 2),
+        "remark": doc.remarks if doc.remarks else '',
+        "regrId": doc.owner,
+        "regrNm": doc.owner,
+        "modrId": doc.modified_by,
+        "modrNm": doc.modified_by,
+        "sarTyCd": sar_type,
+        "itemList": etims_stock_item_list(doc),
+    }
+    
+        
+def stockIOSaveReq(doc, date_str, item_count, sar_type, branch_id):
+    client = KRAClient(branch_id=branch_id)
+
+    payload = {
+        "sarNo": get_next_sar_number(doc, branch_id),
+        "orgSarNo": 0,
+        "regTyCd": "A",
         "custBhfId": "01",
         "ocrnDt": date_str,
         "totItemCnt": item_count,
@@ -105,81 +148,24 @@ def stockIOSaveReq(doc, date_str, item_count, sar_type, branch_id):
         "sarTyCd": sar_type,
         "itemList": etims_stock_item_list(doc)
         }
-    
-        
+
     if doc.custom_send_stock_info_to_etims == 1:
         try:
-            response = requests.request(
-                        "POST", 
-                        eTIMS.tims_base_url() + 'insertStockIO',
-                        json = payload, 
-                        headers=headers
-                    )
-        
-            response_json = response.json()
+            result = client.insert_stock_io(payload)
 
-            if not response_json.get("resultCd") == '000':
-                frappe.logger().debug("Stock entry error: {0}".format(response_json.get("resultMsg")))
-                # eTIMS.log_errors("Stock Entry", response_json.get("resultMsg"))
-                frappe.throw(response_json.get("resultMsg"))
-                
-            
-            doc.custom_updated_in_etims = 1   
-            frappe.msgprint(response_json.get("resultMsg"))
+            if "Error" in result:
+                frappe.logger().debug("Stock entry error: {0}".format(result["Error"]))
+                frappe.throw(result["Error"])
 
-        except Exception:
-            
-            frappe.throw("Error: Oops Bad Request!")
+            doc.custom_updated_in_etims = 1
+            frappe.msgprint("Stock entry synced to eTIMS successfully")
+
+        except Exception as e:
+            frappe.log_error(title="eTIMS Stock Entry Error", message=traceback.format_exc())
+            frappe.throw(f"eTIMS Stock Entry Error: {str(e)}")
     else:
         frappe.logger().debug("Stock IO not sent - branch: {0}, payload: {1}".format(branch_id, payload))
 
-def get_etims_sar_no(doc, branch_id):
-    etims_sar_no = 1
-    etims_sar_docs = frappe.db.get_all(
-                                        "eTIMS Stock Release Number", 
-                                        filters={"tax_branch_office": branch_id}, 
-                                        fields=["sr_number"],
-                                        order_by='sr_number desc',
-                                        page_length = 1
-                                    )
-    if etims_sar_docs:
-        new_sar_no = etims_sar_docs[0].get("sr_number") + 1
-        
-        new_doc = frappe.new_doc("eTIMS Stock Release Number") 
-        new_doc.reference_type = doc.doctype
-        new_doc.reference = doc.name
-        new_doc.tax_branch_office = branch_id
-        new_doc.sr_number = new_sar_no
-        # new_doc.orginal_sr_number = get_org_etims_sar_no(doc)
-        new_doc.insert()
-
-        return new_sar_no
-    
-    else:
-        new_doc = frappe.new_doc("eTIMS Stock Release Number") 
-        new_doc.reference_type = doc.doctype
-        new_doc.reference = doc.name
-        new_doc.tax_branch_office = branch_id
-        new_doc.sr_number = etims_sar_no 
-        # new_doc.orginal_sr_number = eTIMS.get_org_etims_sar_no(doc)
-        
-        new_doc.insert()
-
-        return etims_sar_no
-    
-# def get_org_etims_sar_no(doc):
-#     org_etims_sar_no = 0
-    
-#     if doc.custom_original_invoice_number:
-#         prev_doc  = frappe.db.get_all("eTIMS Stock Release Number", filters={"reference": doc.amended_from}, fields=["sr_number"])
-        
-#         org_etims_sar_no = prev_doc[0].get("sr_number")
-    
-#         return org_etims_sar_no
-#     else:
-
-#         return org_etims_sar_no
-    
 def check_if_interbranch(item):
     interbranch_transfer = False
     
@@ -213,7 +199,7 @@ def etims_stock_item_list(doc):
     stock_item_list = []
     for item in doc.items:
         item_tax_code = get_tax_template_details(item.get("item_code"))
-        item_detail = frappe.db.get_all("Item", filters={"disabled": 0, "item_code": item.get("item_code")}, fields = ["*"])
+        item_detail = frappe.db.get_all("Item", filters={"disabled": 0, "item_code": item.get("item_code")}, fields=["custom_item_code", "custom_item_classification_code", "custom_item_name", "custom_packaging_unit_code", "custom_quantity_unit_code"])
         if not item_detail:
             frappe.throw(f"Item {item.get('item_code')} not found or is disabled")
         item_etims_data = {
@@ -232,8 +218,8 @@ def etims_stock_item_list(doc):
 					"dcAmt": 0.0,
                     "totDcAmt": 0.0,
 					"taxTyCd": item_tax_code,
-					"taxblAmt": round((item.get("amount") - item.get("custom_tax_amount")), 2),
-					"taxAmt": item.get("custom_tax_amount"),
+					"taxblAmt": round((item.get("amount") - (item.get("custom_tax_amount") or 0)), 2),
+					"taxAmt": item.get("custom_tax_amount") or 0,
 					"totAmt": round(item.get("amount"), 2)
 				}
 
@@ -253,14 +239,3 @@ def get_tax_template_details(item_code):
     else:
         return "D"
     
-def get_headers(branch_id):
-    header_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id, "active":1}, fields=["pin", "branch_id", "communication_key"])
-
-    if header_docs:
-        headers = {
-            "tin":header_docs[0].get("pin"),
-            "bhfId":header_docs[0].get("branch_id"),
-            "cmcKey":header_docs[0].get("communication_key"),
-        }
-        
-        return headers

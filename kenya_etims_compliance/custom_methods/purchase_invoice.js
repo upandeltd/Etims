@@ -36,6 +36,36 @@ frappe.ui.form.on("Purchase Invoice",{
     },
 
     refresh: function(frm) {
+        // eTIMS Queue Status indicator
+        if (frm.doc.custom_etims_queue_status) {
+            let color = {
+                "Queued": "blue",
+                "Processing": "orange",
+                "Sent": "green",
+                "Failed": "red"
+            }[frm.doc.custom_etims_queue_status] || "grey";
+
+            frm.dashboard.set_headline(
+                __("eTIMS Status: {0}", [frm.doc.custom_etims_queue_status]),
+                color
+            );
+
+            if (frm.doc.custom_etims_queue_status === "Failed" && frm.doc.custom_etims_queue_entry) {
+                frm.add_custom_button(__("Retry eTIMS"), function() {
+                    frappe.call({
+                        method: "kenya_etims_compliance.custom_methods.queue_processor.retry_single_entry",
+                        args: { queue_entry_name: frm.doc.custom_etims_queue_entry },
+                        callback: function(r) {
+                            if (r.message) {
+                                frappe.show_alert({message: __("Invoice re-queued for eTIMS"), indicator: "green"});
+                                frm.reload_doc();
+                            }
+                        }
+                    });
+                }, __("eTIMS Actions"));
+            }
+        }
+
         // Add Verify Invoice with KRA button
         // Only show if invoice is not verified and is saved (has a name)
         if (frm.doc.name && frm.doc.name !== 'New Purchase Invoice') {

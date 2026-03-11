@@ -1,9 +1,11 @@
-import requests, segno, traceback  #pyqrcode
+import segno, traceback  #pyqrcode
 from datetime import datetime, timedelta, time
 
 import frappe
 from frappe import _
 from kenya_etims_compliance.utils.etims_utils import eTIMS
+from kenya_etims_compliance.utils.kra_client import KRAClient
+from kenya_etims_compliance.utils.etims_utils import get_next_sar_number, get_org_sar_number
 
 
 @frappe.whitelist()
@@ -15,7 +17,6 @@ def searchSalesTrnsReq(invoice_no=None, last_req_dt=None):
         if key == "Success":
             return {"Success": value}
         else:
-            eTIMS.log_errors("Sales Transaction Search", value)
             return {"Error": value}
 
 
@@ -28,7 +29,6 @@ def selectSalesTrnsInfoReq(invoice_no):
         if key == "Success":
             return {"Success": value}
         else:
-            eTIMS.log_errors("Sales Transaction Details", value)
             return {"Error": value}
 
 
@@ -171,9 +171,7 @@ def trnsSalesSaveWrReq(doc, method):
     '''
     if doc.custom_update_invoice_in_tims:
         tax_code_list = []
-        
-        headers = eTIMS.get_headers()
-        
+
         request_date_and_time = doc.modified
     
         conc_datetime_str = eTIMS.strf_datetime_format(request_date_and_time)
@@ -294,72 +292,88 @@ def trnsSalesSaveWrReq(doc, method):
                 frappe.throw("Invalid, return amount is greater than original amount!")
     
     if doc.custom_update_invoice_in_tims:
-        try:
-            response = requests.request(
-                "POST", 
-                eTIMS.tims_base_url() + 'saveTrnsSalesOsdc', 
-                json = payload, 
-                headers=headers)
-            response_json = response.json()
+        from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import get_etims_settings
+        settings = get_etims_settings()
 
-            if not response_json.get("resultCd") == '000':
-                # print(response_json.get("resultMsg"))
-                frappe.throw(response_json.get("resultMsg"))
-                            
-            data = response_json.get("data")
-            control_unit_date_time = eTIMS.strp_datetime_object(data.get("sdcDateTime"))
-            control_unit_date = eTIMS.strp_date_object(data.get("sdcDateTime")[0:8])
-            control_unit_time = eTIMS.strp_time_object(data.get("sdcDateTime")[8:14])
-            
-            doc.custom_current_receipt_number = data.get("curRcptNo")
-            doc.custom_total_receipt_number = data.get("totRcptNo")
-            doc.custom_internal_data = data.get("intrlData")
-            doc.custom_receipt_signature = data.get("rcptSign")
-            doc.custom_control_unit_date_time = control_unit_date_time
-            doc.custom_control_unit_date = control_unit_date
-            doc.custom_control_unit_time = control_unit_time
-            
-            file_name, qr_url = create_qr_code(headers.get("tin"), headers.get("bhfId"), data.get("rcptSign"))
+        # Training mode (Spec 4.1.3): set receipt type to "T"
+        if settings.get("training_mode"):
+            payload["rcptTyCd"] = "T"
 
-            attachment_url = create_attachment(file_name, doc.name)
+        # Set receipt label (Spec 4.3)
+        from kenya_etims_compliance.custom_methods.receipt_labels import get_receipt_label
+        receipt_label = get_receipt_label(doc)
+        frappe.db.set_value("Sales Invoice", doc.name, "custom_receipt_label", receipt_label, update_modified=False)
 
-            doc.custom_receipt_qr_code = attachment_url
-            doc.custom_receipt_qr_url = qr_url
-            
-            create_sales_receipt(data, doc.name)
-                
-            stockIOSaveReq(doc, date_str)
-            doc.custom_update_sales_to_etims = 1
-            frappe.logger().debug("Sales payload: {0}".format(payload))
-            
-            frappe.msgprint(response_json.get("resultMsg"))
+        if settings.get("enable_queue", 1):
+            from kenya_etims_compliance.custom_methods.queue_processor import enqueue_invoice
 
-        except Exception as e:
-            frappe.log_error(title="eTIMS Sales Invoice Error", message=traceback.format_exc())
-            frappe.throw(f"eTIMS Error: {str(e)}")
+            branch_id = None
+            try:
+                branch_id = KRAClient()._get_user_branch_id()
+            except Exception:
+                pass
+
+            enqueue_invoice(
+                doc=doc,
+                payload=payload,
+                api_endpoint="save_sales",
+                branch_id=branch_id,
+            )
+            frappe.msgprint(_("Sales invoice queued for eTIMS submission"), indicator="blue")
+        else:
+            # Synchronous fallback (original behavior)
+            try:
+                client = KRAClient()
+                result = client.save_sales(payload)
+
+                if "Error" in result:
+                    frappe.throw(result["Error"])
+
+                data = result["Success"]
+                control_unit_date_time = eTIMS.strp_datetime_object(data.get("sdcDateTime"))
+                control_unit_date = eTIMS.strp_date_object(data.get("sdcDateTime")[0:8])
+                control_unit_time = eTIMS.strp_time_object(data.get("sdcDateTime")[8:14])
+
+                doc.custom_current_receipt_number = data.get("curRcptNo")
+                doc.custom_total_receipt_number = data.get("totRcptNo")
+                doc.custom_internal_data = data.get("intrlData")
+                doc.custom_receipt_signature = data.get("rcptSign")
+                doc.custom_control_unit_date_time = control_unit_date_time
+                doc.custom_control_unit_date = control_unit_date
+                doc.custom_control_unit_time = control_unit_time
+
+                file_name, qr_url = create_qr_code(client.headers.get("tin"), client.headers.get("bhfId"), data.get("rcptSign"))
+                attachment_url = create_attachment(file_name, doc.name)
+
+                doc.custom_receipt_qr_code = attachment_url
+                doc.custom_receipt_qr_url = qr_url
+
+                create_sales_receipt(data, doc.name)
+                stockIOSaveReq(doc, date_str)
+                doc.custom_update_sales_to_etims = 1
+
+                frappe.msgprint("Sales invoice synced to eTIMS successfully")
+
+            except Exception as e:
+                frappe.log_error(title="eTIMS Sales Invoice Error", message=traceback.format_exc())
+                frappe.throw(f"eTIMS Error: {str(e)}")
     else:
-        # print(payload)
-        # stockIOSaveReq(doc, date_str)
         return
         
 def stockIOSaveReq(doc, date_str):
-    # sar_no, org_sar_no = get_etims_sar_no(doc)
     taxAmt = 0
     taxblAmt = 0
     if doc.custom_update_invoice_in_tims:
-        headers = eTIMS.get_headers()
         stock_list = etims_sale_item_list_stock(doc)
         if len(stock_list):
             for item in doc.items:
                 if item.get("custom_maintain_stock") == 1 and item.get("custom_tax_code") in ["B", "E"]:
                     taxblAmt += item.get("base_net_amount")
                     taxAmt +=  (item.get("base_amount") - item.get("base_net_amount"))
-                    
-                    # if not item.get("")
-            
+
             payload = {
-                "sarNo": get_etims_sar_no(doc),
-                "orgSarNo": get_org_etims_sar_no(doc),
+                "sarNo": get_next_sar_number(doc, doc.custom_tax_branch_office),
+                "orgSarNo": get_org_sar_number(doc),
                 "regTyCd": "A",
                 "custTin": doc.tax_id,
                 "custNm": doc.customer,
@@ -376,37 +390,29 @@ def stockIOSaveReq(doc, date_str):
                 "modrNm": (doc.modified_by or "")[:20],
                 "itemList": stock_list
                 }
-            
-            if doc.is_return == 1: 
+
+            if doc.is_return == 1:
                 return_status = sales_return_information(doc)
-                
+
                 if return_status == "partial" or return_status == "full":
                     payload["sarTyCd"] = "03"
-                
+
                 elif return_status == "null":
                     frappe.throw("Invalid, return amount is greater than original amount!")
-            
+
             else:
                 payload["sarTyCd"] = "11"
 
             if doc.custom_update_invoice_in_tims:
                 try:
                     frappe.logger().debug("Stock IO payload: {0}".format(payload))
-                    response = requests.request(
-                                "POST", 
-                                eTIMS.tims_base_url() + 'insertStockIO',
-                                json = payload, 
-                                headers=headers
-                            )
-                
-                    response_json = response.json()
+                    client = KRAClient()
+                    result = client.insert_stock_io(payload)
 
-                    if not response_json.get("resultCd") == '000':
-                        # print("*"*80)
-                        # print(response_json.get("resultMsg"))
-                        frappe.throw(response_json.get("resultMsg"))
-                            
-                    frappe.msgprint(response_json.get("resultMsg"))
+                    if "Error" in result:
+                        frappe.throw(result["Error"])
+
+                    frappe.msgprint("Stock IO synced to eTIMS successfully")
 
                 except Exception as e:
                     frappe.log_error(title="eTIMS Stock IO Error", message=traceback.format_exc())
@@ -414,47 +420,6 @@ def stockIOSaveReq(doc, date_str):
             else:
                 return
 
-def get_etims_sar_no(doc):
-    etims_sar_no = 1
-    try:
-        etims_sar_docs = frappe.get_last_doc("eTIMS Stock Release Number", filters={"tax_branch_office": doc.custom_tax_branch_office})
-        
-        new_sar_no = etims_sar_docs.get("sr_number") + 1
-        
-        new_doc = frappe.new_doc("eTIMS Stock Release Number") 
-        new_doc.reference_type = doc.doctype
-        new_doc.reference = doc.name
-        new_doc.tax_branch_office = doc.custom_tax_branch_office
-        new_doc.sr_number = new_sar_no
-        new_doc.orginal_sr_number = get_org_etims_sar_no(doc)
-        new_doc.insert()
-
-        return new_sar_no
-    except Exception:
-        new_doc = frappe.new_doc("eTIMS Stock Release Number") 
-        new_doc.reference_type = doc.doctype
-        new_doc.reference = doc.name
-        new_doc.tax_branch_office = doc.custom_tax_branch_office
-        new_doc.sr_number = etims_sar_no 
-        new_doc.orginal_sr_number = get_org_etims_sar_no(doc)
-        
-        new_doc.insert()
-
-        return etims_sar_no
-    
-def get_org_etims_sar_no(doc):
-    org_etims_sar_no = 0
-    
-    if doc.custom_original_invoice_number:
-        prev_doc  = frappe.db.get_all("eTIMS Stock Release Number", filters={"reference": doc.return_against}, fields=["sr_number"])
-        
-        org_etims_sar_no = prev_doc[0].get("sr_number")
-    
-        return org_etims_sar_no
-    else:
-
-        return org_etims_sar_no
-    
 def get_customer_details(customer):
     customer_kra_details = frappe.get_doc("Customer", customer)
     
@@ -514,7 +479,7 @@ def etims_sale_item_list_sales(doc):
     sales_item_list = []
     for item in doc.items:
         item_tax_code = get_tax_template_details(item.get("item_tax_template"))
-        item_detail = frappe.db.get_all("Item", filters={"disabled": 0, "item_code": item.get("item_code")}, fields = ["*"])
+        item_detail = frappe.db.get_all("Item", filters={"disabled": 0, "item_code": item.get("item_code")}, fields=["custom_item_code", "custom_item_classification_code", "custom_item_name", "custom_packaging_unit_code", "custom_quantity_unit_code"])
         if not item_detail:
             frappe.throw(f"Item {item.get('item_code')} not found or is disabled")
         item_etims_data = {
@@ -552,7 +517,7 @@ def etims_sale_item_list_stock(doc):
     for item in doc.items:
         if item.custom_maintain_stock:
             item_tax_code = get_tax_template_details(item.get("item_tax_template"))
-            item_detail = frappe.db.get_all("Item", filters={"disabled": 0, "item_code": item.get("item_code")}, fields = ["*"])
+            item_detail = frappe.db.get_all("Item", filters={"disabled": 0, "item_code": item.get("item_code")}, fields=["custom_item_code", "custom_item_classification_code", "custom_item_name", "custom_packaging_unit_code", "custom_quantity_unit_code"])
             if not item_detail:
                 frappe.throw(f"Item {item.get('item_code')} not found or is disabled")
             item_etims_data = {

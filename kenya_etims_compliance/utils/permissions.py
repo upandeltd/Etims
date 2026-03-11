@@ -382,6 +382,7 @@ def require_etims_role(role_name):
 				)
 			return func(*args, **kwargs)
 		return wrapper
+	return decorator
 
 
 def require_admin():

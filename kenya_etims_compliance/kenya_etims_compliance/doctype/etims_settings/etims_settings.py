@@ -53,6 +53,9 @@ def get_etims_settings():
 		"max_search_limit": 1000,
 		"enable_error_logging": 1,
 		"enable_auto_sync": 1,
+		"enable_queue": 1,
+		"queue_max_retries": 10,
+		"queue_retry_interval": 5,
 	}
 
 	try:
@@ -75,6 +78,9 @@ def get_etims_settings():
 		"max_search_limit": settings.max_search_limit or 1000,
 		"enable_error_logging": settings.enable_error_logging if settings.enable_error_logging is not None else 1,
 		"enable_auto_sync": settings.enable_auto_sync if settings.enable_auto_sync is not None else 1,
+		"enable_queue": settings.enable_queue if hasattr(settings, "enable_queue") and settings.enable_queue is not None else 1,
+		"queue_max_retries": settings.queue_max_retries if hasattr(settings, "queue_max_retries") else 10,
+		"queue_retry_interval": settings.queue_retry_interval if hasattr(settings, "queue_retry_interval") else 5,
 	}
 
 
