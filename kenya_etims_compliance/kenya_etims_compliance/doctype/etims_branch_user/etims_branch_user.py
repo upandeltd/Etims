@@ -23,9 +23,9 @@ class eTIMSBranchUser(Document):
                 "authCd":user.get("authority_code"),
                 "remark":user.get("remark"),
                 "useYn":user.get("used_unused"),
-                "regrId":user.get("registration_id"), 
+                "regrId":user.get("registration_name"), 
                 "regrNm":user.get("registration_name"), 
-                "modrId":user.get("modifier_id"), 
+                "modrId":user.get("modifier_name"),
                 "modrNm":user.get("modifier_name")
             }
     
@@ -45,6 +45,6 @@ class eTIMSBranchUser(Document):
                 user.save()
                 return {"Success":response_json.get("resultMsg")}
 
-            except:
-                eTIMS.log_errors("User Register", traceback.format_exc())
-                return {"Error":"Oops Bad Request!"}	
+            except Exception as e:
+                frappe.log_error(frappe.get_traceback(), "User Register")
+                raise e

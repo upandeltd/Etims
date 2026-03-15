@@ -1,0 +1,220 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:{company}-{tax_branch_office}",
+ "creation": "2025-02-07 16:56:54.962566",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "tax_branch_office",
+  "tis_device_initialization",
+  "parent_tax_account",
+  "accounts_tab",
+  "tax_accounts",
+  "create_accounts",
+  "tax_settings_section",
+  "item_tax_template",
+  "get_item_taxes",
+  "item_tax_configuration",
+  "create_taxes",
+  "section_break_cpoc",
+  "get_item_groups",
+  "item_group_codes",
+  "update_codes",
+  "stock_settings_tab",
+  "selling_column",
+  "auto_create_etims_sales_invoice",
+  "update_stock_selling",
+  "last_etims_sales_invoice_number",
+  "column_break_d9gc",
+  "auto_create_etims_purchase_invoice",
+  "update_stock_purchase",
+  "last_etims_purchase_invoice_number",
+  "column_break_immf",
+  "update_stock_stock"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "tax_branch_office",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Tax Branch Office",
+   "options": "Tax Branch Office",
+   "reqd": 1
+  },
+  {
+   "fieldname": "tax_settings_section",
+   "fieldtype": "Tab Break",
+   "label": "Item Settings"
+  },
+  {
+   "fieldname": "accounts_tab",
+   "fieldtype": "Tab Break",
+   "label": "Accounts"
+  },
+  {
+   "fieldname": "tax_accounts",
+   "fieldtype": "Table",
+   "label": "Tax Accounts",
+   "options": "eTIMS Tax Account"
+  },
+  {
+   "fieldname": "create_accounts",
+   "fieldtype": "Button",
+   "label": "Create Accounts"
+  },
+  {
+   "fieldname": "create_taxes",
+   "fieldtype": "Button",
+   "label": "Create Item Tax Templates"
+  },
+  {
+   "fieldname": "parent_tax_account",
+   "fieldtype": "Link",
+   "label": "Parent Tax Account",
+   "options": "Account"
+  },
+  {
+   "fieldname": "item_tax_configuration",
+   "fieldtype": "Table",
+   "label": "Item Tax Configuration",
+   "options": "eTIMS Tax Configuration"
+  },
+  {
+   "default": "0",
+   "fieldname": "get_item_taxes",
+   "fieldtype": "Button",
+   "label": "Get Item Taxes"
+  },
+  {
+   "fieldname": "stock_settings_tab",
+   "fieldtype": "Tab Break",
+   "label": "Transaction Settings"
+  },
+  {
+   "default": "0",
+   "fieldname": "update_stock_selling",
+   "fieldtype": "Check",
+   "label": "Update Stock"
+  },
+  {
+   "default": "0",
+   "fieldname": "update_stock_purchase",
+   "fieldtype": "Check",
+   "label": "Update Stock"
+  },
+  {
+   "fieldname": "item_group_codes",
+   "fieldtype": "Table",
+   "label": "Item Group Codes",
+   "options": "eTIMS Item Group"
+  },
+  {
+   "fieldname": "update_codes",
+   "fieldtype": "Button",
+   "label": "Update Codes"
+  },
+  {
+   "fieldname": "column_break_d9gc",
+   "fieldtype": "Column Break",
+   "label": "Buying"
+  },
+  {
+   "fieldname": "get_item_groups",
+   "fieldtype": "Button",
+   "label": "Get Item Groups"
+  },
+  {
+   "fieldname": "section_break_cpoc",
+   "fieldtype": "Section Break",
+   "label": "Assign eTIMS Codes To Item Groups"
+  },
+  {
+   "fieldname": "item_tax_template",
+   "fieldtype": "Section Break",
+   "label": "Item Tax Templates"
+  },
+  {
+   "fieldname": "tis_device_initialization",
+   "fieldtype": "Link",
+   "label": "TIS Device Initialization",
+   "options": "TIS Device Initialization",
+   "reqd": 1
+  },
+  {
+   "fieldname": "last_etims_sales_invoice_number",
+   "fieldtype": "Int",
+   "label": "Last eTIMS Sales Invoice Number"
+  },
+  {
+   "fieldname": "last_etims_purchase_invoice_number",
+   "fieldtype": "Int",
+   "label": "Last eTIMS Purchase Invoice Number"
+  },
+  {
+   "default": "0",
+   "fieldname": "auto_create_etims_sales_invoice",
+   "fieldtype": "Check",
+   "label": "Auto Create eTIMS Invoice"
+  },
+  {
+   "default": "0",
+   "fieldname": "auto_create_etims_purchase_invoice",
+   "fieldtype": "Check",
+   "label": "Auto Create eTIMS Invoice"
+  },
+  {
+   "fieldname": "selling_column",
+   "fieldtype": "Column Break",
+   "label": "Selling"
+  },
+  {
+   "fieldname": "column_break_immf",
+   "fieldtype": "Column Break",
+   "label": "Stock"
+  },
+  {
+   "default": "0",
+   "fieldname": "update_stock_stock",
+   "fieldtype": "Check",
+   "label": "Update Stock"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-03-14 17:38:11.019045",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "Tax Branch Configurations",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

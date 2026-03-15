@@ -8,22 +8,23 @@
  "engine": "InnoDB",
  "field_order": [
   "1_search_purchase_information_section",
-  "last_search_date_and_time",
   "last_request_date",
-  "column_break_xbgc",
   "search_purchases",
+  "column_break_xbgc",
+  "last_search_date_and_time",
   "view_purchase_invoices"
  ],
  "fields": [
   {
    "fieldname": "1_search_purchase_information_section",
    "fieldtype": "Section Break",
-   "label": "1. Search Purchase Information"
+   "label": "1. Get eTIMS Purchase Transactions"
   },
   {
    "fieldname": "last_search_date_and_time",
    "fieldtype": "Datetime",
-   "label": "Last Search Date and Time"
+   "label": "Last Search Date and Time",
+   "read_only": 1
   },
   {
    "fieldname": "last_request_date",
@@ -37,18 +38,18 @@
   {
    "fieldname": "search_purchases",
    "fieldtype": "Button",
-   "label": "Search Purchases"
+   "label": "Get Purchases"
   },
   {
    "fieldname": "view_purchase_invoices",
    "fieldtype": "Button",
-   "label": "View Purchase Invoices"
+   "label": "View Purchases"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-12-11 11:35:56.602724",
+ "modified": "2025-02-12 00:34:04.604841",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Purchase Information",

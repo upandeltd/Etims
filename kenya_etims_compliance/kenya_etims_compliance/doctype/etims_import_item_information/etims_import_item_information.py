@@ -50,9 +50,9 @@ class eTIMSImportItemInformation(Document):
                 
             return {"Success": response_json.get("resultMsg")}
 
-        except:
-            eTIMS.log_errors("Search Import Item", traceback.format_exc())
-            return {"Error":"Oops Bad Request!"}
+        except Exception as e:
+            frappe.log_error(frappe.get_traceback(), "Search Import Item")
+            raise e
     
 #  pkgUnitCd': 'KGM', 'qty': 14, 'qtyUnitCd': 'KGM', 'totWt': 140, 'netWt': 14, 'spplrNm': 'SEITZ GMGH', 'agntNm': 'SCHENKER LIMITED', 'invcFcurAmt': 11817.5, 'invcFcurCd': 'EUR', 'invcFcurExcrt': 135.73}, {'taskCd': '20230209004633', 'dclDe': '01022023', 'itemSeq': 1, 'dclNo': '23NBOIM401167364', 'hsCd': '63079000', 'itemNm': 'N; LIFTING BELTS 2t x 4m,3t x4m,5t x 4m,2t x 1m; L; 1; 1; 1; ', 'imptItemsttsCd': '2', 'orgnNatCd': 'DE', 'exptNatCd': 'DE', 'pkg': 17, 'pkgUnitCd': 'KGM', 'qty': 14, 'qtyUnitCd': 'KGM', 'totWt': 140, 'netWt': 14, 'spplrNm': 'SEITZ GMGH', 'agntNm': 'SCHENKER LIMITED', 'invcFcurAmt': 11817.5, 'invcFcurCd': 'EUR', 'invcFcurExcrt': 135.73}, {'taskCd': '20230209004634', 'dclDe': '01022023', 'itemSeq': 1, 'dclNo': '23NBOIM401167364', 'hsCd': '63079000', 'itemNm': 'N; LIFTING BELTS 2t x 4m,3t x4m,5t x 4m,2t x 1m; L; 1; 1; 1; ', 'imptItemsttsCd': '2', 'orgnNatCd': 'DE', 'exptNatCd': 'DE', 'pkg': 17, 'pkgUnitCd': 'KGM', 'qty': 14, 'qtyUnitCd': 'KGM', 'totWt': 140, 'netWt': 14, 'spplrNm': 'SEITZ GMGH'
 ######################################### Methods ################################
