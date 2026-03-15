@@ -8,9 +8,10 @@
  "engine": "InnoDB",
  "field_order": [
   "1_search_import_item_section",
-  "last_search_date_and_time",
   "data_from_datetime",
-  "search_import_item"
+  "search_import_item",
+  "column_break_3je2",
+  "last_search_date_and_time"
  ],
  "fields": [
   {
@@ -27,18 +28,22 @@
   {
    "fieldname": "data_from_datetime",
    "fieldtype": "Datetime",
-   "label": "Data From Datetime"
+   "label": "From Date and Time"
   },
   {
    "fieldname": "search_import_item",
    "fieldtype": "Button",
-   "label": "Search Import Item"
+   "label": "Get Imported Items"
+  },
+  {
+   "fieldname": "column_break_3je2",
+   "fieldtype": "Column Break"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-12-11 11:34:01.627171",
+ "modified": "2025-02-12 00:31:52.967849",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Import Item Information",

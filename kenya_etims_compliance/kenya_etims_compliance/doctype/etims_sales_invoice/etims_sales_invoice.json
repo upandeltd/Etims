@@ -1,0 +1,491 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:{trader_invoice_number}",
+ "creation": "2025-02-14 19:40:12.736241",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "update_invoice_in_etims",
+  "update_stock",
+  "company",
+  "branch_id",
+  "sales_control_unit",
+  "column_break_hrel",
+  "sales_date",
+  "confirmation_date",
+  "stock_release_date",
+  "receipt_publish_date",
+  "section_break_7wlw",
+  "trader_invoice_number",
+  "invoice_number",
+  "original_invoice_number",
+  "status",
+  "column_break_oxzn",
+  "customer_tin",
+  "customer_name",
+  "is_return",
+  "return_against",
+  "section_break_27av",
+  "sales_type_code",
+  "payment_type_code",
+  "purchase_accept",
+  "column_break_rvlv",
+  "sales_status_code",
+  "receipt_type_code",
+  "credit_note_reason_code",
+  "section_break_u7ir",
+  "items",
+  "section_break_fou8",
+  "taxable_amount_a",
+  "taxable_amount_b",
+  "taxable_amount_c",
+  "taxable_amount_d",
+  "taxable_amount_e",
+  "column_break_u7t3",
+  "tax_rate_a",
+  "tax_rate_b",
+  "tax_rate_c",
+  "tax_rate_d",
+  "tax_rate_e",
+  "column_break_v6wt",
+  "tax_amount_a",
+  "tax_amount_b",
+  "tax_amount_c",
+  "tax_amount_d",
+  "tax_amount_e",
+  "section_break_x8z8",
+  "total_item_count",
+  "total_before_discount",
+  "total_discount_amount",
+  "total_taxable_amount",
+  "total_non_taxable_amount",
+  "total_tax_amount",
+  "total_amount",
+  "sales_updated_in_etims",
+  "column_break_aagz",
+  "remark",
+  "registration_name",
+  "modifier_name",
+  "section_break_jnmm",
+  "current_receipt_number",
+  "total_receipt_number",
+  "internal_data",
+  "receipt_signature",
+  "column_break_laq6",
+  "control_unit_date_time",
+  "control_unit_date",
+  "control_unit_time",
+  "receipt_qr_code",
+  "receipt_url"
+ ],
+ "fields": [
+  {
+   "fieldname": "trader_invoice_number",
+   "fieldtype": "Link",
+   "label": "Trader Invoice Number",
+   "options": "Sales Invoice"
+  },
+  {
+   "fieldname": "original_invoice_number",
+   "fieldtype": "Int",
+   "label": "Original Invoice Number"
+  },
+  {
+   "fieldname": "customer_tin",
+   "fieldtype": "Data",
+   "label": "Customer Tin"
+  },
+  {
+   "fieldname": "customer_name",
+   "fieldtype": "Data",
+   "label": "Customer Name"
+  },
+  {
+   "default": "N",
+   "description": "C- Copy, N- Normal, P- Profoma, T- Training\n\n",
+   "fieldname": "sales_type_code",
+   "fieldtype": "Data",
+   "label": "Sales Type Code"
+  },
+  {
+   "default": "S",
+   "description": "S- Sale, R- Credit Note after Sale\n\n",
+   "fieldname": "receipt_type_code",
+   "fieldtype": "Data",
+   "label": "Receipt Type Code"
+  },
+  {
+   "default": "02",
+   "description": "01- Wait for Approval, 02- Approved, 03- Cancel Request, 04- Cancelled, 05- Credit Note Generated, 06- Transferred",
+   "fieldname": "sales_status_code",
+   "fieldtype": "Data",
+   "label": "Sales Status Code"
+  },
+  {
+   "fieldname": "confirmation_date",
+   "fieldtype": "Data",
+   "label": "Confirmation Date"
+  },
+  {
+   "fieldname": "sales_date",
+   "fieldtype": "Data",
+   "label": "Sales Date"
+  },
+  {
+   "fieldname": "invoice_number",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Invoice Number"
+  },
+  {
+   "fieldname": "stock_release_date",
+   "fieldtype": "Data",
+   "label": "Stock Release Date"
+  },
+  {
+   "fieldname": "total_item_count",
+   "fieldtype": "Int",
+   "label": "Total Item Count"
+  },
+  {
+   "fieldname": "total_taxable_amount",
+   "fieldtype": "Currency",
+   "label": "Total Taxable Amount"
+  },
+  {
+   "fieldname": "total_tax_amount",
+   "fieldtype": "Currency",
+   "label": "Total Tax Amount"
+  },
+  {
+   "fieldname": "total_amount",
+   "fieldtype": "Currency",
+   "label": "Total Amount"
+  },
+  {
+   "fieldname": "purchase_accept",
+   "fieldtype": "Data",
+   "label": "Purchase Accept"
+  },
+  {
+   "fieldname": "remark",
+   "fieldtype": "Small Text",
+   "label": "Remark"
+  },
+  {
+   "fieldname": "registration_name",
+   "fieldtype": "Data",
+   "label": "Registration Name"
+  },
+  {
+   "fieldname": "modifier_name",
+   "fieldtype": "Data",
+   "label": "Modifier Name"
+  },
+  {
+   "fieldname": "receipt_publish_date",
+   "fieldtype": "Data",
+   "label": "Receipt Publish Date"
+  },
+  {
+   "fieldname": "column_break_oxzn",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_27av",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_rvlv",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_u7ir",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_aagz",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Items",
+   "options": "eTIMS Sales Invoice Item"
+  },
+  {
+   "fieldname": "section_break_fou8",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "branch_id",
+   "fieldtype": "Link",
+   "label": "Branch ID",
+   "options": "Tax Branch Office"
+  },
+  {
+   "default": "0",
+   "fetch_from": "trader_invoice_number.custom_update_invoice_in_tims",
+   "fetch_if_empty": 1,
+   "fieldname": "update_invoice_in_etims",
+   "fieldtype": "Check",
+   "label": "Update Invoice In eTIMS"
+  },
+  {
+   "fieldname": "section_break_7wlw",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fetch_from": "trader_invoice_number.company",
+   "fetch_if_empty": 1,
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company"
+  },
+  {
+   "fieldname": "sales_control_unit",
+   "fieldtype": "Data",
+   "label": "Sales Control Unit"
+  },
+  {
+   "default": "01",
+   "description": "01- Cash, 02- Credit, 03- Cash/Credit, 04- Bank Check, 05- Debit&Credit Card, 06- Mobile-Money, 07- Other",
+   "fieldname": "payment_type_code",
+   "fieldtype": "Data",
+   "label": "Payment Type Code"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.is_return==1",
+   "fieldname": "is_return",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Is Return"
+  },
+  {
+   "default": "06",
+   "depends_on": "eval:doc.is_return==1",
+   "description": "01- Missing Quantity, 02- Missing Data, 03- Damaged, 04- Wasted, 05- Raw Material Shortage, 06- Refund",
+   "fieldname": "credit_note_reason_code",
+   "fieldtype": "Data",
+   "label": "Credit Note Reason Code"
+  },
+  {
+   "fieldname": "column_break_hrel",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "sales_updated_in_etims",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Sales Updated In eTIMS"
+  },
+  {
+   "fieldname": "section_break_jnmm",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "current_receipt_number",
+   "fieldtype": "Data",
+   "label": "Current Receipt Number"
+  },
+  {
+   "fieldname": "total_receipt_number",
+   "fieldtype": "Data",
+   "label": "Total Receipt Number"
+  },
+  {
+   "fieldname": "internal_data",
+   "fieldtype": "Data",
+   "label": "Internal Data"
+  },
+  {
+   "fieldname": "receipt_signature",
+   "fieldtype": "Data",
+   "label": "Receipt Signature"
+  },
+  {
+   "fieldname": "column_break_laq6",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "control_unit_date_time",
+   "fieldtype": "Data",
+   "label": "Control Unit Date Time"
+  },
+  {
+   "fieldname": "control_unit_date",
+   "fieldtype": "Datetime",
+   "label": "Control Unit Date"
+  },
+  {
+   "fieldname": "control_unit_time",
+   "fieldtype": "Time",
+   "label": "Control Unit Time"
+  },
+  {
+   "fieldname": "receipt_qr_code",
+   "fieldtype": "Data",
+   "label": "Receipt QR Code"
+  },
+  {
+   "fieldname": "taxable_amount_a",
+   "fieldtype": "Currency",
+   "label": "Taxable Amount (A)"
+  },
+  {
+   "fieldname": "section_break_x8z8",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "tax_rate_a",
+   "fieldtype": "Percent",
+   "label": "Tax Rate (A)"
+  },
+  {
+   "fieldname": "tax_amount_a",
+   "fieldtype": "Currency",
+   "label": "Tax Amount (A)"
+  },
+  {
+   "fieldname": "taxable_amount_b",
+   "fieldtype": "Currency",
+   "label": "Taxable Amount (B)"
+  },
+  {
+   "fieldname": "tax_rate_b",
+   "fieldtype": "Percent",
+   "label": "Tax Rate (B)"
+  },
+  {
+   "fieldname": "tax_amount_b",
+   "fieldtype": "Currency",
+   "label": "Tax Amount (B)"
+  },
+  {
+   "fieldname": "taxable_amount_c",
+   "fieldtype": "Currency",
+   "label": "Taxable Amount (C)"
+  },
+  {
+   "fieldname": "tax_rate_c",
+   "fieldtype": "Percent",
+   "label": "Tax Rate (C)"
+  },
+  {
+   "fieldname": "tax_amount_c",
+   "fieldtype": "Currency",
+   "label": "Tax Amount (C)"
+  },
+  {
+   "fieldname": "taxable_amount_d",
+   "fieldtype": "Currency",
+   "label": "Taxable Amount (D)"
+  },
+  {
+   "fieldname": "tax_rate_d",
+   "fieldtype": "Percent",
+   "label": "Tax Rate (D)"
+  },
+  {
+   "fieldname": "tax_amount_d",
+   "fieldtype": "Currency",
+   "label": "Tax Amount (D)"
+  },
+  {
+   "fieldname": "taxable_amount_e",
+   "fieldtype": "Currency",
+   "label": "Taxable Amount (E)"
+  },
+  {
+   "fieldname": "tax_rate_e",
+   "fieldtype": "Percent",
+   "label": "Tax Rate (E)"
+  },
+  {
+   "fieldname": "tax_amount_e",
+   "fieldtype": "Currency",
+   "label": "Tax Amount (E)"
+  },
+  {
+   "fieldname": "column_break_u7t3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_v6wt",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_non_taxable_amount",
+   "fieldtype": "Currency",
+   "label": "Total Non Taxable Amount"
+  },
+  {
+   "fieldname": "total_before_discount",
+   "fieldtype": "Currency",
+   "label": "Total Before Discount"
+  },
+  {
+   "fieldname": "total_discount_amount",
+   "fieldtype": "Currency",
+   "label": "Total Discount Amount"
+  },
+  {
+   "fieldname": "receipt_url",
+   "fieldtype": "Data",
+   "label": "Receipt URL"
+  },
+  {
+   "fieldname": "return_against",
+   "fieldtype": "Link",
+   "label": "Return Against",
+   "options": "Sales Invoice"
+  },
+  {
+   "default": "0",
+   "fieldname": "update_stock",
+   "fieldtype": "Check",
+   "label": "Update Stock"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Pending eTIMS Sync\neTIMS Synced"
+  }
+ ],
+ "in_create": 1,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-03-14 16:28:10.030369",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS Sales Invoice",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
