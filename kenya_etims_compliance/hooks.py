@@ -131,9 +131,7 @@ doctype_js = {
 
 doc_events = {
         "Sales Invoice": {
-            # "before_save": "kenya_etims_compliance.custom_methods.sales_invoice.validate",
             "on_update": "kenya_etims_compliance.custom_methods.sales_invoice.insert_tax_details",
-            # "on_update": "kenya_etims_compliance.custom_methods.sales_invoice.confirm_etims_sinv",
             "before_submit": "kenya_etims_compliance.kenya_etims_compliance.doctype.etims_sales_invoice.etims_sales_invoice.writeInvoiceToeTIMS",
             "on_submit": "kenya_etims_compliance.custom_methods.bin.on_submit"
         },
@@ -144,7 +142,6 @@ doc_events = {
             "on_submit": "kenya_etims_compliance.custom_methods.bin_stock_entry.on_submit"
         },  
         "Item": {
-            # "before_save": "kenya_etims_compliance.custom_methods.item.autofill_tims_info",
             "before_save":"kenya_etims_compliance.custom_methods.item.create_etims_item_data"
         },
         # "Purchase Invoice": {
@@ -161,26 +158,18 @@ doc_events = {
         #     "on_update": "kenya_etims_compliance.custom_methods.etims_stock_movement.update_stock_to_etims",
         # }
 }
+
+
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-#	"all": [
-#		"kenya_etims_compliance.tasks.all"
-#	],
-#	"daily": [
-#		"kenya_etims_compliance.tasks.daily"
-#	],
-#	"hourly": [
-#		"kenya_etims_compliance.tasks.hourly"
-#	],
-#	"weekly": [
-#		"kenya_etims_compliance.tasks.weekly"
-#	],
-#	"monthly": [
-#		"kenya_etims_compliance.tasks.monthly"
-#	],
-# }
+scheduler_events = {
+    "cron": {
+        "*/10 * * * *": [
+            "kenya_etims_compliance.kenya_etims_compliance.doctype.etims_sales_invoice.etims_sales_invoice.retry_pending_etims_invoices"
+        ]
+    }
+}
 
 # Testing
 # -------

@@ -25,13 +25,16 @@
   "item_group_codes",
   "update_codes",
   "stock_settings_tab",
+  "selling_column",
   "auto_create_etims_sales_invoice",
   "update_stock_selling",
   "last_etims_sales_invoice_number",
   "column_break_d9gc",
   "auto_create_etims_purchase_invoice",
   "update_stock_purchase",
-  "last_etims_purchase_invoice_number"
+  "last_etims_purchase_invoice_number",
+  "column_break_immf",
+  "update_stock_stock"
  ],
  "fields": [
   {
@@ -103,13 +106,13 @@
    "default": "0",
    "fieldname": "update_stock_selling",
    "fieldtype": "Check",
-   "label": "Update Stock (Selling)"
+   "label": "Update Stock"
   },
   {
    "default": "0",
    "fieldname": "update_stock_purchase",
    "fieldtype": "Check",
-   "label": "Update Stock (Purchase)"
+   "label": "Update Stock"
   },
   {
    "fieldname": "item_group_codes",
@@ -124,7 +127,8 @@
   },
   {
    "fieldname": "column_break_d9gc",
-   "fieldtype": "Column Break"
+   "fieldtype": "Column Break",
+   "label": "Buying"
   },
   {
    "fieldname": "get_item_groups",
@@ -169,11 +173,27 @@
    "fieldname": "auto_create_etims_purchase_invoice",
    "fieldtype": "Check",
    "label": "Auto Create eTIMS Invoice"
+  },
+  {
+   "fieldname": "selling_column",
+   "fieldtype": "Column Break",
+   "label": "Selling"
+  },
+  {
+   "fieldname": "column_break_immf",
+   "fieldtype": "Column Break",
+   "label": "Stock"
+  },
+  {
+   "default": "0",
+   "fieldname": "update_stock_stock",
+   "fieldtype": "Check",
+   "label": "Update Stock"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-20 19:33:20.788030",
+ "modified": "2026-03-14 17:38:11.019045",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "Tax Branch Configurations",
@@ -193,6 +213,7 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": []

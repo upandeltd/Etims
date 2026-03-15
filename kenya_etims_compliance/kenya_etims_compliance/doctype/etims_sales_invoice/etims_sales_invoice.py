@@ -8,6 +8,8 @@ import frappe
 from frappe.model.document import Document
 from kenya_etims_compliance.utils.etims_utils import eTIMS
 from frappe.exceptions import ValidationError
+from frappe.utils import now_datetime, time_diff_in_seconds
+
 
 class eTIMSSalesInvoice(Document):
     def before_insert(self):
@@ -47,7 +49,7 @@ class eTIMSSalesInvoice(Document):
     def insert_invoice_number(self):
         if self.update_invoice_in_etims:		
             last_inv_number = self.get_last_inv_number()
-            org_inv_no = get_org_etims_sar_no(self)
+            org_inv_no = get_org_etims_inv_no(self)
            
             self.invoice_number = last_inv_number
             self.original_invoice_number = org_inv_no   
@@ -220,16 +222,120 @@ def get_etims_details(company, branch_id, owner, modified_by):
     return results[0]
 
 
-def writeInvoiceToeTIMS(doc, method):
-    if doc.custom_update_invoice_in_tims:
-        doc_name = doc.name
-        etims_inv_doc_name = frappe.db.exists("eTIMS Sales Invoice", {"trader_invoice_number": doc_name})
+# def writeInvoiceToeTIMS(doc, method):
+#     if doc.custom_update_invoice_in_tims:
+#         doc_name = doc.name
+#         etims_inv_doc_name = frappe.db.exists("eTIMS Sales Invoice", {"trader_invoice_number": doc_name})
         
-        if etims_inv_doc_name and not etims_inv_doc_name in ["None", None]:
-            data_doc = frappe.get_doc("eTIMS Sales Invoice", etims_inv_doc_name)
-            trnsSalesSaveWrReq(data_doc)
-        else:
-            frappe.throw("Update Invoice In eTIMS is checked, you can't proceed without creating an eTIMS Sales Invoice!")
+#         if etims_inv_doc_name and not etims_inv_doc_name in ["None", None]:
+#             data_doc = frappe.get_doc("eTIMS Sales Invoice", etims_inv_doc_name)
+#             # trnsSalesSaveWrReq(data_doc)
+#             frappe.enqueue(
+#                 "kenya_etims_compliance.kenya_etims_compliance.doctype.etims_sales_invoice.etims_sales_invoice.trnsSalesSaveWrReq",
+#                 queue="long",
+#                 doc=data_doc,
+#                 timeout=300
+#             )
+#         else:
+#             frappe.throw("Update Invoice In eTIMS is checked, you can't proceed without creating an eTIMS Sales Invoice!")
+
+# def retry_pending_etims_invoices():
+
+#     pending_docs = frappe.db.get_all(
+#         "eTIMS Sales Invoice",
+#         filters={"sales_updated_in_etims": 0},
+#         fields= ["name", "trader_invoice_number"],
+#         limit=50
+#     )
+
+    
+#     if pending_docs:
+
+#         for d in pending_docs:
+#             try:
+#                 if not frappe.db.exists("Sales Invoice", d.get("trader_invoice_number")):
+#                     frappe.log_error(f'Sales invoice does not exist for eTIMS Sales Invoice {d.get("trader_invoice_number")}', "Retry eTIMS Submission Failed.")
+
+#                 sales_invoice = frappe.get_doc("Sales Invoice", d.get("trader_invoice_number"))
+
+#                 if sales_invoice.get("docstatus") == 1:
+#                     doc = frappe.get_doc("eTIMS Sales Invoice", d.get("name"))
+#                     trnsSalesSaveWrReq(doc)
+
+#             except Exception:
+#                 frappe.log_error(frappe.get_traceback(), "Retry eTIMS Submission Failed.")
+
+
+def retry_pending_etims_invoices():
+
+    pending_docs = frappe.db.get_all(
+        "eTIMS Sales Invoice",
+        filters={"sales_updated_in_etims": 0},
+        fields=["name", "trader_invoice_number", "modified"],
+        limit=50
+    )
+
+    if not pending_docs:
+        return
+
+    for d in pending_docs:
+        try:
+            if not frappe.db.exists("Sales Invoice", d.get("trader_invoice_number")):
+                frappe.log_error(
+                    f'Sales invoice does not exist for eTIMS Sales Invoice {d.get("trader_invoice_number")}',
+                    "Retry eTIMS Submission Failed."
+                )
+                continue
+
+            sales_invoice = frappe.get_doc("Sales Invoice", d.get("trader_invoice_number"))
+
+            # Skip if modified within last 5 minutes
+            seconds_diff = time_diff_in_seconds(now_datetime(), sales_invoice.modified)
+
+            if seconds_diff < 300:
+                continue
+
+            if sales_invoice.docstatus == 1:
+                doc = frappe.get_doc("eTIMS Sales Invoice", d.name)
+                trnsSalesSaveWrReq(doc)
+
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "Retry eTIMS Submission Failed.")
+
+
+def writeInvoiceToeTIMS(doc, method):
+    if not doc.custom_update_invoice_in_tims:
+        return
+
+    doc_name = doc.name
+
+    etims_inv_doc_name = frappe.db.exists(
+        "eTIMS Sales Invoice",
+        {"trader_invoice_number": doc_name}
+    )
+
+    if not etims_inv_doc_name:
+        frappe.throw(
+            "Update Invoice In eTIMS is checked, you can't proceed without creating an eTIMS Sales Invoice!"
+        )
+
+    data_doc = frappe.get_doc("eTIMS Sales Invoice", etims_inv_doc_name)
+
+    try:
+        trnsSalesSaveWrReq(data_doc)
+
+    except Exception as e:
+        # DO NOT BLOCK INVOICE
+        frappe.log_error(frappe.get_traceback(), "eTIMS Connection Error")
+
+        # mark invoice for retry
+        data_doc.etims_sync_status = "Pending"
+        data_doc.save(ignore_permissions=True)
+
+        frappe.msgprint(
+            "Invoice submitted locally. eTIMS will update when connection is restored."
+        )
+
 
 @frappe.whitelist()
 def trnsSalesSaveWrReq(doc):
@@ -314,13 +420,25 @@ def trnsSalesSaveWrReq(doc):
 
         response_json = response.json()
 
-        if not response_json.get("resultCd") == '000':
-            error_message = str(response_json.get("resultMsg"))
+        # if not response_json.get("resultCd") == '000':
+        #     error_message = str(response_json.get("resultMsg"))
 
-            escaped_message = html.escape(error_message)
+        #     escaped_message = html.escape(error_message)
 
-            # Throw error with escaped message
-            frappe.throw(f"{escaped_message}")
+        #     # Throw error with escaped message
+        #     frappe.throw(f"{escaped_message}")
+        if response_json.get("resultCd") != '000':
+            error_message = response_json.get("resultMsg")
+
+            frappe.log_error(
+                title="eTIMS API Error",
+                message=error_message
+            )
+
+            doc.status = "Pending eTIMS Sync"
+            doc.save(ignore_permissions=True)
+
+            return
                         
         data = response_json.get("data")
 
@@ -338,6 +456,9 @@ def trnsSalesSaveWrReq(doc):
         
         
         doc.sales_updated_in_etims = 1
+        doc.status = "eTIMS Synced"
+        doc.save(ignore_permissions=True)
+        
         file_name, url = create_qr_code(headers.get("bhfId"), data.get("rcptSign"))
             
         attachment_url = create_attachment(file_name, doc.name)
@@ -357,8 +478,17 @@ def trnsSalesSaveWrReq(doc):
         
         frappe.msgprint(f'Invoice {doc.trader_invoice_number} has been submitted to eTIMS 🎉')
 
-    except ValidationError as e:
-        frappe.throw(str(e)) 
+    except requests.exceptions.RequestException as e:
+
+        frappe.log_error(
+            frappe.get_traceback(),
+            "eTIMS Network Error"
+        )
+
+        doc.status = "Pending eTIMS Sync"
+        doc.save(ignore_permissions=True)
+
+    return
         
 def stockIOSaveReq(doc, date_str):
     taxAmt = 0
@@ -553,18 +683,33 @@ def get_etims_sar_no(doc):
 
             return etims_sar_no
     
-def get_org_etims_sar_no(doc):
-    org_etims_sar_no = 0
+def get_org_etims_inv_no(doc):
+    org_etims_inv_no = 0
     
     if doc.return_against:
         org_inv_no  = frappe.db.get_value("eTIMS Sales Invoice", {"trader_invoice_number": doc.return_against}, "invoice_number")
         
-        org_etims_sar_no = org_inv_no
+        org_etims_inv_no = org_inv_no
+    
+        return org_etims_inv_no
+    else:
+
+        return org_etims_inv_no
+
+
+def get_org_etims_sar_no(doc):
+    org_etims_sar_no = 0
+    
+    if doc.return_against:
+        prev_doc  = frappe.db.get_value("eTIMS Stock Release Number", {"reference": doc.return_against}, "sr_number")
+        
+        org_etims_sar_no = prev_doc
     
         return org_etims_sar_no
     else:
 
         return org_etims_sar_no
+    
 
 @frappe.whitelist()
 def update_etims_values():

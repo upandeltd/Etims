@@ -22,6 +22,7 @@
   "trader_invoice_number",
   "invoice_number",
   "original_invoice_number",
+  "status",
   "column_break_oxzn",
   "customer_tin",
   "customer_name",
@@ -450,12 +451,20 @@
    "fieldname": "update_stock",
    "fieldtype": "Check",
    "label": "Update Stock"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Pending eTIMS Sync\neTIMS Synced"
   }
  ],
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-21 13:37:53.861341",
+ "modified": "2026-03-14 16:28:10.030369",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Sales Invoice",
@@ -475,6 +484,7 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": []

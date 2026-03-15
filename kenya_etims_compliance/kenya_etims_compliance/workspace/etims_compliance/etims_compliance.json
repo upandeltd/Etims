@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"kT0U0DkSdV\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">eTIMS Compliance</span>\",\"col\":12}},{\"id\":\"j2FgKVfBa6\",\"type\":\"card\",\"data\":{\"card_name\":\"Setup\",\"col\":4}},{\"id\":\"tskJRpVzOh\",\"type\":\"card\",\"data\":{\"card_name\":\"Master\",\"col\":4}},{\"id\":\"iemkpzIz-5\",\"type\":\"card\",\"data\":{\"card_name\":\"Shortcuts\",\"col\":4}}]",
+ "content": "[{\"id\":\"kT0U0DkSdV\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">eTIMS Compliance</span>\",\"col\":12}},{\"id\":\"MNVdejOOXO\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"UbEkTDDh_d\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Invoices Synced To eTIMS\",\"col\":3}},{\"id\":\"RiW9xb2d3g\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Invoices Not Synced To eTIMS\",\"col\":3}},{\"id\":\"zQA454DDAo\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"j2FgKVfBa6\",\"type\":\"card\",\"data\":{\"card_name\":\"Setup\",\"col\":4}},{\"id\":\"tskJRpVzOh\",\"type\":\"card\",\"data\":{\"card_name\":\"Masters\",\"col\":4}},{\"id\":\"iemkpzIz-5\",\"type\":\"card\",\"data\":{\"card_name\":\"Shortcuts\",\"col\":4}}]",
  "creation": "2024-02-17 12:49:27.432630",
  "custom_blocks": [],
  "docstatus": 0,
@@ -133,8 +133,58 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Master",
+   "label": "Setup",
+   "link_count": 4,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Tax Branch Office",
+   "link_count": 0,
+   "link_to": "Tax Branch Office",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Device Initialization",
+   "link_count": 0,
+   "link_to": "TIS Device Initialization",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Tax Branch Configurations",
+   "link_count": 0,
+   "link_to": "Tax Branch Configurations",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Branch User",
+   "link_count": 0,
+   "link_to": "eTIMS Branch User",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Masters",
    "link_count": 6,
+   "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
   },
@@ -197,58 +247,9 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Setup",
-   "link_count": 4,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Tax Branch Office",
-   "link_count": 0,
-   "link_to": "Tax Branch Office",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Device Initialization",
-   "link_count": 0,
-   "link_to": "TIS Device Initialization",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Tax Branch Configurations",
-   "link_count": 0,
-   "link_to": "Tax Branch Configurations",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Branch User",
-   "link_count": 0,
-   "link_to": "eTIMS Branch User",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
   }
  ],
- "modified": "2025-06-25 19:06:32.492443",
+ "modified": "2026-03-14 17:24:35.073244",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Compliance",
@@ -259,6 +260,23 @@
  "quick_lists": [],
  "roles": [],
  "sequence_id": 1.0,
- "shortcuts": [],
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "Report Builder",
+   "label": "Invoices Synced To eTIMS",
+   "link_to": "eTIMS Sales Invoice",
+   "stats_filter": "[[\"eTIMS Sales Invoice\",\"sales_updated_in_etims\",\"=\",1,false]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "Report Builder",
+   "label": "Invoices Not Synced To eTIMS",
+   "link_to": "eTIMS Sales Invoice",
+   "stats_filter": "[[\"eTIMS Sales Invoice\",\"sales_updated_in_etims\",\"=\",0,false]]",
+   "type": "DocType"
+  }
+ ],
  "title": "eTIMS Compliance"
 }
