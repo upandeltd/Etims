@@ -45,6 +45,76 @@ class eTIMSSalesInvoice(Document):
             
                     if self.invoice_number in invoice_numbers:
                         self.insert_invoice_number()
+
+    def before_save(self):
+        self.validate_taxes()
+
+    def validate_taxes(self):
+        total_tax_b = total_taxable_b = total_tax_e = total_taxable_e = 0
+        total_taxable_c = total_taxable_d = total_taxable_a = 0
+        total_taxable_amount  = total_non_taxable_amount = total_tax_amount = 0
+
+        if self.items:
+            for item in self.items:
+                if item.get("tax_type_code") in ["B", "b"]:
+                    if item.get("tax_amount") == 0:
+                        taxable_amount = round(item.get("total_amount") / 1.16, 2)
+                        tax_amount = round(item.get("total_amount") - taxable_amount, 2)
+                        item.taxable_amount = taxable_amount
+                        item.tax_amount = tax_amount
+
+                        total_tax_b += tax_amount
+                        total_taxable_b += taxable_amount
+                        total_taxable_amount += total_taxable_b
+                        total_tax_amount += total_tax_b
+
+                        self.taxable_amount_b = total_taxable_b
+                        self.tax_rate_b = 16
+                        self.tax_amount_b = total_tax_b
+
+                elif item.get("tax_type_code") in ["E", "e"]:
+                    if not item.get("tax_amount"):
+                        taxable_amount = round(item.get("total_amount") / 1.08, 2)
+                        tax_amount = round(item.get("total_amount") - taxable_amount, 2)
+                        item.taxable_amount = taxable_amount
+                        item.tax_amount = tax_amount
+
+                        total_tax_e += tax_amount
+                        total_taxable_e += taxable_amount
+                        total_taxable_amount += total_taxable_e
+                        total_tax_amount += total_tax_e
+
+                        self.taxable_amount_e = total_taxable_e
+                        self.tax_rate_e = 8
+                        self.tax_amount_e = total_tax_e
+
+                elif item.get("tax_type_code") in ["A", "a"]:
+                        total_taxable_a += item.get("taxable_amount")
+                        total_non_taxable_amount += total_taxable_a
+
+                        self.taxable_amount_a = total_taxable_a
+                        self.tax_rate_a = 0
+                        self.tax_amount_a = 0
+
+                elif item.get("tax_type_code") in ["C", "c"]:
+                        total_taxable_c += item.get("taxable_amount")
+                        total_non_taxable_amount += total_taxable_c
+
+                        self.taxable_amount_c = total_taxable_c
+                        self.tax_rate_c = 0
+                        self.tax_amount_c = 0
+
+                elif item.get("tax_type_code") in ["D", "d"]:
+                        total_taxable_d += item.get("taxable_amount")
+                        total_non_taxable_amount += total_taxable_d
+
+                        self.taxable_amount_d = total_taxable_d
+                        self.tax_rate_d = 0
+                        self.tax_amount_d = 0
+
+        self.total_taxable_amount = total_taxable_amount
+        self.total_non_taxable_amount = total_non_taxable_amount
+        self.total_tax_amount = total_tax_amount
                         
     def insert_invoice_number(self):
         if self.update_invoice_in_etims:		
