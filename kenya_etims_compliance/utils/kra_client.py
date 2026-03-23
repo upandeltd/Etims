@@ -35,7 +35,13 @@ class KRAClient:
         for attempt in range(max_retries):
             try:
                 response = requests.post(url, json=payload, headers=self.headers, timeout=timeout)
+                if not response.content or not response.content.strip():
+                    self._log_error(endpoint, f"Empty response body (HTTP {response.status_code})")
+                    return {"Error": f"KRA API returned empty response (HTTP {response.status_code})", "Retryable": True}
                 return self._handle_response(response.json(), endpoint)
+            except requests.JSONDecodeError as e:
+                self._log_error(endpoint, f"Invalid JSON response (HTTP {response.status_code}): {response.text[:500]}")
+                return {"Error": f"KRA API returned invalid JSON (HTTP {response.status_code})", "Retryable": True}
             except requests.ConnectionError:
                 if attempt < max_retries - 1:
                     time.sleep(retry_delay)
