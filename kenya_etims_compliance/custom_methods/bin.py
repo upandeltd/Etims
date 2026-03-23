@@ -10,15 +10,22 @@ def on_submit(doc, method):
     mod_user_name = eTIMS.get_name_of_user(doc.modified_by)
     reg_user_name = eTIMS.get_name_of_user(doc.owner)
     
-    try: 
-        for item in doc.items:
-            if item.get("custom_maintain_stock") == 1:
+    for item in doc.items:
+        if item.get("custom_maintain_stock") == 1:
+            try:
                 stockMasterSaveReq(item, doc, reg_user_name, mod_user_name)
                 item.custom_stock_master_updated = 1
-                            
                 frappe.msgprint("Master Stock updated successfully")
-    except Exception:
-        frappe.throw("Error saving Master Stock")        
+            except Exception as e:
+                frappe.log_error(
+                    title="eTIMS Stock Master Error",
+                    message=f"Failed to update stock master for {item.get('item_code')}: {str(e)}"
+                )
+                frappe.msgprint(
+                    f"Warning: Could not update eTIMS Stock Master for {item.get('item_code')}: {str(e)}",
+                    indicator="orange",
+                    alert=True
+                )        
     
 def get_bin_qty(item_code):
         tax_branch = eTIMS.get_user_branch_id()
@@ -31,8 +38,9 @@ def get_bin_qty(item_code):
         bin_docs = frappe.db.get_all("Bin", filters={"item_code":item_code, "warehouse": store_warehouse[0].get("name")}, fields=["actual_qty"])
 
         if bin_docs:
-
             return bin_docs[0].get("actual_qty")
+
+        return 0
     
 def stockMasterSaveReq(item, doc, regName, modName):
     item_code = frappe.db.get_value('Item', item.get("item_code"), 'custom_item_code')
