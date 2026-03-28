@@ -15,7 +15,7 @@ add_to_apps_screen = [
         "name": "kenya_etims_compliance",
         "logo": "/assets/kenya_etims_compliance/images/etims-logo.svg",
         "title": "eTIMS Compliance",
-        "route": "/desk/etims-compliance",
+        "route": "/app/etims-compliance",
         "has_permission": "kenya_etims_compliance.check_app_permission",
     }
 ]
@@ -188,13 +188,7 @@ scheduler_events = {
         "*/5 * * * *": [
             "kenya_etims_compliance.custom_methods.queue_processor.retry_failed_invoices"
         ],
-        "*/15 * * * *": [
-            "kenya_etims_compliance.tasks.process_submission_queue",
-        ],
     },
-    "hourly": [
-        "kenya_etims_compliance.tasks.retry_failed_submissions",
-    ],
     "daily": [
         "kenya_etims_compliance.tasks.fetch_kra_notices",
         "kenya_etims_compliance.tasks.fetch_purchase_transactions",
@@ -282,6 +276,11 @@ scheduler_events = {
 
 fixtures = [
     {"dt": "Custom Field", "filters": [["module", "=", "Kenya Etims Compliance"]]},
+    {"dt": "Workspace", "filters": [["name", "=", "eTIMS Compliance"]]},
     {"dt": "Workspace Sidebar", "filters": [["module", "=", "Kenya Etims Compliance"]]},
+    {"dt": "Role", "filters": [["name", "in", [
+        "eTIMS Administrator", "eTIMS Manager", "eTIMS Operator",
+        "eTIMS Auditor", "eTIMS Sales Clerk", "eTIMS Purchase Clerk", "eTIMS Store Keeper"
+    ]]]},
     {"dt": "eTIMS Credit Note Reason", "filters": [["code", "!=", ""]]}
 ]

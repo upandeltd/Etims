@@ -39,5 +39,6 @@ def setup_workspace_sidebar():
 				import_file_by_path(sidebar_path)
 		except ImportError:
 			pass  # import_file_by_path not available on this Frappe version
-		except Exception:
+		except Exception as e:
+			frappe.log_error("eTIMS: After install error", str(e))
 			pass  # Not critical - workspace JSON handles navigation

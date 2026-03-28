@@ -61,6 +61,7 @@
   {
    "fieldname": "api_endpoint",
    "fieldtype": "Data",
+   "in_standard_filter": 1,
    "label": "API Endpoint",
    "reqd": 1
   },

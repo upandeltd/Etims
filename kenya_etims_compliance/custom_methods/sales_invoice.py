@@ -6,6 +6,9 @@ from frappe import _
 from kenya_etims_compliance.utils.etims_utils import eTIMS
 from kenya_etims_compliance.utils.kra_client import KRAClient
 from kenya_etims_compliance.utils.etims_utils import get_next_sar_number, get_org_sar_number
+from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import get_etims_settings
+from kenya_etims_compliance.custom_methods.receipt_labels import get_receipt_label
+from kenya_etims_compliance.custom_methods.queue_processor import enqueue_invoice
 
 
 @frappe.whitelist()
@@ -292,7 +295,6 @@ def trnsSalesSaveWrReq(doc, method):
                 frappe.throw("Invalid, return amount is greater than original amount!")
     
     if doc.custom_update_invoice_in_tims:
-        from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import get_etims_settings
         settings = get_etims_settings()
 
         # Training mode (Spec 4.1.3): set receipt type to "T"
@@ -300,18 +302,15 @@ def trnsSalesSaveWrReq(doc, method):
             payload["rcptTyCd"] = "T"
 
         # Set receipt label (Spec 4.3)
-        from kenya_etims_compliance.custom_methods.receipt_labels import get_receipt_label
         receipt_label = get_receipt_label(doc)
         frappe.db.set_value("Sales Invoice", doc.name, "custom_receipt_label", receipt_label, update_modified=False)
 
         if settings.get("enable_queue", 1):
-            from kenya_etims_compliance.custom_methods.queue_processor import enqueue_invoice
-
             branch_id = None
             try:
                 branch_id = KRAClient()._get_user_branch_id()
-            except Exception:
-                pass
+            except Exception as e:
+                frappe.log_error("eTIMS: Failed to get branch ID", str(e))
 
             enqueue_invoice(
                 doc=doc,
@@ -462,8 +461,8 @@ def get_last_inv_number(doc, branch_id):
                 
             cur_number = last_inv_no + 1
             
-        except Exception:
-
+        except Exception as e:
+            frappe.log_error("eTIMS: Invoice number calculation error", str(e))
             cur_number = last_inv_no + 1
     
     return cur_number
@@ -607,8 +606,9 @@ def create_qr_code(pin, branch_id, rcpt_signature):
 
                 return file_name, url
 
-            except Exception:
-                frappe.throw("QR Code Not Generated!")
+            except Exception as e:
+                frappe.log_error("eTIMS: QR code generation failed", str(e))
+                frappe.throw(f"QR Code Not Generated: {str(e)}")
             
     
 def create_attachment(file_name, inv_name):

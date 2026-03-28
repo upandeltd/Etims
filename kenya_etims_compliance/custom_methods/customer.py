@@ -1,11 +1,8 @@
-import requests
-
 import frappe
-from kenya_etims_compliance.utils.etims_utils import eTIMS
+from kenya_etims_compliance.utils.kra_client import KRAClient
 
 @frappe.whitelist()
 def bhfCustSaveReq(doc_name):
-    headers = eTIMS.get_headers()
     item = frappe.get_doc("Customer", doc_name)
 
     customer = {
@@ -25,25 +22,18 @@ def bhfCustSaveReq(doc_name):
 	}
  
     try:
-        response = requests.request(
-            "POST",
-            eTIMS.tims_base_url() + 'saveBhfCustomer',
-            json = customer,
-            headers=headers,
-            timeout=30
-        )
+        result = KRAClient().post("saveBhfCustomer", customer)
 
-        response_json = response.json()
-
-        if not response_json.get("resultCd") == '000':
-            frappe.logger().debug("Customer registration error: {0}".format(response_json.get("resultMsg")))
-            return {"Error":response_json.get("resultMsg")}
+        if result.get("Error"):
+            frappe.logger().debug("Customer registration error: {0}".format(result.get("Error")))
+            return {"Error": result.get("Error")}
 
         item.custom_is_registered = 1
         item.save()
 
-        return {"Success":response_json.get("resultMsg")}
+        return {"Success": result.get("Success")}
 
-    except Exception:
-        return {"Error":"Oops Bad Request!"}	
+    except Exception as e:
+        frappe.log_error("eTIMS: Customer registration error", str(e))
+        return {"Error": "Oops Bad Request!"}	
 

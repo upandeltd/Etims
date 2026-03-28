@@ -42,9 +42,9 @@ def get_dashboard_data():
 	# Queue status
 	queue_pending = 0
 	queue_failed = 0
-	if frappe.db.exists("DocType", "eTIMS Submission Queue"):
-		queue_pending = frappe.db.count("eTIMS Submission Queue", filters={"status": "Queued"})
-		queue_failed = frappe.db.count("eTIMS Submission Queue", filters={"status": "Failed"})
+	if frappe.db.exists("DocType", "eTIMS Invoice Queue"):
+		queue_pending = frappe.db.count("eTIMS Invoice Queue", filters={"status": "Queued"})
+		queue_failed = frappe.db.count("eTIMS Invoice Queue", filters={"status": "Failed"})
 
 	# Days to filing deadline (20th of next month)
 	filing_day = 20

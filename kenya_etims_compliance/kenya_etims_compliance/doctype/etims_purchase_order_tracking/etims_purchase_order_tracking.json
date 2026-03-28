@@ -36,31 +36,31 @@
   {
    "fieldname": "purchase_order",
    "fieldtype": "Link",
-   "label": "Purchase Order",
-   "options": "Purchase Order",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "reqd": 1,
-   "read_only": 1
+   "label": "Purchase Order",
+   "options": "Purchase Order",
+   "read_only": 1,
+   "reqd": 1
   },
   {
    "fieldname": "supplier",
    "fieldtype": "Link",
-   "label": "Supplier",
-   "options": "Supplier",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "reqd": 1,
-   "read_only": 1
+   "label": "Supplier",
+   "options": "Supplier",
+   "read_only": 1,
+   "reqd": 1
   },
   {
    "fieldname": "transaction_date",
    "fieldtype": "Date",
-   "label": "Transaction Date",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "reqd": 1,
-   "read_only": 1
+   "label": "Transaction Date",
+   "read_only": 1,
+   "reqd": 1
   },
   {
    "fieldname": "delivery_date",
@@ -75,8 +75,8 @@
   {
    "fieldname": "total_amount",
    "fieldtype": "Currency",
-   "label": "Total Amount",
    "in_list_view": 1,
+   "label": "Total Amount",
    "read_only": 1
   },
   {
@@ -102,18 +102,18 @@
    "default": "Pending Invoice",
    "fieldname": "status",
    "fieldtype": "Select",
-   "label": "Status",
-   "options": "Pending Invoice\nInvoiced\nVerified\nPaid",
    "in_list_view": 1,
    "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Pending Invoice\nInvoiced\nVerified\nPaid",
    "read_only": 1
   },
   {
    "fieldname": "invoice",
    "fieldtype": "Link",
+   "in_standard_filter": 1,
    "label": "Purchase Invoice",
    "options": "Purchase Invoice",
-   "in_standard_filter": 1,
    "read_only": 1
   },
   {
@@ -136,9 +136,9 @@
    "default": "0",
    "fieldname": "invoice_verified",
    "fieldtype": "Check",
-   "label": "Invoice Verified",
    "in_list_view": 1,
    "in_standard_filter": 1,
+   "label": "Invoice Verified",
    "read_only": 1
   },
   {
@@ -148,17 +148,17 @@
    "read_only": 1
   },
   {
+   "depends_on": "eval:doc.status=='Paid'",
    "fieldname": "payment_section",
    "fieldtype": "Section Break",
-   "label": "Payment Status",
-   "depends_on": "eval:doc.status=='Paid'"
+   "label": "Payment Status"
   },
   {
    "fieldname": "payment_entry",
    "fieldtype": "Link",
+   "in_standard_filter": 1,
    "label": "Payment Entry",
    "options": "Payment Entry",
-   "in_standard_filter": 1,
    "read_only": 1
   },
   {
@@ -168,10 +168,10 @@
    "read_only": 1
   },
   {
+   "depends_on": "eval:doc.invoice_verified==1",
    "fieldname": "qr_code_section",
    "fieldtype": "Section Break",
-   "label": "eTIMS Verification Details",
-   "depends_on": "eval:doc.invoice_verified==1"
+   "label": "eTIMS Verification Details"
   },
   {
    "fieldname": "qr_code",
@@ -278,5 +278,6 @@
  "sort_field": "transaction_date",
  "sort_order": "DESC",
  "states": [],
- "title_field": "purchase_order"
+ "title_field": "purchase_order",
+ "track_changes": 1
 }

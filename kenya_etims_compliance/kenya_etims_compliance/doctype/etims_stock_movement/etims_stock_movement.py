@@ -11,8 +11,7 @@ class eTIMSStockMovement(Document):
     def after_insert(self):
         if not self.stock_updated == 1:
             # self.create_stock_trns_entry()
-            print(")"*70)
-            print(self.stock_updated)
+            pass
             # if response == True:
             #     print("True")
             #     self.stock_updated = 1
@@ -43,11 +42,11 @@ class eTIMSStockMovement(Document):
                             frappe.db.set_value('eTIMS Stock Movement Item', item.name, {'stock_updated': 1}, update_modified=True)
                             frappe.db.set_value('eTIMS Stock Movement', self.name, {'stock_updated': 1, "stock_entry": new_stock_doc.name}, update_modified=True)
                             
-                        except Exception:
-                            frappe.throw(traceback.format_exc())
+                        except Exception as e:
+                            frappe.log_error("eTIMS: Stock movement entry failed", str(e))
+                            frappe.throw(str(e))
             else:
-                print("()"*89)
-                print("oakety")
+                frappe.logger().debug("eTIMS: Stock movement has no items")
         else:  
             frappe.throw("Warehouse not found for tax branch!")
 

@@ -1,7 +1,8 @@
-import requests, traceback
+import traceback
 
 import frappe
 from kenya_etims_compliance.utils.etims_utils import eTIMS
+from kenya_etims_compliance.utils.kra_client import KRAClient
 @frappe.whitelist()
 def itemSaveComposition(doc_name):
     bom_item_list = get_bom_items(doc_name)
@@ -40,30 +41,21 @@ def get_bom_items(doc_name):
     return payload_list
 
 def post_item_compostion(item_payload, doc):
-    headers = eTIMS.get_headers()
-    
     for item in doc.items:
         if item.get("custom_etims_item_code") == item_payload.get("cpstItemCd"):
             try:
-                response = requests.request(
-                    "POST",
-                    eTIMS.tims_base_url() + 'saveItemComposition',
-                    json = item_payload,
-                    headers=headers,
-                    timeout=30
-                )
+                result = KRAClient().post("saveItemComposition", item_payload)
 
-                response_json = response.json()
+                if result.get("Error"):
+                    frappe.throw(result.get("Error"))
 
-                if not response_json.get("resultCd") == '000':
-                    
-                    frappe.throw(response_json.get("resultMsg"))
-                
                 item.custom_updated_in_etims = 1
                 doc.save()
-                frappe.msgprint(response_json.get("resultMsg"))
+                frappe.msgprint(result.get("Success") or "Item composition saved successfully.")
 
-            except Exception:
+            except frappe.exceptions.ValidationError:
+                raise
+            except Exception as e:
                 eTIMS.log_errors("Item Save Composition", traceback.format_exc())
                 frappe.throw("Oops Bad Request!")
             

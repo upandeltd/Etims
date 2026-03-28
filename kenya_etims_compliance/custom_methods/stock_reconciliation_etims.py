@@ -142,7 +142,7 @@ def _get_local_summary(from_date, to_date, branch=None):
 			warehouse_filter = "AND sle.warehouse IN %(warehouses)s"
 			params["warehouses"] = list(wh_list)
 
-	result = frappe.db.sql(f"""
+	base_query = """
 		SELECT
 			sle.item_code,
 			SUM(CASE WHEN sle.actual_qty > 0 THEN sle.actual_qty ELSE 0 END) as qty_in,
@@ -150,9 +150,14 @@ def _get_local_summary(from_date, to_date, branch=None):
 		FROM `tabStock Ledger Entry` sle
 		WHERE sle.posting_date BETWEEN %(from_date)s AND %(to_date)s
 		AND sle.is_cancelled = 0
-		{warehouse_filter}
-		GROUP BY sle.item_code
-	""", params, as_dict=True)
+	"""
+
+	if warehouse_filter:
+		base_query += " AND sle.warehouse IN %(warehouses)s"
+
+	base_query += " GROUP BY sle.item_code"
+
+	result = frappe.db.sql(base_query, params, as_dict=True)
 
 	return {r.item_code: {"qty_in": flt(r.qty_in), "qty_out": flt(r.qty_out)} for r in result}
 

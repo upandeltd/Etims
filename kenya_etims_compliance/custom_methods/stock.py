@@ -190,7 +190,8 @@ def get_warehouse_branch(warehouse_name):
         warehouse_doc = frappe.get_doc("Warehouse", warehouse_name)
         
         return warehouse_doc.get("custom_tax_branch_office")
-    except Exception:
+    except Exception as e:
+        frappe.log_error("eTIMS: Stock error", str(e))
         frappe.throw("No tax branch id")
     
     

@@ -238,5 +238,6 @@
  "sort_field": "declaration_date",
  "sort_order": "DESC",
  "states": [],
- "title_field": "item_name"
+ "title_field": "item_name",
+ "track_changes": 1
 }

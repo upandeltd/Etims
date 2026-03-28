@@ -160,19 +160,19 @@ def _supplier_health_score():
 
 def _error_rate_score(from_date, to_date):
 	"""% of submissions that succeeded without retry."""
-	if not frappe.db.exists("DocType", "eTIMS Submission Queue"):
+	if not frappe.db.exists("DocType", "eTIMS Invoice Queue"):
 		return 100
 
-	total = frappe.db.count("eTIMS Submission Queue", filters={
+	total = frappe.db.count("eTIMS Invoice Queue", filters={
 		"creation": ["between", [from_date, to_date]],
 	})
 	if not total:
 		return 100
 
-	first_try_success = frappe.db.count("eTIMS Submission Queue", filters={
+	first_try_success = frappe.db.count("eTIMS Invoice Queue", filters={
 		"creation": ["between", [from_date, to_date]],
-		"status": "Success",
-		"attempts": ["<=", 1],
+		"status": "Sent",
+		"retry_count": ["<=", 1],
 	})
 	return round((first_try_success / total) * 100)
 

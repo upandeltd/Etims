@@ -366,7 +366,8 @@ def log_permission_check(doctype, action, result):
 			f"Branch: {log_entry.get('branch', 'N/A')}"
 		)
 		log_doc.insert()
-	except Exception:
+	except Exception as e:
+		frappe.log_error("eTIMS: Permission check error", str(e))
 		pass  # Silently fail if logging fails
 
 

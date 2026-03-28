@@ -159,7 +159,7 @@ def fetch_total_non_vat(doc):
                 
     return taxable_non_vat_amount
 
-def handle_reverse_invoice(doc, headers):
+def handle_reverse_invoice(doc):
     """Handle buyer-initiated invoicing for unregistered suppliers.
 
     Per KRA Reverse Invoicing Guidelines (March 2025).
@@ -218,28 +218,21 @@ def handle_reverse_invoice(doc, headers):
                 payload[f"taxRt{code}"] = abs(get_tax_account_rate(tax_item.get("account_head")) or 0)
                 payload[f"taxAmt{code}"] = abs(tax_item.get("base_tax_amount_after_discount_amount", 0))
 
-    try:
-        response = requests.request(
-            "POST", eTIMS.tims_base_url() + 'saveTrnsSalesOsdc',
-            json=payload, headers=headers, timeout=30,
-        )
-        response_json = response.json()
-        if response_json.get("resultCd") != "000":
-            frappe.throw(response_json.get("resultMsg"))
-        return response_json.get("data")
-    except requests.Timeout:
-        frappe.throw(_("eTIMS request timed out. Please try again."))
-    except Exception as e:
-        frappe.log_error(title="eTIMS Reverse Invoice Error", message=traceback.format_exc())
-        frappe.throw(f"eTIMS Error: {str(e)}")
+    result = KRAClient().post(
+        "saveTrnsSalesOsdc", payload,
+        reference_doctype="Purchase Invoice", reference_name=doc.name,
+    )
+    if result.get("Error"):
+        frappe.log_error(title="eTIMS Reverse Invoice Error", message=result.get("Error"))
+        frappe.throw(f"eTIMS Error: {result.get('Error')}")
+    return result.get("Success")
 
 
 @frappe.whitelist()
 def trnsPurchaseSaveReq(doc, method):
     # Handle reverse invoicing (buyer-initiated)
     if getattr(doc, 'custom_is_reverse_invoice', False):
-        headers = eTIMS.get_headers()
-        result = handle_reverse_invoice(doc, headers)
+        result = handle_reverse_invoice(doc)
         if result:
             frappe.msgprint(_("Reverse invoice submitted to eTIMS"))
         return
@@ -365,8 +358,8 @@ def trnsPurchaseSaveReq(doc, method):
             branch_id = None
             try:
                 branch_id = KRAClient()._get_user_branch_id()
-            except Exception:
-                pass
+            except Exception as e:
+                frappe.log_error("eTIMS: Failed to get branch ID", str(e))
 
             enqueue_invoice(
                 doc=doc,
@@ -492,8 +485,8 @@ def get_last_inv_number(doc, branch_id):
             
         cur_number = last_inv_no + 1
         
-    except Exception:
-
+    except Exception as e:
+        frappe.log_error("eTIMS: Invoice number calculation error", str(e))
         cur_number = last_inv_no + 1
     
     return cur_number

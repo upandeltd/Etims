@@ -209,6 +209,7 @@ def _record_match(entry, pi, status, variance):
 @frappe.whitelist()
 def run_reconciliation_manual(period=None, branch=None):
 	"""Whitelisted method for manual reconciliation trigger."""
+	frappe.has_permission("eTIMS Reconciliation Log", "create", throw=True)
 	result = run_reconciliation(period, branch)
 	frappe.msgprint(
 		_("Reconciliation: {matched} matched, {mismatched} mismatched, "
@@ -220,6 +221,7 @@ def run_reconciliation_manual(period=None, branch=None):
 @frappe.whitelist()
 def accept_variance(entry_name, reason):
 	"""Accept a variance with a reason."""
+	frappe.has_permission("eTIMS Purchase Register Entry", "write", throw=True)
 	frappe.db.set_value("eTIMS Purchase Register Entry", entry_name, {
 		"variance_accepted": 1,
 		"variance_reason": reason,

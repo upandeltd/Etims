@@ -2,11 +2,12 @@
 # For license information, please see license.txt
 
 from datetime import datetime
-import requests, traceback
+import traceback
 
 import frappe
 from frappe.model.document import Document
 from kenya_etims_compliance.utils.etims_utils import eTIMS
+from kenya_etims_compliance.utils.kra_client import KRAClient
 
 
 class eTIMSCodeInformation(Document):
@@ -17,122 +18,93 @@ class eTIMSCodeInformation(Document):
         request_datetime = self.code_request_datetime
         date_time_str = eTIMS.strf_datetime_object(request_datetime)
 
-        headers = eTIMS.get_headers()
-
         payload = {
             "lastReqDt": date_time_str,
         }
 
         try:
-            response = requests.request(
-                "POST",
-                eTIMS.tims_base_url() + "selectCodeList",
-                json=payload,
-                headers=headers,
-                timeout=30,
-            )
-            response_json = response.json()
+            result = KRAClient().post("selectCodeList", payload)
 
-            if not response_json.get("resultCd") == "000":
-                return {"Error": response_json.get("resultMsg")}
+            if result.get("Error"):
+                return {"Error": result.get("Error")}
 
-            process_code_information(response_json)
-            create_quantity_units(response_json)
-            create_packing_units(response_json)
-            create_country_code(response_json)
+            response_result = {"data": result.get("Success")}
+            process_code_information(response_result)
+            create_quantity_units(response_result)
+            create_packing_units(response_result)
+            create_country_code(response_result)
 
             self.last_search_date_and_time = request_datetime
 
-            return {"Success": response_json.get("resultMsg")}
+            return {"Success": "Code search completed"}
 
-        except Exception:
-            eTIMS.log_errors("Code Search", traceback.format_exc())
+        except Exception as e:
+            frappe.log_error(title="Code Search", message=traceback.format_exc())
             return {"Error":"Oops Bad Request!"}
 
-    #This part describes the Customer API function (url : /selectCustomer) and 
-    # data types for each item. The Customer means the taxpayer. 
-    # API functions are dividedinto 'Request:Argument' and 'Response:Return Object'. 
-    # The CustSearchReq is an Argument Object of Request, The CustSearchRes is a ReturnObjectofResponse. 
-    # Based on the ‘custmTin ‘, the server provides customer information registered to the provided PIN
+    #This part describes the Customer API function (url : /selectCustomer) and
+    # data types for each item. The Customer means the taxpayer.
+    # API functions are dividedinto 'Request:Argument' and 'Response:Return Object'.
+    # The CustSearchReq is an Argument Object of Request, The CustSearchRes is a ReturnObjectofResponse.
+    # Based on the 'custmTin ', the server provides customer information registered to the provided PIN
     @frappe.whitelist()
     def custSearchReq(self):
         #empty customer details records first
         self.set("customer_details", [])
         self.save()
-        
-        headers = eTIMS.get_headers()
 
         payload = {
             "custmTin": self.customer_tin
             }
 
         try:
-            response = requests.request(
-                "POST",
-                eTIMS.tims_base_url() + "selectCustomer",
-                json=payload,
-                headers=headers,
-                timeout=30,
-            )
-            
-            response_data = response.json()
-            response_json = eTIMS.get_response_data(response_data)
-            
+            result = KRAClient().post("selectCustomer", payload)
 
-            if not response_json.get("resultCd") == "000":
-                return {"Error": response_json.get("resultMsg")}
-            
-            data = response_json.get("data")
+            if result.get("Error"):
+                return {"Error": result.get("Error")}
+
+            data = result.get("Success")
             if data:
                 for cust in data.get("custList"):
                     cust_exists = check_customer_exists(cust.get("tin"))
-                    
+
                     self.create_erp_customer(cust.get("taxprNm"), cust.get("tin"))
-                    
+
                     if not cust_exists == True:
                         self.create_customer(cust)
 
-            return {"Success": response_json.get("resultMsg")}
+            return {"Success": "Customer search completed"}
 
-        except Exception:
-            eTIMS.log_errors("Customer Search", traceback.format_exc())
+        except Exception as e:
+            frappe.log_error(title="Customer Search", message=traceback.format_exc())
             return {"Error":"Oops Bad Request!"}
-    
-    #This part describes the components of Notice API function(url : /selectNoticeList) and data types for each item. 
-    # This API function is divided into 'Request:Argument' and 'Response: Return Object'. 
+
+    #This part describes the components of Notice API function(url : /selectNoticeList) and data types for each item.
+    # This API function is divided into 'Request:Argument' and 'Response: Return Object'.
     # The NoticeSearchReq is an Argument Object of Request, The NoticeSearchRes is a Return ObjectofResponse
     @frappe.whitelist()
     def noticeSearchReq(self):
         #empty notice records first
         self.set("notices", [])
         self.save()
-        
+
         request_datetime = self.notice_date_and_time
         date_time_str = eTIMS.strf_datetime_object(request_datetime)
-
-        headers = eTIMS.get_headers()
 
         payload = {
             "lastReqDt": date_time_str,
         }
 
         try:
-            response = requests.request(
-                "POST",
-                eTIMS.tims_base_url() + "selectNoticeList",
-                json=payload,
-                headers=headers,
-                timeout=30,
-            )
+            result = KRAClient().post("selectNoticeList", payload)
 
-            response_json = response.json()
+            if result.get("Error"):
+                return {"Error": result.get("Error")}
 
-            if not response_json.get("resultCd") == "000":
-                return {"Error": response_json.get("resultMsg")}
-
-            notice_list = process_notices(response_json)
+            response_result = {"data": result.get("Success")}
+            notice_list = process_notices(response_result)
             self.last_request_date = request_datetime
-            
+
             for notice in notice_list:
                 create_notice_record(notice)
                 notice_exists = check_if_notice_exists(notice.get("notice_number"))
@@ -140,10 +112,10 @@ class eTIMSCodeInformation(Document):
                     self.append("notices", notice)
 
                     self.save()
-            return {"Success": response_json.get("resultMsg")}
+            return {"Success": "Notice search completed"}
 
-        except Exception:
-            eTIMS.log_errors("Notice Search", traceback.format_exc())
+        except Exception as e:
+            frappe.log_error(title="Notice Search", message=traceback.format_exc())
             return {"Error":"Oops Bad Request!"}
 
     @frappe.whitelist()
@@ -172,10 +144,10 @@ class eTIMSCodeInformation(Document):
         self.append("customer_details", customer_dict)
         self.save()
         return True
-    
+
     def create_erp_customer(self, customer_name, pin):
         customer_exists = frappe.db.exists("Customer", {"customer_name": customer_name})
-        
+
         if not customer_exists:
             new_customer = frappe.new_doc("Customer")
             new_customer.customer_name = customer_name
@@ -184,9 +156,9 @@ class eTIMSCodeInformation(Document):
             new_customer.custom_customer_name = customer_name
             new_customer.customer_type = "Company"
             new_customer.customer_group = "Individual"
-        
+
             new_customer.insert()
-        
+
 
 
 ######################################### Methods ##################################################
@@ -320,7 +292,7 @@ def create_quantity_units(response_result):
                         new_doc.use_yes_or_no = code_item.get("useYn")
                         new_doc.insert()
 
-#method to create etims country codes and contry names, to keep consistency                    
+#method to create etims country codes and contry names, to keep consistency
 def create_country_code(response_result):
     data = response_result.get("data")
     if data.get("clsList"):
@@ -334,11 +306,11 @@ def create_country_code(response_result):
                         new_doc = frappe.new_doc("eTIMS Country")
                         new_doc.country_name = code_item.get("cdNm")
                         new_doc.code_name = code_item.get("cd")
-                       
+
                         new_doc.insert()
 
-                        
-                        
+
+
 def check_if_doc_exists(doc, doc_filter, doc_value):
     cdcls_exists = False
     code_info_docs = frappe.db.get_all(doc, filters={doc_filter: doc_value})
@@ -371,7 +343,7 @@ def create_notice_record(notice):
         new_notice_record.detail_url = notice.get("detail_url")
         new_notice_record.registration_name = notice.get("registration_name")
         new_notice_record.registration_date_and_time = notice.get("registration_date_and_time")
-        
+
         new_notice_record.insert()
     if notice_rec_exists:
         notice_doc = frappe.get_doc("eTIMS Notice", notice_rec_exists)
@@ -380,6 +352,5 @@ def create_notice_record(notice):
         notice_doc.detail_url = notice.get("detail_url")
         notice_doc.registration_name = notice.get("registration_name")
         notice_doc.registration_date_and_time = notice.get("registration_date_and_time")
-        
+
         notice_doc.save()
-        

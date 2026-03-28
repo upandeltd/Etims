@@ -2,11 +2,12 @@
 # For license information, please see license.txt
 
 from datetime  import datetime
-import requests, traceback
+import traceback
 
 import frappe
 from frappe.model.document import Document
 from kenya_etims_compliance.utils.etims_utils import eTIMS
+from kenya_etims_compliance.utils.kra_client import KRAClient
 
 
 class eTIMSImportItemInformation(Document):
@@ -14,47 +15,38 @@ class eTIMSImportItemInformation(Document):
     def importItemSearchReq(self):
         request_datetime = self.data_from_datetime
         date_time_str = eTIMS.strf_datetime_object(request_datetime)
-        
-        headers = eTIMS.get_headers()
 
         payload = {
-                "lastReqDt" : date_time_str, 
+                "lastReqDt" : date_time_str,
         }
 
         try:
-            response = requests.request(
-                "POST",
-                eTIMS.tims_base_url() + 'selectImportItemList',
-                json = payload,
-                headers=headers,
-                timeout=30
-            )
-            response_data = response.json()
-            response_json = eTIMS.get_response_data(response_data)
-   
-            if not response_json.get("resultCd") == '000':
-                return {"Error":response_json.get("resultMsg")}
+            result = KRAClient().post("selectImportItemList", payload)
 
-            item_list = process_item_information(response_json)
+            if result.get("Error"):
+                return {"Error": result.get("Error")}
+
+            response_result = {"data": result.get("Success")}
+            item_list = process_item_information(response_result)
             self.last_search_date_and_time = request_datetime
-               
-            
+
+
             for item in item_list:
                 item_exists = check_import_item_exits(item.get("task_code"))
-    
+
                 if item_exists == False:
                     map_import_item(item)
                     self.save()
                 else:
                     update_import_item_entry(item, item_exists)
-            
-                
-            return {"Success": response_json.get("resultMsg")}
 
-        except Exception:
-            eTIMS.log_errors("Search Import Item", traceback.format_exc())
+
+            return {"Success": "Import item search completed"}
+
+        except Exception as e:
+            frappe.log_error(title="Search Import Item", message=traceback.format_exc())
             return {"Error":"Oops Bad Request!"}
-    
+
 #  pkgUnitCd': 'KGM', 'qty': 14, 'qtyUnitCd': 'KGM', 'totWt': 140, 'netWt': 14, 'spplrNm': 'SEITZ GMGH', 'agntNm': 'SCHENKER LIMITED', 'invcFcurAmt': 11817.5, 'invcFcurCd': 'EUR', 'invcFcurExcrt': 135.73}, {'taskCd': '20230209004633', 'dclDe': '01022023', 'itemSeq': 1, 'dclNo': '23NBOIM401167364', 'hsCd': '63079000', 'itemNm': 'N; LIFTING BELTS 2t x 4m,3t x4m,5t x 4m,2t x 1m; L; 1; 1; 1; ', 'imptItemsttsCd': '2', 'orgnNatCd': 'DE', 'exptNatCd': 'DE', 'pkg': 17, 'pkgUnitCd': 'KGM', 'qty': 14, 'qtyUnitCd': 'KGM', 'totWt': 140, 'netWt': 14, 'spplrNm': 'SEITZ GMGH', 'agntNm': 'SCHENKER LIMITED', 'invcFcurAmt': 11817.5, 'invcFcurCd': 'EUR', 'invcFcurExcrt': 135.73}, {'taskCd': '20230209004634', 'dclDe': '01022023', 'itemSeq': 1, 'dclNo': '23NBOIM401167364', 'hsCd': '63079000', 'itemNm': 'N; LIFTING BELTS 2t x 4m,3t x4m,5t x 4m,2t x 1m; L; 1; 1; 1; ', 'imptItemsttsCd': '2', 'orgnNatCd': 'DE', 'exptNatCd': 'DE', 'pkg': 17, 'pkgUnitCd': 'KGM', 'qty': 14, 'qtyUnitCd': 'KGM', 'totWt': 140, 'netWt': 14, 'spplrNm': 'SEITZ GMGH'
 ######################################### Methods ################################
 def process_item_information(response_result):
@@ -102,63 +94,64 @@ def check_import_item_exits(task_code):
 def create_import_item_entry(item):
     # Create a new document of the eTIMS Import Item doctype
     new_import_item_doc = frappe.new_doc("eTIMS Import Item")
-    
+
     # Get a list of valid field names in the doctype
     valid_fields = [field.fieldname for field in new_import_item_doc.meta.fields]
-    
+
     # Iterate through the item dictionary
     for key, value in item.items():
-        
+
         # Check if the key exists as a field in the doctype
         if key in valid_fields:
             # Set the value of the field in the new document
             new_import_item_doc.set(key, value)
-    
+
     # Save the document
     new_import_item_doc.insert()
 
 def update_import_item_entry(item, item_name):
     # Create a new document of the eTIMS Import Item doctype
     new_import_item_doc = frappe.get_doc("eTIMS Import Item", item_name)
-    
+
     # Get a list of valid field names in the doctype
     valid_fields = [field.fieldname for field in new_import_item_doc.meta.fields]
-    
+
     # Iterate through the item dictionary
     for key, value in item.items():
-        
+
         # Check if the key exists as a field in the doctype
         if key in valid_fields:
             # Set the value of the field in the new document
             new_import_item_doc.set(key, value)
-    
+
     # Save the document
     new_import_item_doc.save()
 
 def map_import_item(item):
     item_exists = check_if_item_exits(item.get("item_name"))
     item_price_ksh = 0
-    
+
     try:
         item_price_ksh = (item.get("invoice_foreign_currency_amount")/item.get("quantity"))*item.get("invoice_foreign_currency_crt")
-    except Exception:
+    except Exception as e:
+        frappe.log_error(title="Import Item Price Calculation", message=str(e))
         item_price_ksh = 0
-        
-    
+
+
     if item_exists == False:
         # create item if not exists
         create_import_item_doctype(item, item_price_ksh)
-        
+
         # create stock entry for receipt and update stock
     else:
         update_import_item_doctype(item, item_price_ksh)
-        
+
 
 def check_if_item_exits(item_code):
     item_exists = frappe.db.exists({"doctype": "Item", "item_code": item_code})
-    
+
     if item_exists:
-        
+
         return True
     else:
         return False
@@ -166,7 +159,7 @@ def check_if_item_exits(item_code):
 def create_import_item_doctype(item, item_price_ksh):
     date_str = item.get("declaration_date")
     date_obj = datetime.strptime(date_str, "%d%m%Y").date()
-    
+
     new_item_doc = frappe.new_doc("Item")
     new_item_doc.item_code = item.get("item_name")
     new_item_doc.item_group = "All Item Groups"
@@ -178,19 +171,19 @@ def create_import_item_doctype(item, item_price_ksh):
     new_item_doc.custom_hs_code = item.get("hs_code")
     new_item_doc.custom_remark = item.get("remark")
     new_item_doc.custom_country_of_origin = get_etims_country(item.get("origin_nation_code"))
-    
+
     if item.get("import_item_status_code") == "1":
         new_item_doc.custom_import_item_status_code = "Unsent"
-    
+
     elif item.get("import_item_status_code") == "2":
         new_item_doc.custom_import_item_status_code = "Waiting"
-        
+
     elif item.get("import_item_status_code") == "3":
         new_item_doc.custom_import_item_status_code = "Approved"
-        
+
     elif item.get("import_item_status_code") == "4":
         new_item_doc.custom_import_item_status_code = "Cancelled"
-    
+
     new_item_doc.insert()
     create_import_item_entry(item)
     create_or_update_price_list(item.get("item_name"), item_price_ksh)
@@ -198,9 +191,9 @@ def create_import_item_doctype(item, item_price_ksh):
 def update_import_item_doctype(item, item_price_ksh):
     date_str = item.get("declaration_date")
     date_obj = datetime.strptime(date_str, "%d%m%Y").date()
-    
+
     new_item_doc = frappe.get_doc("Item", item.get("item_name"))
-    
+
     new_item_doc.custom_is_import_item = 1
     new_item_doc.valuation_rate = item_price_ksh
     new_item_doc.custom_task_code = item.get("task_code")
@@ -208,44 +201,43 @@ def update_import_item_doctype(item, item_price_ksh):
     new_item_doc.custom_hs_code = item.get("hs_code")
     new_item_doc.custom_remark = item.get("remark")
     new_item_doc.custom_country_of_origin = get_etims_country(item.get("origin_nation_code"))
-    
+
     if item.get("import_item_status_code") == "1":
         new_item_doc.custom_import_item_status_code = "Unsent"
-    
+
     elif item.get("import_item_status_code") == "2":
         new_item_doc.custom_import_item_status_code = "Waiting"
-        
+
     elif item.get("import_item_status_code") == "3":
         new_item_doc.custom_import_item_status_code = "Approved"
-        
+
     elif item.get("import_item_status_code") == "4":
         new_item_doc.custom_import_item_status_code = "Cancelled"
-    
+
     new_item_doc.save()
     create_import_item_entry(item)
-    create_or_update_price_list(item.get("item_name"), item_price_ksh)  
-    
+    create_or_update_price_list(item.get("item_name"), item_price_ksh)
+
 def get_etims_country(country_code):
     country_code_list = frappe.db.get_all("eTIMS Country", filters={"code_name": country_code}, fields=["country_name"])
-    
+
     if country_code_list:
         country_name = country_code_list[0].get("country_name")
-        
+
         return country_name
-    
+
 def create_or_update_price_list(item_code, item_price):
     buying_price_list_exists = frappe.db.exists("Item Price", {"item_code": item_code, "price_list": "Standard Buying"})
-    
+
     if not buying_price_list_exists:
         new_buy_price = frappe.new_doc("Item Price")
         new_buy_price.item_code = item_code
         new_buy_price.price_list = "Standard Buying"
         new_buy_price.price_list_rate = item_price
-        
+
         new_buy_price.insert()
     else:
         price_list = frappe.get_doc("Item Price", buying_price_list_exists)
         price_list.price_list_rate = item_price
-        
+
         price_list.save()
-        

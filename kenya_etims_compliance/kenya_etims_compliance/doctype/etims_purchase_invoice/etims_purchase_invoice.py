@@ -58,7 +58,8 @@ class eTIMSPurchaseInvoice(Document):
                     
                     new_purchase_doc.save()
 
-                except Exception:
+                except Exception as e:
+                    frappe.log_error("eTIMS: Purchase invoice processing error", str(e))
                     frappe.throw(traceback.format_exc())
         
     def create_supplier(self):

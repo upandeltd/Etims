@@ -10,6 +10,7 @@ def bulk_register_items(items=None):
 	Args:
 		items: JSON list of item names, or None to auto-detect unregistered items
 	"""
+	frappe.has_permission("Item", "write", throw=True)
 	import json
 	from kenya_etims_compliance.utils.etims_utils import eTIMS
 
@@ -46,6 +47,7 @@ def bulk_register_items(items=None):
 @frappe.whitelist()
 def bulk_submit_invoices(doctype, from_date=None, to_date=None):
 	"""Submit unsubmitted invoices to eTIMS in batch."""
+	frappe.has_permission("eTIMS Invoice Queue", "create", throw=True)
 	flag_field = "custom_update_invoice_in_tims" if doctype == "Sales Invoice" else "custom_update_purchase_in_tims"
 
 	filters = {
@@ -62,14 +64,12 @@ def bulk_submit_invoices(doctype, from_date=None, to_date=None):
 	queued = 0
 
 	for inv in invoices:
-		import uuid
 		frappe.get_doc({
-			"doctype": "eTIMS Submission Queue",
+			"doctype": "eTIMS Invoice Queue",
 			"reference_doctype": doctype,
 			"reference_name": inv.name,
-			"endpoint": "saveTrnsSalesOsdc" if doctype == "Sales Invoice" else "insertTrnsPurchase",
+			"api_endpoint": "saveTrnsSalesOsdc" if doctype == "Sales Invoice" else "insertTrnsPurchase",
 			"status": "Queued",
-			"idempotency_key": str(uuid.uuid4()),
 		}).insert(ignore_permissions=True)
 		queued += 1
 
@@ -80,6 +80,7 @@ def bulk_submit_invoices(doctype, from_date=None, to_date=None):
 @frappe.whitelist()
 def bulk_verify_purchase_invoices(from_date=None, to_date=None):
 	"""Verify unverified Purchase Invoices with KRA in batch."""
+	frappe.has_permission("Purchase Invoice", "write", throw=True)
 	from kenya_etims_compliance.custom_methods.invoice_checker import check_invoice_validity
 
 	filters = {

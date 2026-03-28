@@ -5,23 +5,100 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "period", "branch", "run_date", "run_by", "column_break_1",
-  "total_kra_entries", "match_rate", "total_matched", "total_mismatched",
-  "total_missing_locally", "total_not_in_kra", "total_variance"
+  "period",
+  "branch",
+  "run_date",
+  "run_by",
+  "column_break_1",
+  "total_kra_entries",
+  "match_rate",
+  "total_matched",
+  "total_mismatched",
+  "total_missing_locally",
+  "total_not_in_kra",
+  "total_variance"
  ],
  "fields": [
-  {"fieldname": "period", "fieldtype": "Data", "in_list_view": 1, "in_standard_filter": 1, "label": "Period", "reqd": 1},
-  {"fieldname": "branch", "fieldtype": "Link", "in_list_view": 1, "in_standard_filter": 1, "label": "Branch", "options": "Tax Branch Office"},
-  {"fieldname": "run_date", "fieldtype": "Datetime", "in_list_view": 1, "label": "Run Date", "read_only": 1, "reqd": 1},
-  {"fieldname": "run_by", "fieldtype": "Link", "label": "Run By", "options": "User", "read_only": 1},
-  {"fieldname": "column_break_1", "fieldtype": "Column Break"},
-  {"fieldname": "total_kra_entries", "fieldtype": "Int", "label": "Total KRA Entries", "read_only": 1},
-  {"fieldname": "match_rate", "fieldtype": "Percent", "in_list_view": 1, "label": "Match Rate", "read_only": 1, "bold": 1},
-  {"fieldname": "total_matched", "fieldtype": "Int", "in_list_view": 1, "label": "Matched", "read_only": 1},
-  {"fieldname": "total_mismatched", "fieldtype": "Int", "label": "Mismatched", "read_only": 1},
-  {"fieldname": "total_missing_locally", "fieldtype": "Int", "label": "Missing Locally", "read_only": 1},
-  {"fieldname": "total_not_in_kra", "fieldtype": "Int", "label": "Not in KRA", "read_only": 1},
-  {"fieldname": "total_variance", "fieldtype": "Currency", "label": "Total Variance", "read_only": 1}
+  {
+   "fieldname": "period",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Period",
+   "reqd": 1
+  },
+  {
+   "fieldname": "branch",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Branch",
+   "options": "Tax Branch Office"
+  },
+  {
+   "fieldname": "run_date",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Run Date",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "run_by",
+   "fieldtype": "Link",
+   "label": "Run By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_kra_entries",
+   "fieldtype": "Int",
+   "label": "Total KRA Entries",
+   "read_only": 1
+  },
+  {
+   "bold": 1,
+   "fieldname": "match_rate",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Match Rate",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_matched",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Matched",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_mismatched",
+   "fieldtype": "Int",
+   "label": "Mismatched",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_missing_locally",
+   "fieldtype": "Int",
+   "label": "Missing Locally",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_not_in_kra",
+   "fieldtype": "Int",
+   "label": "Not in KRA",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_variance",
+   "fieldtype": "Currency",
+   "label": "Total Variance",
+   "read_only": 1
+  }
  ],
  "links": [],
  "modified": "2026-03-28 16:00:00.000000",
@@ -31,11 +108,37 @@
  "naming_rule": "Expression (old style)",
  "owner": "Administrator",
  "permissions": [
-  {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1},
-  {"create": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "eTIMS Administrator"},
-  {"export": 1, "print": 1, "read": 1, "report": 1, "role": "eTIMS Auditor"}
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "eTIMS Administrator"
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "eTIMS Auditor"
+  }
  ],
  "sort_field": "run_date",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }

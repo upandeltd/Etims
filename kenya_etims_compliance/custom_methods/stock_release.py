@@ -1,4 +1,4 @@
-import requests, traceback
+import traceback
 from datetime import datetime
 
 import frappe

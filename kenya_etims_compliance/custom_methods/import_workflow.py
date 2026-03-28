@@ -10,10 +10,11 @@ from frappe.utils import now_datetime
 
 def fetch_and_process_imports():
 	"""Daily: Fetch pending import items from KRA and process them."""
-	from kenya_etims_compliance.utils.etims_utils import eTIMS
+	from kenya_etims_compliance.utils.kra_client import KRAClient
 
 	# Step 1: Fetch pending imports
-	result = eTIMS.make_request("selectImportItemList", {"lastReqDt": "20260101000000"})
+	client = KRAClient()
+	result = client.post("selectImportItemList", {"lastReqDt": "20260101000000"})
 	if "Success" not in result or not result["Success"]:
 		return {"fetched": 0, "processed": 0}
 

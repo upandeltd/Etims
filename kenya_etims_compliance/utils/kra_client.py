@@ -25,8 +25,26 @@ class KRAClient:
             self._settings = get_etims_settings()
         return self._settings
 
-    def post(self, endpoint, payload):
-        """POST to KRA API with timeout and retry on connection errors only."""
+    def post(self, endpoint, payload, reference_doctype=None, reference_name=None):
+        """POST to KRA API with circuit breaker, timeout, retry, and audit trail.
+
+        Args:
+            endpoint: API endpoint name (e.g. 'saveTrnsSalesOsdc')
+            payload: dict to POST as JSON
+            reference_doctype: optional — for audit trail (e.g. 'Sales Invoice')
+            reference_name: optional — for audit trail (e.g. 'ACC-SINV-2026-00001')
+
+        Returns:
+            {"Success": <data>} or {"Error": "<message>", "Retryable": bool}
+        """
+        # Circuit breaker: block if 5+ recent failures (auto-resets after 5 minutes)
+        failure_count = frappe.cache.get_value("etims_circuit_breaker") or 0
+        if failure_count >= 5:
+            return {
+                "Error": "eTIMS circuit breaker is open. Too many recent failures. Will auto-reset in 5 minutes.",
+                "Retryable": True
+            }
+
         timeout = self.settings.get("api_timeout", 30)
         max_retries = self.settings.get("max_retry_attempts", 3) if self.settings.get("enable_retry_logic") else 1
         retry_delay = self.settings.get("retry_delay", 2)
@@ -38,18 +56,47 @@ class KRAClient:
                 if not response.content or not response.content.strip():
                     self._log_error(endpoint, f"Empty response body (HTTP {response.status_code})")
                     return {"Error": f"KRA API returned empty response (HTTP {response.status_code})", "Retryable": True}
-                return self._handle_response(response.json(), endpoint)
-            except requests.JSONDecodeError as e:
+                result = self._handle_response(response.json(), endpoint)
+                if "Success" in result:
+                    self._log_api_call(
+                        endpoint, reference_doctype, reference_name,
+                        "000", "Success", "success"
+                    )
+                else:
+                    self._log_api_call(
+                        endpoint, reference_doctype, reference_name,
+                        "", result.get("Error", "Unknown error"), "failure"
+                    )
+                return result
+            except requests.JSONDecodeError:
                 self._log_error(endpoint, f"Invalid JSON response (HTTP {response.status_code}): {response.text[:500]}")
                 return {"Error": f"KRA API returned invalid JSON (HTTP {response.status_code})", "Retryable": True}
             except requests.ConnectionError:
+                frappe.cache.set_value(
+                    "etims_circuit_breaker",
+                    (frappe.cache.get_value("etims_circuit_breaker") or 0) + 1,
+                    expires_in_sec=300
+                )
                 if attempt < max_retries - 1:
                     time.sleep(retry_delay)
                     continue
                 self._log_error(endpoint, f"Connection failed after {max_retries} attempts")
+                self._log_api_call(
+                    endpoint, reference_doctype, reference_name,
+                    "CONN_ERR", f"Connection failed after {max_retries} attempts", "failure"
+                )
                 return {"Error": f"KRA API unreachable after {max_retries} attempts", "Retryable": True}
             except requests.Timeout:
+                frappe.cache.set_value(
+                    "etims_circuit_breaker",
+                    (frappe.cache.get_value("etims_circuit_breaker") or 0) + 1,
+                    expires_in_sec=300
+                )
                 self._log_error(endpoint, f"Timeout after {timeout}s")
+                self._log_api_call(
+                    endpoint, reference_doctype, reference_name,
+                    "TIMEOUT", f"Request timed out after {timeout}s", "failure"
+                )
                 return {"Error": f"KRA API timed out after {timeout} seconds", "Retryable": True}
             except Exception as e:
                 self._log_error(endpoint, traceback.format_exc())
@@ -59,17 +106,17 @@ class KRAClient:
 
     # --- Convenience methods ---
 
-    def save_sales(self, payload):
-        return self.post("saveTrnsSalesOsdc", payload)
+    def save_sales(self, payload, reference_doctype=None, reference_name=None):
+        return self.post("saveTrnsSalesOsdc", payload, reference_doctype, reference_name)
 
-    def insert_purchase(self, payload):
-        return self.post("insertTrnsPurchase", payload)
+    def insert_purchase(self, payload, reference_doctype=None, reference_name=None):
+        return self.post("insertTrnsPurchase", payload, reference_doctype, reference_name)
 
-    def insert_stock_io(self, payload):
-        return self.post("insertStockIO", payload)
+    def insert_stock_io(self, payload, reference_doctype=None, reference_name=None):
+        return self.post("insertStockIO", payload, reference_doctype, reference_name)
 
-    def save_item(self, payload):
-        return self.post("saveItem", payload)
+    def save_item(self, payload, reference_doctype=None, reference_name=None):
+        return self.post("saveItem", payload, reference_doctype, reference_name)
 
     def search_item(self, payload):
         return self.post("searchItem", payload)
@@ -80,8 +127,8 @@ class KRAClient:
     def search_trns(self, endpoint, payload):
         return self.post(endpoint, payload)
 
-    def stock_release_no_save(self, payload):
-        return self.post("stockReleaseNoSaveReq", payload)
+    def stock_release_no_save(self, payload, reference_doctype=None, reference_name=None):
+        return self.post("stockReleaseNoSaveReq", payload, reference_doctype, reference_name)
 
     def search_stock_release_no(self, payload):
         return self.post("searchStockReleaseNo", payload)
@@ -175,6 +222,7 @@ class KRAClient:
             )
 
         if result_cd == "000":
+            frappe.cache.delete_value("etims_circuit_breaker")
             return {"Success": response_json.get("data")}
 
         # Look up specific error message from error code mapping
@@ -189,6 +237,31 @@ class KRAClient:
         self._log_error(endpoint, error_detail)
         return {"Error": error_detail}
 
+    def _log_api_call(self, endpoint, reference_doctype, reference_name, result_cd, result_msg, status):
+        """Log each API call to Integration Request for audit trail.
+
+        Only logs when reference_doctype is provided. Never raises — logging must
+        never break the main submission flow.
+        """
+        if not reference_doctype:
+            return
+        try:
+            frappe.get_doc({
+                "doctype": "Integration Request",
+                "integration_type": "Remote",
+                "integration_request_service": "eTIMS",
+                "reference_doctype": reference_doctype,
+                "reference_name": reference_name,
+                "url": endpoint,
+                "data": frappe.as_json({"endpoint": endpoint, "timestamp": frappe.utils.now()}),
+                "output": frappe.as_json({"resultCd": str(result_cd), "resultMsg": str(result_msg)[:500]}),
+                "status": "Completed" if status == "success" else "Failed",
+                "error": str(result_msg)[:500] if status != "success" else None,
+            }).insert(ignore_permissions=True)
+        except Exception as e:
+            frappe.log_error("eTIMS: KRA client error", str(e))
+            pass  # Never let audit logging break the main operation
+
     def _log_error(self, title, description):
         """Log errors using frappe.log_error (transaction-safe).
 
@@ -202,5 +275,6 @@ class KRAClient:
                 title=f"KRA API: {title}"[:140],
                 message=str(description)[:2000]
             )
-        except Exception:
+        except Exception as e:
+            frappe.log_error("eTIMS: KRA client error", str(e))
             pass  # Never let logging break the actual operation

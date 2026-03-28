@@ -37,7 +37,7 @@ def create_number_cards():
         {
             "name": "eTIMS Queue Pending",
             "label": "Queue Pending",
-            "document_type": "eTIMS Submission Queue",
+            "document_type": "eTIMS Invoice Queue",
             "function": "Count",
             "filters_json": '{"status": ["in", ["Queued", "Failed"]]}',
             "color": "#e74c3c",
@@ -77,9 +77,9 @@ def create_number_cards():
                 "is_public": 1,
                 "type": "Document Type",
             }).insert(ignore_permissions=True)
-            print(f"Created card: {c['name']}")
+            frappe.logger().debug(f"Created number card: {c['name']}")
         else:
-            print(f"Exists: {c['name']}")
+            pass
 
 
 def create_dashboard_charts():
@@ -109,7 +109,7 @@ def create_dashboard_charts():
             "name": "eTIMS Queue Status",
             "chart_name": "eTIMS Queue Status",
             "chart_type": "Group By",
-            "document_type": "eTIMS Submission Queue",
+            "document_type": "eTIMS Invoice Queue",
             "group_by_based_on": "status",
             "type": "Donut",
             "color": "#f39c12",
@@ -137,13 +137,13 @@ def create_dashboard_charts():
                 doc_data["group_by_based_on"] = c["group_by_based_on"]
 
             frappe.get_doc(doc_data).insert(ignore_permissions=True)
-            print(f"Created chart: {c['name']}")
+            frappe.logger().debug(f"Created dashboard chart: {c['name']}")
         else:
-            print(f"Exists: {c['name']}")
+            pass
 
 
 def execute():
     create_number_cards()
     create_dashboard_charts()
     frappe.db.commit()
-    print("Dashboard setup complete")
+    frappe.logger().info("eTIMS dashboard setup complete")

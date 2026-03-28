@@ -1,8 +1,9 @@
-import requests, traceback
+import traceback
 from datetime import datetime
 
 import frappe
 from kenya_etims_compliance.utils.etims_utils import eTIMS
+from kenya_etims_compliance.utils.kra_client import KRAClient
 
 #This part describes the components of SaveItem API function (url : /saveItem) and data types for each item. 
 # This API function is divided into 'Request: Argument' and 'Response: Return Object'. 
@@ -44,12 +45,11 @@ def selectItemReq(item_code):
 
 @frappe.whitelist()
 def importItemUpdateReq(doc_name):
-    headers = eTIMS.get_headers()
     import_item = frappe.get_doc("Item", doc_name)
-    
+
     if import_item.custom_is_import_item == 1:
         declr_date = datetime.strftime(import_item.get("custom_declaration_date"), "%Y%m%d")
-        
+
         payload = {
             "taskCd": import_item.get("custom_task_code"),
             "dclDe": declr_date,
@@ -63,24 +63,16 @@ def importItemUpdateReq(doc_name):
             "modrNm": import_item.get("modified_by")
         }
         try:
-            
-            response = requests.request(
-                "POST",
-                eTIMS.tims_base_url() + 'updateImportItem',
-                json = payload,
-                headers=headers,
-                timeout=30
-            )
-            response_json = response.json()
+            result = KRAClient().post("updateImportItem", payload)
 
-            if not response_json.get("resultCd") == '000':
-                return {"Error":response_json.get("resultMsg")}
+            if result.get("Error"):
+                return {"Error": result.get("Error")}
 
-            return {"Success":response_json.get("resultMsg")}
+            return {"Success": result.get("Success")}
 
-        except Exception:
+        except Exception as e:
             eTIMS.log_errors("Import Item Update", traceback.format_exc())
-            return {"Error":"Oops Bad Request!"}	       	
+            return {"Error": "Oops Bad Request!"}
     
 def get_status_code(code_name):    
     if code_name == "Unsent":
@@ -131,7 +123,8 @@ def get_item_pkg_unit_codes(pkg_unit):
         etims_code_doc = frappe.get_doc("eTIMS Packing Unit", pkg_unit)
         if etims_code_doc:
             return etims_code_doc.get("etims_code")
-    except Exception:
+    except Exception as e:
+        frappe.log_error("eTIMS: Item error", str(e))
         return
 
 
@@ -140,7 +133,8 @@ def get_item_qty_unit_codes(qty_unit):
         etims_code_doc = frappe.get_doc("eTIMS Quantity Unit", qty_unit)
         if etims_code_doc:
             return etims_code_doc.get("etims_code")
-    except Exception:
+    except Exception as e:
+        frappe.log_error("eTIMS: Item error", str(e))
         return       
     
 def get_item_status(doc):

@@ -1,17 +1,17 @@
 # Copyright (c) 2024, Upande Ltd and contributors
 # For license information, please see license.txt
 
-import requests, traceback
+import traceback
 
 import frappe
 from frappe.model.document import Document
 from kenya_etims_compliance.utils.etims_utils import eTIMS
+from kenya_etims_compliance.utils.kra_client import KRAClient
 
 
 class eTIMSBranchUser(Document):
     @frappe.whitelist()
     def bhfUserSaveReq(self):
-        headers = eTIMS.get_headers()
         user = self
         if not user.get("saved") == 1:
             payload = {
@@ -23,29 +23,22 @@ class eTIMSBranchUser(Document):
                 "authCd":user.get("authority_code"),
                 "remark":user.get("remark"),
                 "useYn":user.get("used_unused"),
-                "regrId":user.get("registration_id"), 
-                "regrNm":user.get("registration_name"), 
-                "modrId":user.get("modifier_id"), 
+                "regrId":user.get("registration_id"),
+                "regrNm":user.get("registration_name"),
+                "modrId":user.get("modifier_id"),
                 "modrNm":user.get("modifier_name")
             }
-    
-            try:
-                response = requests.request(
-                    "POST",
-                    eTIMS.tims_base_url() + 'saveBhfUser',
-                    json=payload,
-                    headers=headers,
-                    timeout=30
-                )
-                response_json = response.json()
 
-                if not response_json.get("resultCd") == '000':
-                    return {"Error":response_json.get("resultMsg")}
+            try:
+                result = KRAClient().post("saveBhfUser", payload)
+
+                if result.get("Error"):
+                    return {"Error": result.get("Error")}
 
                 user.saved = 1
                 user.save()
-                return {"Success":response_json.get("resultMsg")}
+                return {"Success": "Branch user saved"}
 
-            except Exception:
-                eTIMS.log_errors("User Register", traceback.format_exc())
-                return {"Error":"Oops Bad Request!"}	
+            except Exception as e:
+                frappe.log_error(title="User Register", message=traceback.format_exc())
+                return {"Error":"Oops Bad Request!"}

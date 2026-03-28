@@ -1,30 +1,5 @@
 import frappe
-
-
-def retry_failed_submissions():
-    """Hourly: Retry invoices that failed eTIMS submission."""
-    for doctype, flag_field in [
-        ("Sales Invoice", "custom_update_invoice_in_tims"),
-        ("Purchase Invoice", "custom_update_purchase_in_tims"),
-    ]:
-        failed = frappe.get_all(
-            doctype,
-            filters={flag_field: 1, "docstatus": 1},
-            fields=["name", "custom_invoice_number"],
-            limit=50,
-        )
-        for doc in failed:
-            if not doc.custom_invoice_number:
-                try:
-                    method = (
-                        "kenya_etims_compliance.custom_methods.sales_invoice.trnsSalesSaveWrReq"
-                        if doctype == "Sales Invoice"
-                        else "kenya_etims_compliance.custom_methods.purchase_invoice.trnsPurchaseSaveReq"
-                    )
-                    frappe.enqueue(method, docname=doc.name, queue="short")
-                except Exception:
-                    frappe.log_error(title=f"eTIMS Retry Failed: {doc.name}")
-    frappe.db.commit()
+from kenya_etims_compliance.utils.kra_client import KRAClient
 
 
 def fetch_kra_notices():
@@ -35,7 +10,7 @@ def fetch_kra_notices():
     if not headers:
         return
 
-    result = eTIMS.make_request("selectNoticeList", {}, headers)
+    result = KRAClient().post("selectNoticeList", {}, headers)
     if "Success" not in result or not result["Success"]:
         return
 
@@ -91,7 +66,7 @@ def fetch_purchase_transactions():
     else:
         last_fetch = eTIMS.strf_datetime_format(last_fetch)
 
-    result = eTIMS.make_request("selectTrnsPurchaseSalesList", {"lastReqDt": last_fetch})
+    result = KRAClient().post("selectTrnsPurchaseSalesList", {"lastReqDt": last_fetch})
     if "Success" not in result or not result["Success"]:
         return
 
@@ -110,7 +85,8 @@ def fetch_purchase_transactions():
         sale_date = None
         try:
             sale_date = eTIMS.strp_date_object(inv.get("salesDt"))
-        except Exception:
+        except Exception as e:
+            frappe.log_error("eTIMS: Task error", str(e))
             pass
 
         frappe.get_doc({
@@ -137,51 +113,6 @@ def run_reconciliation_task():
     from kenya_etims_compliance.custom_methods.reconciliation import run_reconciliation
     result = run_reconciliation()
     frappe.logger().info("eTIMS Reconciliation: %s", result)
-
-
-def process_submission_queue():
-    """Every 15 min: Process queued eTIMS submissions with exponential backoff."""
-    if not frappe.db.exists("DocType", "eTIMS Submission Queue"):
-        return
-
-    # Check circuit breaker
-    failure_count = frappe.cache.get_value("etims_failures") or 0
-    if failure_count >= 5:
-        return
-
-    now = frappe.utils.now_datetime()
-
-    entries = frappe.get_all(
-        "eTIMS Submission Queue",
-        filters={
-            "status": ["in", ["Queued", "Failed"]],
-            "next_retry_at": ["<=", now],
-        },
-        fields=["name"],
-        order_by="creation asc",
-        limit=20,
-    )
-
-    # Also get entries with no next_retry_at (new entries)
-    new_entries = frappe.get_all(
-        "eTIMS Submission Queue",
-        filters={
-            "status": "Queued",
-            "next_retry_at": ["is", "not set"],
-        },
-        fields=["name"],
-        order_by="creation asc",
-        limit=20,
-    )
-
-    all_entries = {e.name for e in entries} | {e.name for e in new_entries}
-
-    for entry_name in all_entries:
-        try:
-            doc = frappe.get_doc("eTIMS Submission Queue", entry_name)
-            doc.process()
-        except Exception:
-            frappe.log_error(title=f"Queue Processing Error: {entry_name}")
 
 
 def calculate_supplier_scores():

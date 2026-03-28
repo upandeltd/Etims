@@ -1,11 +1,13 @@
 # Copyright (c) 2024, Upande Ltd and contributors
 # For license information, please see license.txt
-import requests, traceback
+import traceback
 
 import frappe
 from frappe.model.document import Document
 from kenya_etims_compliance.utils.etims_utils import eTIMS
 from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import get_api_url
+from kenya_etims_compliance.utils.kra_client import KRAClient
+
 
 class TISDeviceInitialization(Document):
 	# Method to initialize and verify a device with etims
@@ -18,27 +20,25 @@ class TISDeviceInitialization(Document):
         }
 
         try:
-            # Get API URL directly from settings using this document's api_mode
-            # Cannot use eTIMS.tims_base_url() here because it looks up
-            # an active TIS Device Initialization, which doesn't exist yet
-            # during first-time device initialization.
+            # For device initialization, we create a KRAClient that will have
+            # empty headers since no active TIS Device exists yet.
+            # We override the base URL manually via the post endpoint.
             api_url = get_api_url(self.api_mode or "Sandbox")
 
-            response = requests.request(
-                        "POST",
-                        api_url + 'selectInitOsdcInfo',
-                        json = payload,
-                        timeout=30
-                    )
-            response_data = response.json()
-            response_json = eTIMS.get_response_data(response_data)
+            # Use KRAClient with empty headers for bootstrap endpoint
+            client = KRAClient()
+            # Override headers to empty since selectInitOsdcInfo doesn't need auth
+            client.headers = {}
+            # Store original _get_base_url and override
+            original_get_base_url = client._get_base_url
+            client._get_base_url = lambda: api_url
 
+            result = client.post("selectInitOsdcInfo", payload)
 
-            if not response_json.get("resultCd") == '000':
+            if result.get("Error"):
+                return {"Error": result.get("Error")}
 
-                return {"Error":response_json.get("resultMsg")}
-
-            data = response_json.get("data")
+            data = result.get("Success")
             if data:
                 info = data.get("info")
                 self.communication_key = info.get("cmcKey")
@@ -47,14 +47,12 @@ class TISDeviceInitialization(Document):
                 self.mrc_no = info.get("mrcNo")
                 save_communication_key(info.get("cmcKey"), self.branch_id)
 
-
             self.save()
-            return {"Success":response_json.get("resultMsg")}
+            return {"Success": "Device verification completed"}
 
-        except Exception:
+        except Exception as e:
             error_msg = traceback.format_exc()
-            eTIMS.log_errors("TIS Device Verification", error_msg)
-            frappe.logger().error(f"TIS Device Verification failed: {error_msg}")
+            frappe.log_error(title="TIS Device Verification", message=error_msg)
             return {"Error": f"Device initialization failed. Check Error Log for details."}
 
     @frappe.whitelist()
@@ -69,7 +67,7 @@ class TISDeviceInitialization(Document):
 
         return result
 
-#Method to create communication key and stores it in communication key doctype       
+#Method to create communication key and stores it in communication key doctype
 def save_communication_key(comKey, branch_id):
     """_summary_
 
@@ -83,11 +81,10 @@ def save_communication_key(comKey, branch_id):
         new_doc = frappe.new_doc("TIS Communication Key")
         new_doc.branch_id = branch_id
         new_doc.communication_key = comKey
-        
+
         new_doc.insert()
     else:
         new_doc = frappe.get_doc("TIS Communication Key", doc_exits)
         new_doc.communication_key = comKey
-        
+
         new_doc.save()
-    

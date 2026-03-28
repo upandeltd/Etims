@@ -72,5 +72,6 @@
  ],
  "sort_field": "code",
  "sort_order": "ASC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }

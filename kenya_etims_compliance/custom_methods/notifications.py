@@ -29,16 +29,16 @@ def send_filing_deadline_reminder():
 
 def send_queue_failure_alert(queue_entry_name):
 	"""Send alert when a queue entry exceeds max retries."""
-	entry = frappe.get_doc("eTIMS Submission Queue", queue_entry_name)
+	entry = frappe.get_doc("eTIMS Invoice Queue", queue_entry_name)
 
 	subject = _("eTIMS Submission Failed: {0}").format(entry.reference_name)
 	message = _(
 		"eTIMS submission for {doctype} {name} has failed after {attempts} attempts. "
-		"Last error: {error}. Please check the Submission Queue."
+		"Last error: {error}. Please check the Invoice Queue."
 	).format(
 		doctype=entry.reference_doctype,
 		name=entry.reference_name,
-		attempts=entry.attempts,
+		attempts=entry.retry_count,
 		error=entry.last_error or "Unknown",
 	)
 
@@ -75,5 +75,6 @@ def _send_to_etims_admins(subject, message):
 				message=message,
 				now=True,
 			)
-		except Exception:
+		except Exception as e:
+			frappe.log_error("eTIMS: Notification error", str(e))
 			pass  # Don't break on email errors

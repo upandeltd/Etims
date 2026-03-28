@@ -53,6 +53,7 @@ class eTIMSPurchaseOrderTracking(Document):
                     return f"{count} item(s): {', '.join(item_names)}"
                 else:
                     return f"{count} item(s): {', '.join(item_names)} + {count - 3} more"
-        except Exception:
+        except Exception as e:
+            frappe.log_error("eTIMS: Purchase order tracking error", str(e))
             pass
         return "No items summary available"

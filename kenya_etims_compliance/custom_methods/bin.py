@@ -1,6 +1,6 @@
-import requests
 import frappe
 from kenya_etims_compliance.utils.etims_utils import eTIMS
+from kenya_etims_compliance.utils.kra_client import KRAClient
 
 def on_submit(doc, method):
     # Skip eTIMS stock master update if the current user has no Tax Branch Office configured
@@ -68,22 +68,7 @@ def stockMasterSaveReq(item, doc, regName, modName):
             frappe.logger().debug("eTIMS stock master update for purchase")
         
 def save_stock_master(payload):
-    headers = eTIMS.get_headers()
-    try:
-        response = requests.request(
-            "POST",
-            eTIMS.tims_base_url() + 'saveStockMaster',
-            json = payload,
-            headers=headers,
-            timeout=30
-        )
-        
-        response_json = response.json()
-        if not response_json.get("resultCd") == '000':
-        
-            return {"Oops!":response_json.get("resultMsg")}
-        
-        return {"Success":response_json.get("resultMsg")}
-
-    except Exception:
-        return {"Error":"Oops Bad Request!"}
+    result = KRAClient().post("saveStockMaster", payload)
+    if result.get("Success"):
+        return {"Success": result.get("Success")}
+    return {"Error": result.get("Error", "Oops Bad Request!")}

@@ -39,7 +39,8 @@ class eTIMS():
                 datetime_object = datetime.strptime(datetime_data, '%Y-%m-%d %H:%M:%S.%f')
                 date_time_str = datetime_object.strftime("%Y%m%d%H%M%S")
           
-            except Exception:
+            except Exception as e:
+                frappe.log_error("eTIMS: Utils error", str(e))
                 datetime_object = datetime.strptime(datetime_data, '%Y-%m-%d %H:%M:%S')
                 date_time_str = datetime_object.strftime("%Y%m%d%H%M%S")
       
@@ -55,7 +56,8 @@ class eTIMS():
             date_object = datetime.strptime(date_data, '%Y-%m-%d')
             date_str = date_object.strftime("%Y%m%d")
                     
-        except Exception:
+        except Exception as e:
+            frappe.log_error("eTIMS: Utils error", str(e))
             date_str = date_data.strftime("%Y%m%d")
         
         return date_str
@@ -66,7 +68,8 @@ class eTIMS():
         try:
             time_object = datetime.strptime(time_data, '%H:%M:%S')
             time_str = time_object.strftime("%H%M%S")
-        except Exception:
+        except Exception as e:
+            frappe.log_error("eTIMS: Utils error", str(e))
             time_object = datetime.strptime(time_data, '%H:%M:%S.%f')
             time_str = time_object.strftime("%H%M%S")
    
@@ -95,132 +98,12 @@ class eTIMS():
         return get_api_url("Sandbox")
 
     @staticmethod
-    def make_request(endpoint, payload, headers=None, reference_doctype=None, reference_name=None):
-        """Central HTTP handler with timeout, circuit breaker, idempotency, and audit trail.
-
-        Args:
-            endpoint: API endpoint name (e.g. 'saveItem')
-            payload: dict to POST as JSON
-            headers: optional — uses get_headers() if not provided
-            reference_doctype: optional — for audit trail (e.g. 'Sales Invoice')
-            reference_name: optional — for audit trail (e.g. 'ACC-SINV-2026-00001')
-
-        Returns:
-            {"Success": <data>} or {"Error": "<message>"}
-        """
-        import json as json_lib
-        import uuid
-
-        if not headers:
-            headers = eTIMS.get_headers()
-        if not headers:
-            return {"Error": "No active eTIMS device configured"}
-
-        # Simple circuit breaker: block if 5+ recent failures
-        failure_count = frappe.cache.get_value("etims_failures") or 0
-        if failure_count >= 5:
-            return {"Error": "eTIMS service temporarily unavailable. Retry in a few minutes."}
-
-        # Idempotency key — prevent duplicate submissions on retry
-        idempotency_key = None
-        if reference_doctype and reference_name:
-            idempotency_key = frappe.db.get_value(
-                reference_doctype, reference_name, "custom_etims_idempotency_key"
-            )
-            if not idempotency_key:
-                idempotency_key = str(uuid.uuid4())
-                try:
-                    frappe.db.set_value(reference_doctype, reference_name,
-                        "custom_etims_idempotency_key", idempotency_key,
-                        update_modified=False)
-                except Exception:
-                    pass  # Field may not exist on all doctypes
-
-        url = eTIMS.tims_base_url() + endpoint
-
-        try:
-            response = requests.request(
-                "POST", url, json=payload, headers=headers, timeout=30
-            )
-            response_json = response.json()
-            result_cd = response_json.get("resultCd")
-            result_msg = response_json.get("resultMsg", "Unknown error")
-
-            if result_cd == "000":
-                frappe.cache.delete_value("etims_failures")
-                eTIMS._log_integration_request(
-                    reference_doctype, reference_name, endpoint,
-                    result_cd, result_msg, "Completed")
-                return {"Success": response_json.get("data")}
-
-            frappe.cache.set_value(
-                "etims_failures",
-                (frappe.cache.get_value("etims_failures") or 0) + 1,
-                expires_in_sec=300
-            )
-            eTIMS._log_integration_request(
-                reference_doctype, reference_name, endpoint,
-                result_cd, result_msg, "Failed")
-            eTIMS.log_errors(f"eTIMS {endpoint}", f"Error {result_cd}: {result_msg}")
-            return {"Error": result_msg}
-
-        except requests.Timeout:
-            frappe.cache.set_value(
-                "etims_failures",
-                (frappe.cache.get_value("etims_failures") or 0) + 1,
-                expires_in_sec=300
-            )
-            eTIMS._log_integration_request(
-                reference_doctype, reference_name, endpoint,
-                "TIMEOUT", "Request timed out", "Failed")
-            eTIMS.log_errors(f"eTIMS {endpoint}", "Request timed out")
-            return {"Error": "eTIMS request timed out. Will retry automatically."}
-
-        except requests.ConnectionError:
-            frappe.cache.set_value(
-                "etims_failures",
-                (frappe.cache.get_value("etims_failures") or 0) + 1,
-                expires_in_sec=300
-            )
-            eTIMS._log_integration_request(
-                reference_doctype, reference_name, endpoint,
-                "CONN_ERR", "Cannot connect", "Failed")
-            eTIMS.log_errors(f"eTIMS {endpoint}", "Cannot connect to eTIMS server")
-            return {"Error": "Cannot connect to eTIMS server."}
-
-        except Exception:
-            frappe.log_error(title=f"eTIMS {endpoint}", message=traceback.format_exc())
-            return {"Error": "Unexpected error calling eTIMS."}
-
-    @staticmethod
-    def _log_integration_request(reference_doctype, reference_name, endpoint,
-                                  result_cd, result_msg, status):
-        """Log API call to Integration Request for audit trail. No sensitive data stored."""
-        if not reference_doctype or not reference_name:
-            return
-        try:
-            import json as json_lib
-            frappe.get_doc({
-                "doctype": "Integration Request",
-                "integration_type": "Remote",
-                "integration_request_service": "eTIMS",
-                "reference_doctype": reference_doctype,
-                "reference_name": reference_name,
-                "url": endpoint,
-                "data": json_lib.dumps({"endpoint": endpoint, "timestamp": str(frappe.utils.now())}),
-                "output": json_lib.dumps({"resultCd": str(result_cd), "resultMsg": str(result_msg)[:500]}),
-                "status": "Completed" if status == "Completed" else "Failed",
-                "error": str(result_msg)[:500] if status == "Failed" else None,
-            }).insert(ignore_permissions=True)
-        except Exception:
-            pass  # Never let audit logging break the main flow
-
-    @staticmethod
     def verify_supplier_pin(supplier_pin):
         """Verify supplier PIN via KRA selectCustomer endpoint."""
         if not supplier_pin or len(supplier_pin) != 10:
             return {"Error": "Invalid PIN format"}
-        return eTIMS.make_request("selectCustomer", {"custmTin": supplier_pin})
+        client = KRAClient()
+        return client.post("selectCustomer", {"custmTin": supplier_pin})
 
     @staticmethod
     def strp_datetime_object(date_time_str):
@@ -303,7 +186,8 @@ class eTIMS():
             new_doc.insert()
 
             return new_sar_no
-        except Exception:
+        except Exception as e:
+            frappe.log_error("eTIMS: Utils error", str(e))
             new_doc = frappe.new_doc("eTIMS Stock Release Number") 
             new_doc.reference_type = doc.doctype
             new_doc.reference = doc.name
@@ -704,7 +588,8 @@ def get_country_of_origin(item_code):
             country_name = etims_country_list[0].get("country_name")
                         
             return country_name
-    except Exception:
+    except Exception as e:
+        frappe.log_error("eTIMS: Utils error", str(e))
         return "KE", "Kenya"
     
 def get_item_type(item_code):

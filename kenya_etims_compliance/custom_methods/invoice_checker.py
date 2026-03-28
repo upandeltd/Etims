@@ -35,6 +35,7 @@ def check_invoice_validity(invoice_no, supplier_pin, invoice_date, total_amount)
             "message": "..."
         }
     """
+    frappe.has_permission("Purchase Invoice", "read", throw=True)
     try:
         # Validate inputs
         if not invoice_no:
@@ -136,6 +137,7 @@ def bulk_verify_invoices(invoice_list):
             }
         }
     """
+    frappe.has_permission("Purchase Invoice", "read", throw=True)
     results = []
     verified_count = 0
     failed_count = 0
@@ -180,6 +182,7 @@ def get_verification_status(purchase_invoice):
             "kra_invoice_number": "..."
         }
     """
+    frappe.has_permission("Purchase Invoice", "read", throw=True)
     try:
         doc = frappe.get_doc("Purchase Invoice", purchase_invoice)
 
@@ -223,6 +226,7 @@ def get_unverified_invoices(limit=100):
     Returns:
         List of unverified invoices with key details
     """
+    frappe.has_permission("Purchase Invoice", "read", throw=True)
     try:
         invoices = frappe.db.get_all(
             "Purchase Invoice",

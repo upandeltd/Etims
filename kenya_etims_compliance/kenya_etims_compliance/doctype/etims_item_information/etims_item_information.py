@@ -1,108 +1,89 @@
 # Copyright (c) 2023, Upande Ltd and contributors
 # For license information, please see license.txt
 
-import requests, traceback
+import traceback
 
 import frappe
 from frappe.model.document import Document
 from kenya_etims_compliance.utils.etims_utils import eTIMS, get_country_of_origin, get_packing_and_quantity_unit, get_item_type, get_item_tax_template
+from kenya_etims_compliance.utils.kra_client import KRAClient
 
 
 class eTIMSItemInformation(Document):
-    #This part describes the item API function (url : /selectItemClsList) of product classification and data types for each item. 
-    # API functions are dividedinto'Request:Argument' and 'Response:Return Object'. 
+    #This part describes the item API function (url : /selectItemClsList) of product classification and data types for each item.
+    # API functions are dividedinto'Request:Argument' and 'Response:Return Object'.
     # The ItemClsSearchReq is an Argument Object of Request, The ItemClsSearchRes is a ReturnObject ofResponse.
     @frappe.whitelist()
     def itemClsSearchReq(self):
         request_datetime = self.search_datetime
         date_time_str = eTIMS.strf_datetime_object(request_datetime)
-        
+
         headers = eTIMS.get_headers()
 
         payload = {
                 "bhfId": headers.get("bhfId"),
-                "lastReqDt" : date_time_str, 
+                "lastReqDt" : date_time_str,
         }
-  
+
         try:
-            response = requests.request(
-                "POST",
-                eTIMS.tims_base_url() + 'selectItemClsList',
-                json = payload,
-                headers=headers,
-                timeout=30
-            )
-    
-            response_json = response.json()
-        
-            if not response_json.get("resultCd") == '000':
-                return {"Error":response_json.get("resultMsg")}
-            
-            frappe.enqueue(process_item_cls_info, queue='long', response_result = response_json)
-   
+            result = KRAClient().post("selectItemClsList", payload)
+
+            if result.get("Error"):
+                return {"Error": result.get("Error")}
+
+            response_result = {"data": result.get("Success")}
+            frappe.enqueue(process_item_cls_info, queue='long', response_result=response_result)
+
             self.last_search_date_and_time = request_datetime
             self.save()
-            return {"Success":response_json.get("resultMsg")}
+            return {"Success": "Item classification search completed"}
 
-        except Exception:
-            eTIMS.log_errors("Item Classification Search", traceback.format_exc())
-            return {"Error":"Oops Bad Request!"}	        
-    
-    # This part describes the components of SelectItemList API function (url : /selectItemList) and data types for each item. 
-    # This API function is divided into 'Request:Argument' and 'Response: Return Object'. 
+        except Exception as e:
+            frappe.log_error(title="Item Classification Search", message=traceback.format_exc())
+            return {"Error":"Oops Bad Request!"}
+
+    # This part describes the components of SelectItemList API function (url : /selectItemList) and data types for each item.
+    # This API function is divided into 'Request:Argument' and 'Response: Return Object'.
     # The ItemSearchReq is an Argument Object of Request, The ItemSearchRes is a Return Object of Response
     @frappe.whitelist()
     def itemSearchReq(self):
         request_datetime = self.item_request_datetime
         date_time_str = eTIMS.strf_datetime_object(request_datetime)
-        
-        headers = eTIMS.get_headers()
 
         payload = {
-                "lastReqDt" : date_time_str, 
+                "lastReqDt" : date_time_str,
         }
-      
 
         try:
-            response = requests.request(
-                "POST",
-                eTIMS.tims_base_url() + 'selectItemList',
-                json = payload,
-                headers=headers,
-                timeout=30
-            )
-    
-            response_json = response.json()
-        
-            if not response_json.get("resultCd") == '000':
-                return {"Error":response_json.get("resultMsg")}
+            result = KRAClient().post("selectItemList", payload)
 
-            item_list = process_registered_items(response_json)
+            if result.get("Error"):
+                return {"Error": result.get("Error")}
+
+            response_result = {"data": result.get("Success")}
+            item_list = process_registered_items(response_result)
             for item in item_list:
                 item_exists = check_if_item_exists(item.get("item_code"))
                 if not item_exists == True:
                     self.append("registered_items", item)
-                    # self.save()
             self.item_last_search_date_and_time = request_datetime
             self.save()
-            return {"Success":response_json.get("resultMsg")}
+            return {"Success": "Item search completed"}
 
-        except Exception:
-            eTIMS.log_errors("Item Search", traceback.format_exc())
+        except Exception as e:
+            frappe.log_error(title="Item Search", message=traceback.format_exc())
+            return {"Error":"Oops Bad Request!"}
 
-            return {"Error":"Oops Bad Request!"}	
-        
     @frappe.whitelist()
     def itemSaveComposition(self):
-        headers = eTIMS.get_headers()
         if not self.bom_items:
             frappe.throw("No BOM items to register!")
-        
+
         if not self.item:
-            frappe.throw("Item name is mandatory!")   
-        
+            frappe.throw("Item name is mandatory!")
+
         item_doc = frappe.get_doc("Item", self.item)
-        
+
         for item in self.bom_items:
             if not item.get("saved_in_etims") == 1:
                 payload = {
@@ -112,30 +93,19 @@ class eTIMSItemInformation(Document):
                     "regrNm" : item.owner,
                     "regrId" : item.owner
                 }
-                print(payload)
                 try:
-                    response = requests.request(
-                        "POST",
-                        eTIMS.tims_base_url() + 'saveItemComposition',
-                        json = payload,
-                        headers=headers,
-                        timeout=30
-                    )
+                    result = KRAClient().post("saveItemComposition", payload)
 
-                    response_json = response.json()
+                    if result.get("Error"):
+                        return {"Error": result.get("Error")}
 
-                    if not response_json.get("resultCd") == '000':
-                        print(response_json.get("resultMsg"))
-                        return {"Error":response_json.get("resultMsg")}
-                    
-                    # item.custom_composition_saved_in_tims = 1
                     item.saved_in_etims = 1
                     self.save()
                     self.itemSaveComposition()
-                    return {"Success":response_json.get("resultMsg")}
+                    return {"Success": "Item composition saved"}
 
-                except Exception:
-                    eTIMS.log_errors("Item Save Composition", traceback.format_exc())
+                except Exception as e:
+                    frappe.log_error(title="Item Save Composition", message=traceback.format_exc())
                     return {"Error":"Oops Bad Request!"}
 
     @frappe.whitelist()
@@ -143,10 +113,10 @@ class eTIMSItemInformation(Document):
         try:
             if not self.item:
                 frappe.throw("No Item Selected!")
-            
+
             item_bom = check_if_item_has_bom(self.item)
             bom_item_list = get_exploded_items(item_bom)
-            
+
             for item in bom_item_list:
                 check_bom_item_exists = check_if_bom_item_exists(item.get("etims_item_code"), item_bom)
                 if not check_bom_item_exists == True:
@@ -154,14 +124,15 @@ class eTIMSItemInformation(Document):
                                 {"item_name": item.get("item_name"),
                                 "etims_item_code": item.get("etims_item_code"),
                                 "quantity": item.get("qty"),
-                                "stock_uom": item.get("uom"), 
+                                "stock_uom": item.get("uom"),
                                 "parent_bom": item.get("bom")
                                 })
                     self.save()
-        except:     
+        except Exception as e:
+            frappe.log_error(title="Consolidate Item BOM", message=str(e))
             frappe.throw("Something went wrong!")
-        
-        
+
+
 def process_item_cls_info(response_result):
     data = response_result.get("data")
     if data.get("itemClsList"):
@@ -176,24 +147,24 @@ def process_item_cls_info(response_result):
                 new_doc.is_major_target = item.get("mjrTgYn")
                 new_doc.usedunused = item.get("useYn")
                 new_doc.insert()
-                
+
     else:
         frappe.throw("No code data found for this period please try an earlier date")
-        
+
 def check_if_doc_exists(item_code):
     cdcls_exists = False
     code_info_docs = frappe.db.get_all("eTIMS Item Classification",filters = {"item_class_code": item_code}, fields=["name"])
-    
+
     if code_info_docs:
         cdcls_exists = True
-    
+
     return cdcls_exists
 
 
 def process_registered_items(response_result):
     item_list = []
     data = response_result.get("data")
-   
+
     if data.get("itemList"):
         for item in data.get("itemList"):
             create_new_item_doctype(item)
@@ -223,28 +194,28 @@ def process_registered_items(response_result):
                 "kra_modify_yn_item_classification_code": item.get("rraModYn"),
                 "usedunused": item.get("useYn")
             }
-            
+
             if not data in item_list:
                 item_list.append(data)
-                
+
     return item_list
-        
+
 def check_if_item_exists(item_code):
     item_exists = False
     etims_items = frappe.db.get_all("eTIMS Registered Items",filters = {"item_code": item_code})
-    
+
     if etims_items:
         item_exists = True
-    
+
     return item_exists
 
 def check_if_bom_item_exists(etims_item_code, parent_bom):
     item_exists = False
     etims_items = frappe.db.get_all("eTIMS BOM Item",filters = {"etims_item_code": etims_item_code, "parent_bom":parent_bom})
-    
+
     if etims_items:
         item_exists = True
-    
+
     return item_exists
 
 def check_if_item_has_bom(item_code):
@@ -264,9 +235,10 @@ def check_if_item_has_bom(item_code):
             return valid_bom[0].get('name')
         else:
             frappe.throw("BOM for {} is not defined".format(item_code))
-    except Exception:
+    except Exception as e:
+        frappe.log_error(title="Check Item BOM", message=str(e))
         frappe.throw("BOM for {} is not defined".format(item_code))
-        
+
 def get_exploded_items(bom_name):
     bom_details_list = []
     bom_doc = frappe.get_doc("BOM", bom_name)
@@ -274,12 +246,12 @@ def get_exploded_items(bom_name):
         item_doc = frappe.get_doc("Item", item.item_code)
         if not item_doc.get("custom_item_code"):
             frappe.throw("Item {} has no eTIMS item code.".format(item_doc.item_code))
-        
+
         if not item_doc.get("custom_registered_in_tims"):
            frappe.throw("Item {} not registered to eTIMS.".format(item_doc.item_code))
-           
+
         etims_item_code = item_doc.get("custom_item_code")
-        
+
         bom_item_details = {
             "item_name": item.item_code,
             "etims_item_code": etims_item_code,
@@ -287,21 +259,21 @@ def get_exploded_items(bom_name):
             "uom": item.get("stock_uom"),
             "bom": bom_name
         }
-        
+
         if not bom_item_details in bom_details_list:
             bom_details_list.append(bom_item_details)
-            
+
     return bom_details_list
-        
-        
+
+
 def create_new_item_doctype(item):
     current_user = frappe.session.user
     item_exists = check_if_item_exits(item.get("itemNm"))
-    
+
     if item_exists == False:
         pkgUnitNm, qtyUnitNm = get_packing_and_quantity_unit(item.get("pkgUnitCd"), item.get("qtyUnitCd"))
         nat_of_origin = get_country_of_origin(item.get("itemCd"))
-        
+
         new_item_doc = frappe.new_doc("Item")
         new_item_doc.item_code = item.get("itemNm")
         new_item_doc.custom_item_code = item.get("itemCd")
@@ -320,36 +292,36 @@ def create_new_item_doctype(item):
         new_item_doc.custom_registration_id = current_user
         new_item_doc.custom_modifier_id = current_user
         new_item_doc.custom_registered_in_tims = 1
-        
+
         if item.get("taxTyCd"):
             tax_template = get_item_tax_template(item.get("taxTyCd"))
             new_item_doc.append("taxes",{
                 "item_tax_template": tax_template
             })
-            
-        
+
+
         new_item_doc.insert()
-        
+
         create_selling_price(item.get("itemNm"), item.get("dftPrc"))
-        
+
         new_item_doc.save()
-    
+
 def create_selling_price(item_code, prc):
     prc_list = frappe.db.get_all("Item Price", filters={"item_code": item_code, "selling":1}, fields=["name"])
-    
+
     if not prc_list:
         new_item_prc = frappe.new_doc("Item Price")
         new_item_prc.item_code = item_code
         new_item_prc.price_list = "Standard Selling"
         new_item_prc.price_list_rate = prc
-        
+
         new_item_prc.insert()
-    
+
 def check_if_item_exits(item_code):
     item_exists = frappe.db.exists({"doctype": "Item", "item_code": item_code})
-    
+
     if item_exists:
-        
+
         return True
     else:
         return False

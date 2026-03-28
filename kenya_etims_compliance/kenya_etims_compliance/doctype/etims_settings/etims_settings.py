@@ -60,7 +60,8 @@ def get_etims_settings():
 
 	try:
 		settings = frappe.get_single("eTIMS Settings")
-	except Exception:
+	except Exception as e:
+		frappe.log_error("eTIMS: Settings error", str(e))
 		# Return defaults if the Single record has not been saved yet
 		return _defaults
 

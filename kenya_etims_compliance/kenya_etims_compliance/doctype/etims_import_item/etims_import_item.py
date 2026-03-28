@@ -33,7 +33,8 @@ def create_and_link_erpnext_stock_entry(item):
                 # update etims purchase item
                 frappe.db.set_value('eTIMS Import Item', item.name, {'stock_entry_created': 1, 'stock_entry': new_stk_entry_doc.name}, update_modified=True)
                 
-            except Exception:
+            except Exception as e:
+                frappe.log_error("eTIMS: Import item error", str(e))
                 frappe.throw(traceback.format_exc())
                     
 def create_supplier(supplier_name):

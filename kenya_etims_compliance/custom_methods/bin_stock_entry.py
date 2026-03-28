@@ -1,6 +1,6 @@
-import requests
 import frappe
 from kenya_etims_compliance.utils.etims_utils import eTIMS
+from kenya_etims_compliance.utils.kra_client import KRAClient
 
 def on_submit(doc, method):
     if doc.custom_send_stock_info_to_etims: #*******Change condition
@@ -33,8 +33,9 @@ def on_submit(doc, method):
 
                 else:
                     frappe.throw("Missing Value For Warehouse Id")
-        except Exception:
-            frappe.throw("Error saving Master Stock")        
+        except Exception as e:
+            frappe.log_error("eTIMS: Stock master update failed", str(e))
+            frappe.throw(f"Error saving Master Stock: {str(e)}")        
     
 def get_bin_qty(item_code, branch_id):
         store_warehouse = frappe.db.get_all("Warehouse", filters={"warehouse_type": "Stores", "is_group": 0, "custom_tax_branch_office": branch_id}, fields=["warehouse_name", "name"])
@@ -65,37 +66,17 @@ def stockMasterSaveReq(item, doc, regName, modName, branch_id):
     
 def save_stock_master(doc, payload, branch_id):
     if doc.custom_send_stock_info_to_etims:
-        headers = get_headers(branch_id)
         try:
-            response = requests.request(
-                "POST",
-                eTIMS.tims_base_url() + 'saveStockMaster',
-                json = payload,
-                headers=headers,
-                timeout=30
-            )
-            
-            response_json = response.json()
-            if not response_json.get("resultCd") == '000':
-            
-                return {"Oops!":response_json.get("resultMsg")}
-            
-            return {"Success":response_json.get("resultMsg")}
+            result = KRAClient(branch_id=branch_id).post("saveStockMaster", payload)
 
-        except Exception:
-            return {"Error":"Oops Bad Request!"}
-    
+            if result.get("Success") is not None:
+                return {"Success": result.get("Success")}
+
+            return {"Error": result.get("Error", "Oops Bad Request!")}
+
+        except Exception as e:
+            frappe.log_error("eTIMS: Stock master save failed", str(e))
+            return {"Error": f"Stock master error: {str(e)}"}
+
     else:
         frappe.logger().debug("eTIMS stock master update for stock entry")
-        
-def get_headers(branch_id):
-    header_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id, "active":1}, fields=["pin", "branch_id", "communication_key"])
-
-    if header_docs:
-        headers = {
-            "tin":header_docs[0].get("pin"),
-            "bhfId":header_docs[0].get("branch_id"),
-            "cmcKey":header_docs[0].get("communication_key"),
-        }
-        
-        return headers

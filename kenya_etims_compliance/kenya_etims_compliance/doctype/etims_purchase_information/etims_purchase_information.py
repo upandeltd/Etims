@@ -1,65 +1,53 @@
 # Copyright (c) 2023, Upande Ltd and contributors
 # For license information, please see license.txt
 
-import requests, traceback
+import traceback
 
 import frappe
 from frappe.model.document import Document
 from kenya_etims_compliance.utils.etims_utils import eTIMS
+from kenya_etims_compliance.utils.kra_client import KRAClient
 
 class eTIMSPurchaseInformation(Document):
     @frappe.whitelist()
     def trnsPurchaseSalesReq(self):
         request_datetime = self.last_request_date
         date_time_str = eTIMS.strf_datetime_object(request_datetime)
-        
-        headers = eTIMS.get_headers()
 
         payload = {
-                "lastReqDt" :date_time_str, 
+                "lastReqDt" :date_time_str,
         }
 
         try:
-            response = requests.request(
-                            "POST",
-                            # eTIMS.get_base_url() + '/api/method/kenya_etims_compliance.utils.etims_response.' + 'selectTrnsPurchaseSalesList',
-                            eTIMS.tims_base_url() + 'selectTrnsPurchaseSalesList',
-                            json = payload,
-                            headers=headers,
-                            timeout=30
-                        )
-    
-            response_data = response.json()
-            
-            response_json = eTIMS.get_response_data(response_data)
-            
-            if not response_json.get("resultCd") == '000':
-       
-                return {"Oops!":response_json.get("resultMsg")}
-           
-            process_purchases(response_json)
-            
+            result = KRAClient().post("selectTrnsPurchaseSalesList", payload)
+
+            if result.get("Error"):
+                return {"Error": result.get("Error")}
+
+            response_result = {"data": result.get("Success")}
+            process_purchases(response_result)
+
             self.last_search_date_and_time = request_datetime
             self.save()
-     
-            return {"Success":response_json.get("resultMsg")}
 
-        except Exception:
-            return {"Oops!":"An error occured on TIS server!"}	
-        # self.item_classification_data = response_result
-    
+            return {"Success": "Purchase search completed"}
+
+        except Exception as e:
+            frappe.log_error(title="Purchase Sales Request", message=traceback.format_exc())
+            return {"Error": "An error occurred on TIS server!"}
+
 def process_purchases(response_json):
     data = response_json.get("data")
     invoices = data.get("saleList")
-    
+
     if invoices:
         for invoice in invoices:
             doc_exists = check_if_doc_exists(
                         "eTIMS Purchase Invoice", "supplier_invoice_number", invoice.get("spplrInvcNo")
                     )
-            
+
             sale_date = eTIMS.strp_date_object(invoice.get("salesDt"))
-            
+
             if not doc_exists == True:
                 new_doc = frappe.new_doc("eTIMS Purchase Invoice")
                 new_doc.supplier_pin = invoice.get("spplrTin")
@@ -91,22 +79,21 @@ def process_purchases(response_json):
                 new_doc.total_tax_amount = invoice.get("totTaxAmt")
                 new_doc.total_amount = invoice.get("totAmt")
                 new_doc.remark = invoice.get("remark")
-                
-                # new_doc.save()
-                
+
                 for item_detail in invoice.get("itemList"):
                     try:
                         #Method to create new item if not exists and register it to etims
                         eTIMS.map_new_item(item_detail)
                         item_dict = assign_purchase_item(item_detail)
-                    
+
                         new_doc.append("items", item_dict)
 
-                    except Exception:
-                        frappe.throw(traceback.format_exc())
-                
+                    except Exception as e:
+                        frappe.log_error(title="Purchase Item Processing", message=traceback.format_exc())
+                        frappe.throw(str(e))
+
                 new_doc.insert()
-     
+
 def check_if_doc_exists(doc, doc_filter, doc_value):
     cdcls_exists = False
     code_info_docs = frappe.db.get_all(doc, filters={doc_filter: doc_value})
@@ -117,7 +104,7 @@ def check_if_doc_exists(doc, doc_filter, doc_value):
     return cdcls_exists
 
 
-def assign_purchase_item(item_detail):        
+def assign_purchase_item(item_detail):
     item_dict = {
         "item_sequence_number": item_detail.get("itemSeq"),
         "item_code": item_detail.get("itemCd"),
@@ -139,4 +126,3 @@ def assign_purchase_item(item_detail):
     }
 
     return item_dict
-

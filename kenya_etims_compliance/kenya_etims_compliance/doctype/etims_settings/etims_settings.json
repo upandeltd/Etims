@@ -273,7 +273,7 @@
    "label": "Enable PO Notifications"
   },
   {
-"fieldname": "column_break_owpm",
+   "fieldname": "column_break_owpm",
    "fieldtype": "Column Break"
   },
   {
@@ -381,5 +381,6 @@
  "row_format": "Dynamic",
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }

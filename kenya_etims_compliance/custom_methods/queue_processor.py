@@ -165,6 +165,7 @@ def retry_failed_invoices():
 @frappe.whitelist()
 def get_queue_status():
     """Return queue statistics for the dashboard."""
+    frappe.has_permission("eTIMS Invoice Queue", "read", throw=True)
     stats = {}
     for status in ("Queued", "Processing", "Sent", "Failed", "Cancelled"):
         stats[status] = frappe.db.count(
@@ -177,6 +178,7 @@ def get_queue_status():
 @frappe.whitelist()
 def retry_single_entry(queue_entry_name):
     """Manually retry a single failed queue entry."""
+    frappe.has_permission("eTIMS Invoice Queue", "write", throw=True)
     entry = frappe.get_doc("eTIMS Invoice Queue", queue_entry_name)
     if entry.status != "Failed":
         frappe.throw(_("Only failed entries can be retried"))
@@ -196,6 +198,7 @@ def retry_single_entry(queue_entry_name):
 @frappe.whitelist()
 def bulk_retry_failed():
     """Retry all failed entries that haven't exceeded max retries."""
+    frappe.has_permission("eTIMS Invoice Queue", "write", throw=True)
     failed = frappe.get_all(
         "eTIMS Invoice Queue",
         filters={"status": "Failed"},
@@ -296,7 +299,7 @@ def _handle_sales_invoice_success(docname, data, queue_entry):
     date_str = eTIMS.strf_date_object(doc.posting_date)
     try:
         stockIOSaveReq(doc, date_str)
-    except Exception:
+    except Exception as e:
         frappe.log_error(
             title=f"eTIMS Stock IO Error (post-queue): {doc.name}",
             message=traceback.format_exc(),
@@ -317,7 +320,7 @@ def _handle_purchase_invoice_success(docname, data, queue_entry):
     date_str = eTIMS.strf_date_object(doc.posting_date)
     try:
         stockIOSaveReq(doc, date_str)
-    except Exception:
+    except Exception as e:
         frappe.log_error(
             title=f"eTIMS Stock IO Error (post-queue): {doc.name}",
             message=traceback.format_exc(),

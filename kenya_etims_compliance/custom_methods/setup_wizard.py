@@ -21,6 +21,8 @@ import re
 @frappe.whitelist()
 def get_setup_status():
 	"""Check what's already configured — wizard skips completed steps."""
+	if "System Manager" not in frappe.get_roles() and "eTIMS Administrator" not in frappe.get_roles():
+		frappe.throw("Not permitted", frappe.PermissionError)
 	status = {
 		"company": None,
 		"pin": None,
@@ -71,6 +73,8 @@ def get_setup_status():
 @frappe.whitelist()
 def step1_validate_company(company):
 	"""Step 1: Validate company has a KRA PIN."""
+	if "System Manager" not in frappe.get_roles() and "eTIMS Administrator" not in frappe.get_roles():
+		frappe.throw("Not permitted", frappe.PermissionError)
 	tax_id = frappe.db.get_value("Company", company, "tax_id")
 	if not tax_id:
 		return {"status": "error", "message": "Company has no Tax ID (KRA PIN) configured"}
@@ -85,20 +89,20 @@ def step1_validate_company(company):
 @frappe.whitelist()
 def step2_test_connectivity(api_mode="Sandbox"):
 	"""Step 2: Test connectivity to KRA eTIMS API."""
+	if "System Manager" not in frappe.get_roles() and "eTIMS Administrator" not in frappe.get_roles():
+		frappe.throw("Not permitted", frappe.PermissionError)
 	from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import get_api_url
-	import requests
+	from kenya_etims_compliance.utils.kra_client import KRAClient
 
 	url = get_api_url(api_mode)
+	payload = {"lastReqDt": "20200101000000"}
 	try:
-		response = requests.request("POST", url + "selectCodeList",
-			json={"lastReqDt": "20200101000000"}, timeout=10)
-		if response.status_code == 200:
+		result = KRAClient().post("selectCodeList", payload)
+		if result.get("Success") is not None or not result.get("Retryable"):
+			# Any non-retryable response (success or application-level error) means
+			# we reached the API successfully.
 			return {"status": "success", "message": f"Connected to {api_mode} API", "url": url}
-		return {"status": "error", "message": f"API returned status {response.status_code}"}
-	except requests.Timeout:
-		return {"status": "error", "message": "Connection timed out"}
-	except requests.ConnectionError as e:
-		return {"status": "error", "message": f"Cannot connect: {str(e)[:100]}"}
+		return {"status": "error", "message": result.get("Error", "API unreachable")}
 	except Exception as e:
 		return {"status": "error", "message": str(e)[:200]}
 
@@ -106,6 +110,8 @@ def step2_test_connectivity(api_mode="Sandbox"):
 @frappe.whitelist()
 def step3_initialize_device(company, branch_id, serial_number, api_mode="Sandbox"):
 	"""Step 3: Initialize TIS device with KRA."""
+	if "System Manager" not in frappe.get_roles() and "eTIMS Administrator" not in frappe.get_roles():
+		frappe.throw("Not permitted", frappe.PermissionError)
 	# Create Tax Branch Office if not exists
 	if not frappe.db.exists("Tax Branch Office", branch_id):
 		frappe.get_doc({
@@ -147,6 +153,8 @@ def step3_initialize_device(company, branch_id, serial_number, api_mode="Sandbox
 @frappe.whitelist()
 def step4_assign_branch(branch_id):
 	"""Step 4: Assign Tax Branch Office to current user."""
+	if "System Manager" not in frappe.get_roles() and "eTIMS Administrator" not in frappe.get_roles():
+		frappe.throw("Not permitted", frappe.PermissionError)
 	_assign_branch_to_user(branch_id)
 	return {"status": "success", "message": f"Branch {branch_id} assigned to {frappe.session.user}"}
 
@@ -154,9 +162,12 @@ def step4_assign_branch(branch_id):
 @frappe.whitelist()
 def step5_fetch_classifications():
 	"""Step 5: Fetch item classification codes from KRA."""
-	from kenya_etims_compliance.utils.etims_utils import eTIMS
+	if "System Manager" not in frappe.get_roles() and "eTIMS Administrator" not in frappe.get_roles():
+		frappe.throw("Not permitted", frappe.PermissionError)
+	from kenya_etims_compliance.utils.kra_client import KRAClient
 
-	result = eTIMS.make_request("selectItemClsList", {"lastReqDt": "20200101000000"})
+	client = KRAClient()
+	result = client.post("selectItemClsList", {"lastReqDt": "20200101000000"})
 
 	if "Success" in result and result["Success"]:
 		data = result["Success"]
@@ -186,6 +197,8 @@ def step5_fetch_classifications():
 @frappe.whitelist()
 def step6_create_tax_templates(company):
 	"""Step 6: Auto-create Item Tax Templates for KRA tax codes A-E."""
+	if "System Manager" not in frappe.get_roles() and "eTIMS Administrator" not in frappe.get_roles():
+		frappe.throw("Not permitted", frappe.PermissionError)
 	tax_codes = {
 		"A": {"name": "VAT 16%", "rate": 16},
 		"B": {"name": "Zero Rated", "rate": 0},
@@ -232,6 +245,8 @@ def step6_create_tax_templates(company):
 @frappe.whitelist()
 def step7_bulk_register_items(limit=50):
 	"""Step 7: Register unregistered items to eTIMS in batch."""
+	if "System Manager" not in frappe.get_roles() and "eTIMS Administrator" not in frappe.get_roles():
+		frappe.throw("Not permitted", frappe.PermissionError)
 	from kenya_etims_compliance.custom_methods.bulk_operations import bulk_register_items
 
 	items = frappe.get_all("Item", filters={
@@ -251,6 +266,8 @@ def step7_bulk_register_items(limit=50):
 @frappe.whitelist()
 def step8_verify_setup():
 	"""Step 8: Verify everything is configured correctly."""
+	if "System Manager" not in frappe.get_roles() and "eTIMS Administrator" not in frappe.get_roles():
+		frappe.throw("Not permitted", frappe.PermissionError)
 	checks = []
 
 	# Check 1: Company PIN

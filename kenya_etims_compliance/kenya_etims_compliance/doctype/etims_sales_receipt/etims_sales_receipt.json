@@ -27,6 +27,7 @@
    "fieldname": "total_receipt_number",
    "fieldtype": "Data",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Total Receipt Number"
   },
   {
@@ -141,5 +142,6 @@
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
- "title_field": "receipt_number"
+ "title_field": "receipt_number",
+ "track_changes": 1
 }

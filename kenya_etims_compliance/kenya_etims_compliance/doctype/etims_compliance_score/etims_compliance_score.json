@@ -5,28 +5,121 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "period", "branch", "generated_on", "column_break_1",
-  "grade", "overall_score",
-  "section_break_scores", "transmission_score", "reconciliation_score",
-  "column_break_2", "filing_timeliness_score", "supplier_health_score", "error_rate_score",
-  "section_break_desc", "description"
+  "period",
+  "branch",
+  "generated_on",
+  "column_break_1",
+  "grade",
+  "overall_score",
+  "section_break_scores",
+  "transmission_score",
+  "reconciliation_score",
+  "column_break_2",
+  "filing_timeliness_score",
+  "supplier_health_score",
+  "error_rate_score",
+  "section_break_desc",
+  "description"
  ],
  "fields": [
-  {"fieldname": "period", "fieldtype": "Data", "in_list_view": 1, "in_standard_filter": 1, "label": "Period", "reqd": 1},
-  {"fieldname": "branch", "fieldtype": "Link", "in_list_view": 1, "in_standard_filter": 1, "label": "Branch", "options": "Tax Branch Office"},
-  {"fieldname": "generated_on", "fieldtype": "Datetime", "label": "Generated On", "read_only": 1},
-  {"fieldname": "column_break_1", "fieldtype": "Column Break"},
-  {"fieldname": "grade", "fieldtype": "Select", "in_list_view": 1, "label": "Grade", "options": "A\nB\nC\nD", "read_only": 1, "bold": 1},
-  {"fieldname": "overall_score", "fieldtype": "Percent", "in_list_view": 1, "label": "Overall Score", "read_only": 1, "bold": 1},
-  {"fieldname": "section_break_scores", "fieldtype": "Section Break", "label": "Score Breakdown"},
-  {"fieldname": "transmission_score", "fieldtype": "Percent", "label": "Transmission (35%)", "read_only": 1, "description": "% of Sales + Purchase Invoices transmitted to eTIMS"},
-  {"fieldname": "reconciliation_score", "fieldtype": "Percent", "label": "Reconciliation (25%)", "read_only": 1, "description": "% of KRA purchase entries matched to local records"},
-  {"fieldname": "column_break_2", "fieldtype": "Column Break"},
-  {"fieldname": "filing_timeliness_score", "fieldtype": "Percent", "label": "Filing Timeliness (15%)", "read_only": 1, "description": "Whether VAT return preparation is on track"},
-  {"fieldname": "supplier_health_score", "fieldtype": "Percent", "label": "Supplier Health (15%)", "read_only": 1, "description": "Average compliance score of active suppliers"},
-  {"fieldname": "error_rate_score", "fieldtype": "Percent", "label": "Error Rate (10%)", "read_only": 1, "description": "% of eTIMS submissions that succeeded on first try"},
-  {"fieldname": "section_break_desc", "fieldtype": "Section Break", "label": "Summary"},
-  {"fieldname": "description", "fieldtype": "Small Text", "label": "Description", "read_only": 1}
+  {
+   "fieldname": "period",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Period",
+   "reqd": 1
+  },
+  {
+   "fieldname": "branch",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Branch",
+   "options": "Tax Branch Office"
+  },
+  {
+   "fieldname": "generated_on",
+   "fieldtype": "Datetime",
+   "label": "Generated On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "bold": 1,
+   "fieldname": "grade",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Grade",
+   "options": "A\nB\nC\nD",
+   "read_only": 1
+  },
+  {
+   "bold": 1,
+   "fieldname": "overall_score",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Overall Score",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_scores",
+   "fieldtype": "Section Break",
+   "label": "Score Breakdown"
+  },
+  {
+   "description": "% of Sales + Purchase Invoices transmitted to eTIMS",
+   "fieldname": "transmission_score",
+   "fieldtype": "Percent",
+   "label": "Transmission (35%)",
+   "read_only": 1
+  },
+  {
+   "description": "% of KRA purchase entries matched to local records",
+   "fieldname": "reconciliation_score",
+   "fieldtype": "Percent",
+   "label": "Reconciliation (25%)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Whether VAT return preparation is on track",
+   "fieldname": "filing_timeliness_score",
+   "fieldtype": "Percent",
+   "label": "Filing Timeliness (15%)",
+   "read_only": 1
+  },
+  {
+   "description": "Average compliance score of active suppliers",
+   "fieldname": "supplier_health_score",
+   "fieldtype": "Percent",
+   "label": "Supplier Health (15%)",
+   "read_only": 1
+  },
+  {
+   "description": "% of eTIMS submissions that succeeded on first try",
+   "fieldname": "error_rate_score",
+   "fieldtype": "Percent",
+   "label": "Error Rate (10%)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_desc",
+   "fieldtype": "Section Break",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description",
+   "read_only": 1
+  }
  ],
  "links": [],
  "modified": "2026-03-28 13:00:00.000000",
@@ -36,11 +129,38 @@
  "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
-  {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1},
-  {"create": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "eTIMS Administrator", "write": 1},
-  {"export": 1, "print": 1, "read": 1, "report": 1, "role": "eTIMS Auditor"}
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "eTIMS Administrator",
+   "write": 1
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "eTIMS Auditor"
+  }
  ],
  "sort_field": "period",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }
