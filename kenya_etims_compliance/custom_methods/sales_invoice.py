@@ -414,6 +414,12 @@ def stockIOSaveReq(doc, date_str):
 
                     frappe.msgprint("Stock IO synced to eTIMS successfully")
 
+                except requests.Timeout:
+                    frappe.log_error(title="eTIMS Stock IO Timeout", message=f"Stock IO for {doc.name} timed out")
+                    frappe.throw(_("eTIMS stock I/O timed out."))
+                except requests.ConnectionError:
+                    frappe.log_error(title="eTIMS Stock IO Connection Error", message=traceback.format_exc())
+                    frappe.throw(_("Cannot connect to eTIMS for stock I/O."))
                 except Exception as e:
                     frappe.log_error(title="eTIMS Stock IO Error", message=traceback.format_exc())
                     frappe.throw(f"eTIMS Stock IO Error: {str(e)}")
@@ -576,33 +582,6 @@ def create_sales_receipt(data, doc_name):
    
     new_rcpt_doc.insert()
     
-# def create_qr_codedd(pin, branch_id, rcpt_signature):
-#     header_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id, "active":1}, fields=["api_mode"])
-
-#     if rcpt_signature:
-#         if header_docs:
-#             settings_doc = header_docs[0]
-            
-#             url = "https://etims-sbx.kra.go.ke/common/link/etims/receipt/indexEtimsReceiptData?Data=" + pin+ branch_id + rcpt_signature
-#             file_name = rcpt_signature + ".png"
-            
-#             file_path = frappe.get_site_path('private', 'files', file_name)
-            
-#             if settings_doc.get("api_mode") == "Production":
-#                 url = "https://etims.kra.go.ke/common/link/etims/receipt/indexEtimsReceiptData?Data=" + pin+ branch_id + rcpt_signature
-#             else:
-#                 url = "https://etims-sbx.kra.go.ke/common/link/etims/receipt/indexEtimsReceiptData?Data=" + pin+ branch_id + rcpt_signature
-                
-#             try:
-#                 big_code = pyqrcode.create(url, error='L', version=27, mode='binary')
-#                 big_code.png(file_path, scale=10, module_color=[0, 0, 0, 128], background=[255, 255, 255])
-#                 # big_code.show()
-                
-#                 return file_name
-                
-#             except Exception:
-#                 frappe.throw("QR Code Not Generated!")
-
 def create_qr_code(pin, branch_id, rcpt_signature):     
     header_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id, "active":1}, fields=["api_mode"])
 

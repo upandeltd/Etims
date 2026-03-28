@@ -23,10 +23,11 @@ class eTIMSImportItemInformation(Document):
 
         try:
             response = requests.request(
-                "POST", 
-                eTIMS.tims_base_url() + 'selectImportItemList', 
-                json = payload, 
-                headers=headers
+                "POST",
+                eTIMS.tims_base_url() + 'selectImportItemList',
+                json = payload,
+                headers=headers,
+                timeout=30
             )
             response_data = response.json()
             response_json = eTIMS.get_response_data(response_data)

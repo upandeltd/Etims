@@ -29,7 +29,8 @@ class eTIMSItemInformation(Document):
                 "POST",
                 eTIMS.tims_base_url() + 'selectItemClsList',
                 json = payload,
-                headers=headers
+                headers=headers,
+                timeout=30
             )
     
             response_json = response.json()
@@ -64,10 +65,11 @@ class eTIMSItemInformation(Document):
 
         try:
             response = requests.request(
-                "POST", 
-                eTIMS.tims_base_url() + 'selectItemList', 
-                json = payload, 
-                headers=headers
+                "POST",
+                eTIMS.tims_base_url() + 'selectItemList',
+                json = payload,
+                headers=headers,
+                timeout=30
             )
     
             response_json = response.json()
@@ -114,9 +116,10 @@ class eTIMSItemInformation(Document):
                 try:
                     response = requests.request(
                         "POST",
-                        eTIMS.tims_base_url() + 'saveItemComposition', 
-                        json = payload, 
-                        headers=headers
+                        eTIMS.tims_base_url() + 'saveItemComposition',
+                        json = payload,
+                        headers=headers,
+                        timeout=30
                     )
 
                     response_json = response.json()

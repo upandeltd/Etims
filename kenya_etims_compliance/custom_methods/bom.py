@@ -47,9 +47,10 @@ def post_item_compostion(item_payload, doc):
             try:
                 response = requests.request(
                     "POST",
-                    eTIMS.tims_base_url() + 'saveItemComposition', 
-                    json = item_payload, 
-                    headers=headers
+                    eTIMS.tims_base_url() + 'saveItemComposition',
+                    json = item_payload,
+                    headers=headers,
+                    timeout=30
                 )
 
                 response_json = response.json()

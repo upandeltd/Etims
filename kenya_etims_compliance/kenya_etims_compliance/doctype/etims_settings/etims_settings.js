@@ -3,6 +3,7 @@
 
 frappe.ui.form.on("eTIMS Settings", {
 	refresh(frm) {
+<<<<<<< Updated upstream
 		// Test Connection button
 		frm.add_custom_button(__("Test Connection"), function () {
 			frappe.call({
@@ -106,3 +107,36 @@ function render_queue_dashboard(frm) {
 		},
 	});
 }
+=======
+		frm.add_custom_button(__("Run Setup Wizard"), function () {
+			frappe.set_route("app", "etims-setup-wizard");
+		}, __("Actions"));
+
+		frm.add_custom_button(__("View Dashboard Data"), function () {
+			frappe.call({
+				method: "kenya_etims_compliance.custom_methods.dashboard.get_dashboard_data",
+				callback: function (r) {
+					if (r.message) {
+						const d = r.message;
+						frappe.msgprint({
+							title: __("eTIMS Dashboard"),
+							message: `
+								<table class="table table-bordered">
+									<tr><td><b>${__("Sales Transmitted")}</b></td><td>${d.sales_transmitted}</td></tr>
+									<tr><td><b>${__("Sales Pending")}</b></td><td>${d.sales_pending}</td></tr>
+									<tr><td><b>${__("Purchases Matched")}</b></td><td>${d.purchase_matched}</td></tr>
+									<tr><td><b>${__("Input VAT at Risk")}</b></td><td>${format_currency(d.input_vat_at_risk)}</td></tr>
+									<tr><td><b>${__("Queue Pending")}</b></td><td>${d.queue_pending}</td></tr>
+									<tr><td><b>${__("Days to Deadline")}</b></td><td>${d.days_to_deadline}</td></tr>
+									<tr><td><b>${__("Suppliers Verified")}</b></td><td>${d.verified_suppliers} / ${d.total_suppliers}</td></tr>
+								</table>
+							`,
+							indicator: "blue",
+						});
+					}
+				},
+			});
+		}, __("Actions"));
+	},
+});
+>>>>>>> Stashed changes

@@ -27,6 +27,7 @@
    "fieldname": "customer_tin",
    "fieldtype": "Data",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Customer TIN",
    "length": 11,
    "read_only": 1
@@ -49,6 +50,7 @@
    "fieldname": "occurred_date",
    "fieldtype": "Date",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Occurred Date",
    "read_only": 1
   },
@@ -63,6 +65,8 @@
    "default": "0",
    "fieldname": "stock_updated",
    "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Stock Updated"
   },
   {
@@ -118,7 +122,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-12-06 20:26:18.452599",
+ "modified": "2026-03-28 17:00:00.000000",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Stock Movement",
@@ -147,9 +151,33 @@
    "role": "Sales User",
    "share": 1,
    "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "eTIMS Administrator",
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "eTIMS Store Keeper"
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "eTIMS Auditor"
   }
  ],
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
  "states": []
 }

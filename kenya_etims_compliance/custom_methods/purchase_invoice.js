@@ -66,6 +66,26 @@ frappe.ui.form.on("Purchase Invoice",{
             }
         }
 
+        // Reverse invoice indicator
+        if (frm.doc.custom_is_reverse_invoice && !frm.doc.docstatus) {
+            frm.dashboard.set_headline_alert(
+                __('Reverse Invoice mode — generating tax invoice on behalf of supplier'),
+                'blue'
+            );
+        }
+
+        // Supplier PIN verification banner
+        if (frm.doc.supplier && !frm.is_new()) {
+            frappe.db.get_value('Supplier', frm.doc.supplier, 'custom_kra_pin_verified', function(r) {
+                if (r && !r.custom_kra_pin_verified) {
+                    frm.dashboard.set_headline_alert(
+                        __('Supplier KRA PIN not verified — input VAT may be rejected'),
+                        'orange'
+                    );
+                }
+            });
+        }
+
         // Add Verify Invoice with KRA button
         // Only show if invoice is not verified and is saved (has a name)
         if (frm.doc.name && frm.doc.name !== 'New Purchase Invoice') {

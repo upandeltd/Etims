@@ -159,8 +159,91 @@ def fetch_total_non_vat(doc):
                 
     return taxable_non_vat_amount
 
+def handle_reverse_invoice(doc, headers):
+    """Handle buyer-initiated invoicing for unregistered suppliers.
+
+    Per KRA Reverse Invoicing Guidelines (March 2025).
+    """
+    if doc.custom_supplier_vat_registered:
+        frappe.throw(_("Cannot issue reverse invoice — supplier is VAT-registered."))
+
+    request_date = doc.posting_date
+    date_str = eTIMS.strf_date_object(request_date)
+    now_dt = datetime.now()
+    date_time_str = now_dt.strftime("%Y%m%d%H%M%S")
+    conc_datetime_str = eTIMS.strf_datetime_format(doc.modified)
+
+    payload = {
+        "trdInvcNo": doc.name,
+        "invcNo": doc.custom_invoice_number,
+        "orgInvcNo": 0,
+        "custTin": doc.get("custom_supplier_pin") or "",
+        "custNm": doc.supplier_name or doc.supplier,
+        "salesTyCd": "N",
+        "rcptTyCd": "R",
+        "pmtTyCd": doc.custom_payment_type_code or "01",
+        "salesSttsCd": "02",
+        "cfmDt": conc_datetime_str,
+        "salesDt": date_str,
+        "stockRlsDt": date_time_str,
+        "totItemCnt": len(doc.items),
+        "totTaxblAmt": abs(doc.custom_total_taxable_amount or 0),
+        "totTaxAmt": abs(doc.base_total_taxes_and_charges),
+        "totAmt": abs(doc.base_grand_total),
+        "prchrAcptcYn": "N",
+        "remark": f"Reverse Invoice - {doc.remarks or ''}",
+        "regrId": (doc.owner or "")[:20],
+        "regrNm": (doc.owner or "")[:20],
+        "modrId": (doc.modified_by or "")[:20],
+        "modrNm": (doc.modified_by or "")[:20],
+        "receipt": {
+            "custTin": doc.get("custom_supplier_pin") or "",
+            "rcptPbctDt": date_time_str,
+            "prchrAcptcYn": "N",
+        },
+        "itemList": etims_pur_item_list(doc),
+    }
+
+    # Add tax breakdown
+    for code in ["A", "B", "C", "D", "E"]:
+        payload[f"taxblAmt{code}"] = 0
+        payload[f"taxRt{code}"] = 0
+        payload[f"taxAmt{code}"] = 0
+
+    if doc.taxes:
+        for tax_item in doc.taxes:
+            code = tax_item.get("custom_code")
+            if code and code in ["A", "B", "C", "D", "E"]:
+                payload[f"taxblAmt{code}"] = abs(round(tax_item.get("custom_total_taxable_amount", 0), 2))
+                payload[f"taxRt{code}"] = abs(get_tax_account_rate(tax_item.get("account_head")) or 0)
+                payload[f"taxAmt{code}"] = abs(tax_item.get("base_tax_amount_after_discount_amount", 0))
+
+    try:
+        response = requests.request(
+            "POST", eTIMS.tims_base_url() + 'saveTrnsSalesOsdc',
+            json=payload, headers=headers, timeout=30,
+        )
+        response_json = response.json()
+        if response_json.get("resultCd") != "000":
+            frappe.throw(response_json.get("resultMsg"))
+        return response_json.get("data")
+    except requests.Timeout:
+        frappe.throw(_("eTIMS request timed out. Please try again."))
+    except Exception as e:
+        frappe.log_error(title="eTIMS Reverse Invoice Error", message=traceback.format_exc())
+        frappe.throw(f"eTIMS Error: {str(e)}")
+
+
 @frappe.whitelist()
 def trnsPurchaseSaveReq(doc, method):
+    # Handle reverse invoicing (buyer-initiated)
+    if getattr(doc, 'custom_is_reverse_invoice', False):
+        headers = eTIMS.get_headers()
+        result = handle_reverse_invoice(doc, headers)
+        if result:
+            frappe.msgprint(_("Reverse invoice submitted to eTIMS"))
+        return
+
     supplier_details = get_supplier_details(doc.supplier)
 
     tax_code_list = []
@@ -310,7 +393,7 @@ def trnsPurchaseSaveReq(doc, method):
                 frappe.log_error(title="eTIMS Purchase Invoice Error", message=traceback.format_exc())
                 frappe.throw(f"eTIMS Error: {str(e)}")
     else:
-        frappe.logger().debug("Purchase payload (not sent to eTIMS): {0}".format(payload))
+        frappe.logger().debug("eTIMS purchase skipped for %s", doc.name)
         stockIOSaveReq(doc, date_str)
         return
     
@@ -371,7 +454,7 @@ def stockIOSaveReq(doc, date_str):
             frappe.log_error(title="eTIMS Purchase Stock IO Error", message=traceback.format_exc())
             return {"Error": f"eTIMS Error: {str(e)}"}
     else:
-        frappe.logger().debug("Purchase stock IO payload (not sent): {0}".format(payload))
+        frappe.logger().debug("eTIMS purchase stock IO skipped for %s", doc.name)
         return
         
 def get_supplier_details(supplier):

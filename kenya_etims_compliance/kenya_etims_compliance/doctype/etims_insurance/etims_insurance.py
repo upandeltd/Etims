@@ -27,10 +27,11 @@ class eTIMSInsurance(Document):
 
             try:
                 response = requests.request(
-                    "POST", 
-                    eTIMS.tims_base_url() + 'saveBhfInsurance', 
-                    json = payload, 
-                    headers=headers
+                    "POST",
+                    eTIMS.tims_base_url() + 'saveBhfInsurance',
+                    json = payload,
+                    headers=headers,
+                    timeout=30
                 )
                 response_json = response.json()
     

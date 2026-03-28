@@ -1,44 +1,50 @@
 {
  "actions": [],
- "allow_import": 1,
  "creation": "2024-02-03 00:00:00",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
- "issingle": 1,
  "field_order": [
   "sb_general",
   "default_sar_type_sales",
   "default_sar_type_purchase",
-  "default_sar_type_stock_entry",
+  "column_break_owpm",
   "enable_auto_sync",
+  "default_sar_type_stock_entry",
   "sb_role",
   "enable_rbac",
   "enforce_branch_isolation",
+  "column_break_vyys",
   "allow_cross_branch_operations",
   "sb_api",
   "api_timeout",
   "production_api_url",
+  "column_break_xwoa",
   "sandbox_api_url",
   "sb_retry",
   "enable_retry_logic",
   "max_retry_attempts",
+  "column_break_neqx",
   "retry_delay",
   "sb_search",
   "default_search_limit",
+  "column_break_ienu",
   "max_search_limit",
   "sb_error",
   "enable_error_logging",
   "enable_permission_logging",
+  "column_break_rwal",
   "error_notification_email",
   "sb_compliance",
   "enforce_invoice_verification",
   "auto_verify_invoices",
+  "column_break_bpgc",
   "allow_payment_unverified",
   "verification_amount_threshold",
   "sb_po_tracking",
   "enable_po_tracking",
   "auto_reconcile_invoices",
+  "column_break_emxl",
   "po_notification_enabled",
   "sb_queue",
   "enable_queue",
@@ -267,6 +273,38 @@
    "label": "Enable PO Notifications"
   },
   {
+"fieldname": "column_break_owpm",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_vyys",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_xwoa",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_neqx",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_ienu",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_rwal",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_bpgc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_emxl",
+   "fieldtype": "Column Break"
+  },
+  {
    "fieldname": "sb_queue",
    "fieldtype": "Section Break",
    "label": "Invoice Queue Settings"
@@ -306,8 +344,9 @@
   }
  ],
  "index_web_pages_for_search": 1,
+ "issingle": 1,
  "links": [],
- "modified": "2026-03-11 00:00:00.000000",
+ "modified": "2026-03-28 10:13:49.764135",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Settings",
@@ -317,10 +356,8 @@
    "create": 1,
    "delete": 1,
    "email": 1,
-   "export": 1,
    "print": 1,
    "read": 1,
-   "report": 1,
    "role": "System Manager",
    "share": 1,
    "write": 1
@@ -329,21 +366,20 @@
    "create": 1,
    "delete": 1,
    "email": 1,
-   "export": 1,
    "print": 1,
    "read": 1,
-   "report": 1,
    "role": "eTIMS Administrator",
    "share": 1,
    "write": 1
   },
   {
-   "export": 1,
    "print": 1,
    "read": 1,
-   "report": 1,
    "role": "eTIMS Auditor"
   }
  ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
  "states": []
 }

@@ -27,7 +27,8 @@ class TISDeviceInitialization(Document):
             response = requests.request(
                         "POST",
                         api_url + 'selectInitOsdcInfo',
-                        json = payload
+                        json = payload,
+                        timeout=30
                     )
             response_data = response.json()
             response_json = eTIMS.get_response_data(response_data)

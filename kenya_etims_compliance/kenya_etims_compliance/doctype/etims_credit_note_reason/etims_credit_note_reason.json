@@ -1,0 +1,76 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "field:code",
+ "creation": "2026-03-27 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "code",
+  "description",
+  "applies_to"
+ ],
+ "fields": [
+  {
+   "fieldname": "code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Code",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Description",
+   "reqd": 1
+  },
+  {
+   "default": "Both",
+   "fieldname": "applies_to",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Applies To",
+   "options": "Sales\nPurchase\nBoth"
+  }
+ ],
+ "links": [],
+ "modified": "2026-03-27 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS Credit Note Reason",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "eTIMS Administrator",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "eTIMS Auditor"
+  }
+ ],
+ "sort_field": "code",
+ "sort_order": "ASC",
+ "states": []
+}

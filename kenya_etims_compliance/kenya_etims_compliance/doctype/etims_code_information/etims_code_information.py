@@ -29,6 +29,7 @@ class eTIMSCodeInformation(Document):
                 eTIMS.tims_base_url() + "selectCodeList",
                 json=payload,
                 headers=headers,
+                timeout=30,
             )
             response_json = response.json()
 
@@ -71,6 +72,7 @@ class eTIMSCodeInformation(Document):
                 eTIMS.tims_base_url() + "selectCustomer",
                 json=payload,
                 headers=headers,
+                timeout=30,
             )
             
             response_data = response.json()
@@ -120,6 +122,7 @@ class eTIMSCodeInformation(Document):
                 eTIMS.tims_base_url() + "selectNoticeList",
                 json=payload,
                 headers=headers,
+                timeout=30,
             )
 
             response_json = response.json()

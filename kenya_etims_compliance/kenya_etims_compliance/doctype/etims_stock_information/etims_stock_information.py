@@ -23,11 +23,12 @@ class eTIMSStockInformation(Document):
 
         try:
             response = requests.request(
-                "POST", 
-                eTIMS.tims_base_url() + 'selectStockMoveList', 
+                "POST",
+                eTIMS.tims_base_url() + 'selectStockMoveList',
                 # eTIMS.get_base_url() + 'selectStockMoveList',
-                json = payload, 
-                headers=headers
+                json = payload,
+                headers=headers,
+                timeout=30
             )
             
             response_data = response.json()
@@ -66,10 +67,11 @@ class eTIMSStockInformation(Document):
                 
                 try:
                     response = requests.request(
-                        "POST", 
-                        eTIMS.tims_base_url() + 'saveStockMaster', 
-                        json = payload, 
-                        headers=headers
+                        "POST",
+                        eTIMS.tims_base_url() + 'saveStockMaster',
+                        json = payload,
+                        headers=headers,
+                        timeout=30
                     )
                     
                     response_json = response.json()

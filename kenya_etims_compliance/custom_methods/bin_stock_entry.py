@@ -68,10 +68,11 @@ def save_stock_master(doc, payload, branch_id):
         headers = get_headers(branch_id)
         try:
             response = requests.request(
-                "POST", 
-                eTIMS.tims_base_url() + 'saveStockMaster', 
-                json = payload, 
-                headers=headers
+                "POST",
+                eTIMS.tims_base_url() + 'saveStockMaster',
+                json = payload,
+                headers=headers,
+                timeout=30
             )
             
             response_json = response.json()
@@ -85,7 +86,7 @@ def save_stock_master(doc, payload, branch_id):
             return {"Error":"Oops Bad Request!"}
     
     else:
-        frappe.logger().debug("Stock Master - Stock: {0}".format(payload))
+        frappe.logger().debug("eTIMS stock master update for stock entry")
         
 def get_headers(branch_id):
     header_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id, "active":1}, fields=["pin", "branch_id", "communication_key"])

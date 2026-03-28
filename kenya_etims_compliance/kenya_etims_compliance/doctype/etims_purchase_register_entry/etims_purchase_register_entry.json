@@ -1,0 +1,60 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-03-28 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "supplier_pin", "supplier_name", "supplier", "kra_invoice_number", "column_break_1",
+  "invoice_date", "total_amount", "tax_amount", "item_count",
+  "section_break_recon", "match_status", "matched_purchase_invoice", "etims_purchase_invoice",
+  "column_break_2", "variance_amount", "variance_accepted", "variance_reason",
+  "accepted_by", "accepted_on",
+  "section_break_meta", "fetch_date", "branch"
+ ],
+ "fields": [
+  {"fieldname": "supplier_pin", "fieldtype": "Data", "in_list_view": 1, "in_standard_filter": 1, "label": "Supplier PIN", "reqd": 1},
+  {"fieldname": "supplier_name", "fieldtype": "Data", "in_list_view": 1, "label": "Supplier Name"},
+  {"fieldname": "supplier", "fieldtype": "Link", "label": "Supplier", "options": "Supplier", "read_only": 1},
+  {"fieldname": "kra_invoice_number", "fieldtype": "Int", "in_list_view": 1, "label": "KRA Invoice Number", "reqd": 1},
+  {"fieldname": "column_break_1", "fieldtype": "Column Break"},
+  {"fieldname": "invoice_date", "fieldtype": "Date", "in_list_view": 1, "in_standard_filter": 1, "label": "Invoice Date", "reqd": 1},
+  {"fieldname": "total_amount", "fieldtype": "Currency", "in_list_view": 1, "label": "Total Amount", "reqd": 1},
+  {"fieldname": "tax_amount", "fieldtype": "Currency", "label": "Tax Amount"},
+  {"fieldname": "item_count", "fieldtype": "Int", "label": "Item Count"},
+  {"fieldname": "section_break_recon", "fieldtype": "Section Break", "label": "Reconciliation"},
+  {"default": "Pending", "fieldname": "match_status", "fieldtype": "Select", "in_list_view": 1, "in_standard_filter": 1, "label": "Match Status", "options": "Pending\nMatched\nMatched (Auto-Created)\nAmount Mismatch\nMissing Locally\nReview Required"},
+  {"fieldname": "matched_purchase_invoice", "fieldtype": "Link", "label": "Matched Purchase Invoice", "options": "Purchase Invoice", "read_only": 1},
+  {"fieldname": "etims_purchase_invoice", "fieldtype": "Link", "label": "eTIMS Purchase Invoice", "options": "eTIMS Purchase Invoice", "read_only": 1, "description": "Raw KRA purchase data with item details"},
+  {"fieldname": "column_break_2", "fieldtype": "Column Break"},
+  {"fieldname": "variance_amount", "fieldtype": "Currency", "label": "Variance Amount", "read_only": 1},
+  {"fieldname": "variance_accepted", "fieldtype": "Check", "label": "Variance Accepted"},
+  {"fieldname": "variance_reason", "fieldtype": "Small Text", "label": "Variance Reason", "depends_on": "variance_accepted", "mandatory_depends_on": "variance_accepted"},
+  {"fieldname": "accepted_by", "fieldtype": "Link", "label": "Accepted By", "options": "User", "read_only": 1},
+  {"fieldname": "accepted_on", "fieldtype": "Datetime", "label": "Accepted On", "read_only": 1},
+  {"fieldname": "section_break_meta", "fieldtype": "Section Break", "label": "Metadata"},
+  {"fieldname": "fetch_date", "fieldtype": "Datetime", "label": "Fetch Date", "read_only": 1},
+  {"fieldname": "branch", "fieldtype": "Link", "label": "Branch", "options": "Tax Branch Office"}
+ ],
+ "links": [
+  {"group": "Reference", "link_doctype": "Purchase Invoice", "link_fieldname": "name"},
+  {"group": "Reference", "link_doctype": "eTIMS Purchase Invoice", "link_fieldname": "name"}
+ ],
+ "modified": "2026-03-28 15:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS Purchase Register Entry",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1},
+  {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "eTIMS Administrator", "share": 1, "write": 1},
+  {"email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "eTIMS Manager", "write": 1},
+  {"export": 1, "print": 1, "read": 1, "report": 1, "role": "eTIMS Auditor"}
+ ],
+ "sort_field": "invoice_date",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "supplier_name",
+ "show_title_field_in_link": 1
+}

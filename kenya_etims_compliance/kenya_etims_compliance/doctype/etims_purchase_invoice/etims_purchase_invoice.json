@@ -56,6 +56,7 @@
   {
    "fieldname": "supplier_name",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Supplier Name",
    "length": 60,
    "read_only": 1
@@ -94,6 +95,7 @@
   {
    "fieldname": "sale_date",
    "fieldtype": "Date",
+   "in_standard_filter": 1,
    "label": "Sale Date",
    "read_only": 1
   },
@@ -227,6 +229,7 @@
   {
    "fieldname": "total_amount",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Total Amount",
    "read_only": 1
   },
@@ -257,6 +260,7 @@
   {
    "fieldname": "erpnext_purchase_invoice",
    "fieldtype": "Link",
+   "in_standard_filter": 1,
    "label": "ERPNext Purchase Invoice",
    "options": "Purchase Invoice"
   },
@@ -272,7 +276,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-12-11 11:35:29.373707",
+ "modified": "2026-03-28 17:00:00.000000",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Purchase Invoice",
@@ -301,9 +305,35 @@
    "role": "Sales User",
    "share": 1,
    "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "eTIMS Manager",
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "eTIMS Purchase Clerk"
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "eTIMS Auditor"
   }
  ],
- "sort_field": "modified",
+ "show_title_field_in_link": 1,
+ "sort_field": "creation",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "supplier_name"
 }

@@ -41,6 +41,30 @@ frappe.ui.form.on('Supplier', {
         frm.add_custom_button(__('View Invoice Statistics'), function() {
             view_supplier_invoice_stats(frm);
         }, __('eTIMS Actions'));
+
+        // KRA PIN Verification
+        if (frm.doc.custom_supplier_pin && !frm.is_new()) {
+            frm.add_custom_button(__('Verify KRA PIN'), function() {
+                frappe.call({
+                    method: 'kenya_etims_compliance.utils.etims_utils.verify_supplier',
+                    args: { supplier_name: frm.doc.name },
+                    freeze: true,
+                    freeze_message: __('Verifying with KRA...'),
+                    callback: function(r) {
+                        if (r.message && r.message.status === 'success') {
+                            frappe.show_alert({message: r.message.message, indicator: 'green'});
+                        } else {
+                            frappe.show_alert({message: (r.message && r.message.message) || 'Failed', indicator: 'red'});
+                        }
+                        frm.reload_doc();
+                    }
+                });
+            }, __('eTIMS'));
+
+            if (frm.doc.custom_kra_pin_verified) {
+                frm.dashboard.set_headline(__('KRA PIN Verified'));
+            }
+        }
     },
 
     // Validate Tax PIN format

@@ -50,10 +50,9 @@ doctype_js = {
 }
 
 # include js in doctype views
-# doctype_js = {"doctype" : "public/js/doctype.js"}
-# doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
-# doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
-# doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
+doctype_list_js = {
+    "Item": "custom_methods/item_list.js",
+}
 
 # Svg Icons
 # ------------------
@@ -188,8 +187,28 @@ scheduler_events = {
     "cron": {
         "*/5 * * * *": [
             "kenya_etims_compliance.custom_methods.queue_processor.retry_failed_invoices"
-        ]
-    }
+        ],
+        "*/15 * * * *": [
+            "kenya_etims_compliance.tasks.process_submission_queue",
+        ],
+    },
+    "hourly": [
+        "kenya_etims_compliance.tasks.retry_failed_submissions",
+    ],
+    "daily": [
+        "kenya_etims_compliance.tasks.fetch_kra_notices",
+        "kenya_etims_compliance.tasks.fetch_purchase_transactions",
+        "kenya_etims_compliance.tasks.run_reconciliation_task",
+        "kenya_etims_compliance.tasks.fetch_import_items",
+        "kenya_etims_compliance.tasks.send_deadline_reminders",
+    ],
+    "weekly": [
+        "kenya_etims_compliance.tasks.verify_supplier_pins",
+        "kenya_etims_compliance.tasks.calculate_supplier_scores",
+    ],
+    "monthly": [
+        "kenya_etims_compliance.tasks.generate_compliance_score",
+    ],
 }
 
 # Testing
@@ -263,4 +282,6 @@ scheduler_events = {
 
 fixtures = [
     {"dt": "Custom Field", "filters": [["module", "=", "Kenya Etims Compliance"]]},
+    {"dt": "Workspace Sidebar", "filters": [["module", "=", "Kenya Etims Compliance"]]},
+    {"dt": "eTIMS Credit Note Reason", "filters": [["code", "!=", ""]]}
 ]

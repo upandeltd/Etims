@@ -60,21 +60,22 @@ def stockMasterSaveReq(item, doc, regName, modName):
         if doc.custom_update_invoice_in_tims:
             save_stock_master(payload)	
         else:
-            frappe.logger().debug("Stock Master - Sales: {0}".format(payload))
+            frappe.logger().debug("eTIMS stock master update for sales")
     if doc.doctype == "Purchase Invoice":
         if doc.custom_update_purchase_in_tims:
             save_stock_master(payload)	
         else:
-            frappe.logger().debug("Stock Master - Pur: {0}".format(payload))
+            frappe.logger().debug("eTIMS stock master update for purchase")
         
 def save_stock_master(payload):
     headers = eTIMS.get_headers()
     try:
         response = requests.request(
-            "POST", 
-            eTIMS.tims_base_url() + 'saveStockMaster', 
-            json = payload, 
-            headers=headers
+            "POST",
+            eTIMS.tims_base_url() + 'saveStockMaster',
+            json = payload,
+            headers=headers,
+            timeout=30
         )
         
         response_json = response.json()

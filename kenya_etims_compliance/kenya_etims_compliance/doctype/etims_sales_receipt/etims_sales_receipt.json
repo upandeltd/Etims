@@ -20,6 +20,7 @@
    "fieldname": "receipt_number",
    "fieldtype": "Data",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Receipt Number"
   },
   {
@@ -42,6 +43,7 @@
    "fieldname": "control_unit_date_time",
    "fieldtype": "Datetime",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Control Unit Date Time"
   },
   {
@@ -55,13 +57,14 @@
    "fieldname": "reference",
    "fieldtype": "Dynamic Link",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Reference",
    "options": "reference_doctype"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-25 22:23:59.567602",
+ "modified": "2026-03-28 17:00:00.000000",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Sales Receipt",
@@ -135,7 +138,8 @@
   }
  ],
  "row_format": "Dynamic",
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "receipt_number"
 }

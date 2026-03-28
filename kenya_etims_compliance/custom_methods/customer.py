@@ -26,10 +26,11 @@ def bhfCustSaveReq(doc_name):
  
     try:
         response = requests.request(
-            "POST", 
-            eTIMS.tims_base_url() + 'saveBhfCustomer', 
-            json = customer, 
-            headers=headers
+            "POST",
+            eTIMS.tims_base_url() + 'saveBhfCustomer',
+            json = customer,
+            headers=headers,
+            timeout=30
         )
 
         response_json = response.json()

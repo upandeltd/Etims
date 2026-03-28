@@ -1,0 +1,44 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-03-28 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "sar_number", "item_code", "item_name", "column_break_1",
+  "quantity", "movement_type", "movement_date", "branch",
+  "section_break_recon", "match_status", "matched_reference_type", "matched_document",
+  "fetch_date"
+ ],
+ "fields": [
+  {"fieldname": "sar_number", "fieldtype": "Int", "in_list_view": 1, "label": "SAR Number", "reqd": 1},
+  {"fieldname": "item_code", "fieldtype": "Data", "in_list_view": 1, "in_standard_filter": 1, "label": "Item Code", "reqd": 1},
+  {"fieldname": "item_name", "fieldtype": "Data", "in_list_view": 1, "label": "Item Name"},
+  {"fieldname": "column_break_1", "fieldtype": "Column Break"},
+  {"fieldname": "quantity", "fieldtype": "Float", "label": "Quantity", "reqd": 1},
+  {"fieldname": "movement_type", "fieldtype": "Data", "in_list_view": 1, "in_standard_filter": 1, "label": "Movement Type"},
+  {"fieldname": "movement_date", "fieldtype": "Date", "in_list_view": 1, "in_standard_filter": 1, "label": "Movement Date", "reqd": 1},
+  {"fieldname": "branch", "fieldtype": "Link", "in_standard_filter": 1, "label": "Branch", "options": "Tax Branch Office"},
+  {"fieldname": "section_break_recon", "fieldtype": "Section Break", "label": "Reconciliation"},
+  {"default": "Pending", "fieldname": "match_status", "fieldtype": "Select", "in_list_view": 1, "in_standard_filter": 1, "label": "Match Status", "options": "Pending\nMatched\nVariance\nUnmatched"},
+  {"fieldname": "matched_reference_type", "fieldtype": "Link", "label": "Reference Type", "options": "DocType"},
+  {"fieldname": "matched_document", "fieldtype": "Dynamic Link", "label": "Matched Document", "options": "matched_reference_type"},
+  {"fieldname": "fetch_date", "fieldtype": "Datetime", "label": "Fetch Date", "read_only": 1}
+ ],
+ "links": [],
+ "modified": "2026-03-28 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS Stock Register Entry",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1},
+  {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "eTIMS Administrator", "share": 1, "write": 1},
+  {"export": 1, "print": 1, "read": 1, "report": 1, "role": "eTIMS Store Keeper"},
+  {"export": 1, "print": 1, "read": 1, "report": 1, "role": "eTIMS Auditor"}
+ ],
+ "sort_field": "movement_date",
+ "sort_order": "DESC",
+ "states": []
+}

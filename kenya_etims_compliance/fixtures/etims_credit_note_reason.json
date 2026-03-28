@@ -1,0 +1,83 @@
+[
+ {
+  "applies_to": "Both",
+  "code": "01",
+  "description": "Missing Quantity",
+  "docstatus": 0,
+  "doctype": "eTIMS Credit Note Reason",
+  "modified": "2026-03-28 06:52:00.145841",
+  "name": "01"
+ },
+ {
+  "applies_to": "Both",
+  "code": "02",
+  "description": "Damaged Goods",
+  "docstatus": 0,
+  "doctype": "eTIMS Credit Note Reason",
+  "modified": "2026-03-28 06:52:00.149428",
+  "name": "02"
+ },
+ {
+  "applies_to": "Both",
+  "code": "03",
+  "description": "Overcharge",
+  "docstatus": 0,
+  "doctype": "eTIMS Credit Note Reason",
+  "modified": "2026-03-28 06:52:00.151543",
+  "name": "03"
+ },
+ {
+  "applies_to": "Both",
+  "code": "04",
+  "description": "Wrong Information",
+  "docstatus": 0,
+  "doctype": "eTIMS Credit Note Reason",
+  "modified": "2026-03-28 06:52:00.153614",
+  "name": "04"
+ },
+ {
+  "applies_to": "Purchase",
+  "code": "05",
+  "description": "Raw Material Shortage",
+  "docstatus": 0,
+  "doctype": "eTIMS Credit Note Reason",
+  "modified": "2026-03-28 06:52:00.156264",
+  "name": "05"
+ },
+ {
+  "applies_to": "Sales",
+  "code": "06",
+  "description": "Change of Mind",
+  "docstatus": 0,
+  "doctype": "eTIMS Credit Note Reason",
+  "modified": "2026-03-28 06:52:00.158305",
+  "name": "06"
+ },
+ {
+  "applies_to": "Both",
+  "code": "07",
+  "description": "Product Recall",
+  "docstatus": 0,
+  "doctype": "eTIMS Credit Note Reason",
+  "modified": "2026-03-28 06:52:00.177704",
+  "name": "07"
+ },
+ {
+  "applies_to": "Both",
+  "code": "08",
+  "description": "Late Delivery",
+  "docstatus": 0,
+  "doctype": "eTIMS Credit Note Reason",
+  "modified": "2026-03-28 06:52:00.180020",
+  "name": "08"
+ },
+ {
+  "applies_to": "Both",
+  "code": "09",
+  "description": "Other",
+  "docstatus": 0,
+  "doctype": "eTIMS Credit Note Reason",
+  "modified": "2026-03-28 06:52:00.182283",
+  "name": "09"
+ }
+]

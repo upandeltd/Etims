@@ -164,7 +164,7 @@ def stockIOSaveReq(doc, date_str, item_count, sar_type, branch_id):
             frappe.log_error(title="eTIMS Stock Entry Error", message=traceback.format_exc())
             frappe.throw(f"eTIMS Stock Entry Error: {str(e)}")
     else:
-        frappe.logger().debug("Stock IO not sent - branch: {0}, payload: {1}".format(branch_id, payload))
+        frappe.logger().debug("eTIMS stock IO not sent for branch %s", branch_id)
 
 def check_if_interbranch(item):
     interbranch_transfer = False

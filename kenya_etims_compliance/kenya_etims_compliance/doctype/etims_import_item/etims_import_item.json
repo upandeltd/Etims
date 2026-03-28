@@ -61,6 +61,8 @@
   {
    "fieldname": "hs_code",
    "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "HS Code",
    "length": 17
   },
@@ -68,12 +70,15 @@
    "fieldname": "item_name",
    "fieldtype": "Link",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Item Name",
    "options": "Item"
   },
   {
    "fieldname": "import_item_status_code",
    "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Import Item Status Code",
    "length": 5
   },
@@ -81,6 +86,7 @@
    "fieldname": "origin_nation_code",
    "fieldtype": "Data",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Origin Nation Code",
    "length": 5
   },
@@ -173,7 +179,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-12-11 11:34:33.385494",
+ "modified": "2026-03-28 17:00:00.000000",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Import Item",
@@ -203,9 +209,34 @@
    "role": "Sales User",
    "share": 1,
    "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "eTIMS Administrator",
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "eTIMS Store Keeper"
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "eTIMS Auditor"
   }
  ],
- "sort_field": "modified",
+ "sort_field": "declaration_date",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "item_name"
 }
