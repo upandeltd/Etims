@@ -63,6 +63,7 @@ def insert_invoice_number(doc,method):
         frappe.throw(_("Sales Invoice must have at least one item to submit to eTIMS"))
 
     scu = ""
+    sales_warehouse = ""
     item_count = 0
     if doc.name and doc.custom_update_invoice_in_tims:
         branch_id = eTIMS.get_user_branch_id()
