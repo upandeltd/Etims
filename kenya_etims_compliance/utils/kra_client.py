@@ -45,6 +45,15 @@ class KRAClient:
                 "Retryable": True
             }
 
+        if not self.headers:
+            return {
+                "Error": (
+                    f"No active TIS Device Initialization for branch '{self.branch_id}'. "
+                    "Cannot call KRA API without authentication headers (tin, bhfId, cmcKey)."
+                ),
+                "Retryable": False,
+            }
+
         timeout = self.settings.get("api_timeout", 30)
         max_retries = self.settings.get("max_retry_attempts", 3) if self.settings.get("enable_retry_logic") else 1
         retry_delay = self.settings.get("retry_delay", 2)

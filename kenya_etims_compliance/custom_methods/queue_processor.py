@@ -100,6 +100,13 @@ def process_queue_entry(queue_entry_name):
                 _update_source_status(queue_entry, "Queued")
                 return
 
+        # Fail fast if no authentication headers — prevents cryptic KRA error 900
+        if not client.headers:
+            raise ValueError(
+                f"No active TIS Device Initialization found for branch '{queue_entry.branch_id or 'default'}'. "
+                "Cannot send to KRA without authentication headers (tin, bhfId, cmcKey)."
+            )
+
         # Call the appropriate KRA API method
         api_method = getattr(client, queue_entry.api_endpoint, None)
         if not api_method:
