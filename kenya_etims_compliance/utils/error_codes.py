@@ -35,6 +35,8 @@ KRA_ERROR_CODES = {
     "080": ("Timeout", "The KRA server did not respond in time. Retry the request."),
     "090": ("Data integrity error", "Data validation failed on KRA side. Review all field values."),
     "099": ("Unknown error", "An unexpected error occurred. Check KRA error logs for details."),
+    # Device installation / re-initialization codes
+    "902": ("Device already installed", "This device is already registered with KRA. No re-initialization needed. Verify device is online using selectOrgUsrInfo."),
 }
 
 # Warning codes (Spec 21.6.4) — memory capacity warnings

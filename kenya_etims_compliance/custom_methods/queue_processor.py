@@ -81,13 +81,19 @@ def process_queue_entry(queue_entry_name):
         client = KRAClient(branch_id=queue_entry.branch_id or None)
 
         # Connection pre-flight check (Spec 6.7)
+        # NOTE: Some physical OSCU devices do not support selectOrgUsrInfo
+        # and return 404. In that case we still attempt the actual submission
+        # because saveTrnsSalesOsdc may work fine (the original app behaviour).
         if client.headers:
             status = client.check_status()
-            if not status.get("connected"):
-                # OSCU/VSCU is down — leave in Queued state for retry later
+            error_msg = status.get("error", "")
+            is_404_preflight = "404" in error_msg or "invalid JSON" in error_msg.lower()
+
+            if not status.get("connected") and not is_404_preflight:
+                # OSCU/VSCU is genuinely down — leave in Queued state for retry later
                 queue_entry.reload()
                 queue_entry.status = "Queued"
-                queue_entry.last_error = f"Pre-flight check failed: {status.get('error', 'OSCU/VSCU unreachable')}"
+                queue_entry.last_error = f"Pre-flight check failed: {error_msg}"
                 queue_entry.next_retry_at = _calculate_next_retry(queue_entry.retry_count or 0)
                 queue_entry.save(ignore_permissions=True)
                 frappe.db.commit()
