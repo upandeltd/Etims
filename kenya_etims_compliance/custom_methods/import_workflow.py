@@ -3,6 +3,7 @@
 Automates: fetch pending imports → match to local items → create Stock Entry → confirm to KRA.
 Builds on existing eTIMS Import Item DocType and etims_import_item_information.py.
 """
+
 import frappe
 from frappe import _
 from frappe.utils import now_datetime
@@ -23,7 +24,7 @@ def fetch_and_process_imports():
 	fetched = 0
 	processed = 0
 
-	for item in (import_items or []):
+	for item in import_items or []:
 		task_code = item.get("taskCd")
 		if not task_code:
 			continue
@@ -33,28 +34,30 @@ def fetch_and_process_imports():
 			continue
 
 		# Create import item record
-		import_doc = frappe.get_doc({
-			"doctype": "eTIMS Import Item",
-			"task_code": task_code,
-			"declaration_date": item.get("dclDe"),
-			"item_sequence": item.get("itemSeq"),
-			"declaration_number": item.get("dclNo"),
-			"hs_code": item.get("hsCd"),
-			"item_name": item.get("itemNm"),
-			"import_item_status_code": item.get("imptItemSttsCd"),
-			"origin_nation_code": item.get("orgnNatCd"),
-			"export_nation_code": item.get("exptNatCd"),
-			"package": item.get("pkg"),
-			"packaging_unit_code": item.get("pkgUnitCd"),
-			"quantity": item.get("qty"),
-			"quantity_unit_code": item.get("qtyUnitCd"),
-			"gross_weight": item.get("totWt"),
-			"net_weight": item.get("netWt"),
-			"supplier_name": item.get("agntNm"),
-			"invoice_foreign_currency_amount": item.get("invcFcurAmt"),
-			"invoice_foreign_currency": item.get("invcFcurCd"),
-			"invoice_foreign_currency_crt": item.get("invcFcurExcrt"),
-		})
+		import_doc = frappe.get_doc(
+			{
+				"doctype": "eTIMS Import Item",
+				"task_code": task_code,
+				"declaration_date": item.get("dclDe"),
+				"item_sequence": item.get("itemSeq"),
+				"declaration_number": item.get("dclNo"),
+				"hs_code": item.get("hsCd"),
+				"item_name": item.get("itemNm"),
+				"import_item_status_code": item.get("imptItemSttsCd"),
+				"origin_nation_code": item.get("orgnNatCd"),
+				"export_nation_code": item.get("exptNatCd"),
+				"package": item.get("pkg"),
+				"packaging_unit_code": item.get("pkgUnitCd"),
+				"quantity": item.get("qty"),
+				"quantity_unit_code": item.get("qtyUnitCd"),
+				"gross_weight": item.get("totWt"),
+				"net_weight": item.get("netWt"),
+				"supplier_name": item.get("agntNm"),
+				"invoice_foreign_currency_amount": item.get("invcFcurAmt"),
+				"invoice_foreign_currency": item.get("invcFcurCd"),
+				"invoice_foreign_currency_crt": item.get("invcFcurExcrt"),
+			}
+		)
 		import_doc.insert(ignore_permissions=True)
 		fetched += 1
 
@@ -81,17 +84,29 @@ def _match_import_to_local_item(import_doc):
 	"""Match import item to local ERPNext Item by HS code or name."""
 	# Match by HS code first
 	if import_doc.hs_code:
-		items = frappe.get_all("Item", filters={
-			"custom_hs_code": import_doc.hs_code, "disabled": 0,
-		}, fields=["name"], limit=1)
+		items = frappe.get_all(
+			"Item",
+			filters={
+				"custom_hs_code": import_doc.hs_code,
+				"disabled": 0,
+			},
+			fields=["name"],
+			limit=1,
+		)
 		if items:
 			return items[0].name
 
 	# Match by item name
 	if import_doc.item_name:
-		items = frappe.get_all("Item", filters={
-			"item_name": ["like", f"%{import_doc.item_name}%"], "disabled": 0,
-		}, fields=["name"], limit=1)
+		items = frappe.get_all(
+			"Item",
+			filters={
+				"item_name": ["like", f"%{import_doc.item_name}%"],
+				"disabled": 0,
+			},
+			fields=["name"],
+			limit=1,
+		)
 		if items:
 			return items[0].name
 
@@ -106,9 +121,11 @@ def _create_stock_entry(import_doc, item_name):
 	if not branch_id:
 		return None
 
-	warehouse = frappe.db.get_value("TIS Device Initialization",
+	warehouse = frappe.db.get_value(
+		"TIS Device Initialization",
 		filters={"branch_id": branch_id, "active": 1},
-		fieldname="default_stores_warehouse")
+		fieldname="default_stores_warehouse",
+	)
 
 	if not warehouse:
 		return None
@@ -116,19 +133,23 @@ def _create_stock_entry(import_doc, item_name):
 	qty = import_doc.quantity or 1
 	rate = (import_doc.invoice_foreign_currency_amount or 0) * (import_doc.invoice_foreign_currency_crt or 1)
 
-	stock_entry = frappe.get_doc({
-		"doctype": "Stock Entry",
-		"stock_entry_type": "Material Receipt",
-		"custom_is_import_stock": 1,
-		"custom_task_code": import_doc.task_code,
-		"custom_target_tax_branch_office": branch_id,
-		"items": [{
-			"item_code": item_name,
-			"qty": qty,
-			"basic_rate": rate / qty if qty else rate,
-			"t_warehouse": warehouse,
-		}],
-	})
+	stock_entry = frappe.get_doc(
+		{
+			"doctype": "Stock Entry",
+			"stock_entry_type": "Material Receipt",
+			"custom_is_import_stock": 1,
+			"custom_task_code": import_doc.task_code,
+			"custom_target_tax_branch_office": branch_id,
+			"items": [
+				{
+					"item_code": item_name,
+					"qty": qty,
+					"basic_rate": rate / qty if qty else rate,
+					"t_warehouse": warehouse,
+				}
+			],
+		}
+	)
 	stock_entry.insert(ignore_permissions=True)
 	return stock_entry
 

@@ -1,5 +1,6 @@
-import frappe
 import unittest
+
+import frappe
 
 
 class TesteTIMSPurchaseRegisterEntry(unittest.TestCase):

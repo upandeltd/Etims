@@ -14,8 +14,13 @@ def execute(filters=None):
 
 def get_columns():
 	return [
-		{"fieldname": "payment_entry", "label": _("Payment Entry"), "fieldtype": "Link",
-		 "options": "Payment Entry", "width": 160},
+		{
+			"fieldname": "payment_entry",
+			"label": _("Payment Entry"),
+			"fieldtype": "Link",
+			"options": "Payment Entry",
+			"width": 160,
+		},
 		{"fieldname": "posting_date", "label": _("Date"), "fieldtype": "Date", "width": 100},
 		{"fieldname": "paid_amount", "label": _("Amount"), "fieldtype": "Currency", "width": 130},
 		{"fieldname": "mode_of_payment", "label": _("Channel"), "fieldtype": "Data", "width": 120},
@@ -36,30 +41,44 @@ def get_data(filters):
 	if filters.get("mode_of_payment"):
 		pe_filters["mode_of_payment"] = filters["mode_of_payment"]
 
-	payments = frappe.get_all("Payment Entry", filters=pe_filters,
-		fields=["name", "posting_date", "paid_amount", "mode_of_payment",
-				"party_type", "party", "payment_type"],
-		limit_page_length=0)
+	payments = frappe.get_all(
+		"Payment Entry",
+		filters=pe_filters,
+		fields=[
+			"name",
+			"posting_date",
+			"paid_amount",
+			"mode_of_payment",
+			"party_type",
+			"party",
+			"payment_type",
+		],
+		limit_page_length=0,
+	)
 
 	data = []
 	for pe in payments:
 		# Find linked invoices via Payment Entry Reference
-		refs = frappe.get_all("Payment Entry Reference",
+		refs = frappe.get_all(
+			"Payment Entry Reference",
 			filters={"parent": pe.name},
-			fields=["reference_doctype", "reference_name", "allocated_amount"])
+			fields=["reference_doctype", "reference_name", "allocated_amount"],
+		)
 
 		if not refs:
-			data.append({
-				"payment_entry": pe.name,
-				"posting_date": pe.posting_date,
-				"paid_amount": pe.paid_amount,
-				"mode_of_payment": pe.mode_of_payment or "Unknown",
-				"party": pe.party,
-				"linked_invoice": "No linked invoice",
-				"invoice_type": "",
-				"etims_status": "Unbacked",
-				"backed": "No",
-			})
+			data.append(
+				{
+					"payment_entry": pe.name,
+					"posting_date": pe.posting_date,
+					"paid_amount": pe.paid_amount,
+					"mode_of_payment": pe.mode_of_payment or "Unknown",
+					"party": pe.party,
+					"linked_invoice": "No linked invoice",
+					"invoice_type": "",
+					"etims_status": "Unbacked",
+					"backed": "No",
+				}
+			)
 			continue
 
 		for ref in refs:
@@ -67,28 +86,32 @@ def get_data(filters):
 			backed = "No"
 
 			if ref.reference_doctype == "Sales Invoice":
-				transmitted = frappe.db.get_value("Sales Invoice", ref.reference_name,
-					"custom_update_sales_to_etims")
+				transmitted = frappe.db.get_value(
+					"Sales Invoice", ref.reference_name, "custom_update_sales_to_etims"
+				)
 				etims_status = "Transmitted" if transmitted else "Not Transmitted"
 				backed = "Yes" if transmitted else "No"
 
 			elif ref.reference_doctype == "Purchase Invoice":
-				match_status = frappe.db.get_value("Purchase Invoice", ref.reference_name,
-					"custom_kra_match_status")
+				match_status = frappe.db.get_value(
+					"Purchase Invoice", ref.reference_name, "custom_kra_match_status"
+				)
 				etims_status = match_status or "Unknown"
 				backed = "Yes" if match_status == "Matched" else "No"
 
-			data.append({
-				"payment_entry": pe.name,
-				"posting_date": pe.posting_date,
-				"paid_amount": ref.allocated_amount,
-				"mode_of_payment": pe.mode_of_payment or "Unknown",
-				"party": pe.party,
-				"linked_invoice": ref.reference_name,
-				"invoice_type": ref.reference_doctype,
-				"etims_status": etims_status,
-				"backed": backed,
-			})
+			data.append(
+				{
+					"payment_entry": pe.name,
+					"posting_date": pe.posting_date,
+					"paid_amount": ref.allocated_amount,
+					"mode_of_payment": pe.mode_of_payment or "Unknown",
+					"party": pe.party,
+					"linked_invoice": ref.reference_name,
+					"invoice_type": ref.reference_doctype,
+					"etims_status": etims_status,
+					"backed": backed,
+				}
+			)
 
 	return sorted(data, key=lambda x: x["posting_date"], reverse=True)
 
@@ -100,10 +123,8 @@ def get_summary(data):
 
 	return [
 		{"value": total, "label": _("Total Payments"), "datatype": "Currency"},
-		{"value": backed_total, "label": _("Backed by eTIMS"), "datatype": "Currency",
-		 "indicator": "green"},
-		{"value": unbacked_total, "label": _("Unbacked"), "datatype": "Currency",
-		 "indicator": "red"},
+		{"value": backed_total, "label": _("Backed by eTIMS"), "datatype": "Currency", "indicator": "green"},
+		{"value": unbacked_total, "label": _("Unbacked"), "datatype": "Currency", "indicator": "red"},
 	]
 
 

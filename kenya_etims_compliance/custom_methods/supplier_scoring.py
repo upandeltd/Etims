@@ -7,27 +7,42 @@ Calculates a 0-100 compliance score for each supplier based on:
 - Credit note ratio (10%)
 - Payment history (10%)
 """
+
 import frappe
-from frappe.utils import now_datetime, add_days, flt, getdate
+from frappe.utils import add_days, flt, getdate, now_datetime
 
 
 def calculate_supplier_scores(limit=200):
 	"""Recalculate compliance scores for active suppliers."""
-	suppliers = frappe.get_all("Supplier", filters={
-		"disabled": 0,
-		"custom_supplier_pin": ["is", "set"],
-	}, fields=["name", "custom_supplier_pin", "custom_kra_pin_verified",
-			   "custom_kra_pin_verified_date", "custom_etims_registered"],
-	   limit=limit)
+	suppliers = frappe.get_all(
+		"Supplier",
+		filters={
+			"disabled": 0,
+			"custom_supplier_pin": ["is", "set"],
+		},
+		fields=[
+			"name",
+			"custom_supplier_pin",
+			"custom_kra_pin_verified",
+			"custom_kra_pin_verified_date",
+			"custom_etims_registered",
+		],
+		limit=limit,
+	)
 
 	for supplier in suppliers:
 		score = _calculate_score(supplier)
 		status = _score_to_status(score)
 
-		frappe.db.set_value("Supplier", supplier.name, {
-			"custom_etims_compliance_score": score,
-			"custom_etims_compliance_status": status,
-		}, update_modified=False)
+		frappe.db.set_value(
+			"Supplier",
+			supplier.name,
+			{
+				"custom_etims_compliance_score": score,
+				"custom_etims_compliance_status": status,
+			},
+			update_modified=False,
+		)
 
 	frappe.db.commit()
 	return {"processed": len(suppliers)}
@@ -68,35 +83,53 @@ def _calculate_score(supplier):
 
 def _get_transmission_rate(supplier_name):
 	"""% of Purchase Invoices from this supplier that have KRA match."""
-	total = frappe.db.count("Purchase Invoice", filters={
-		"supplier": supplier_name, "docstatus": 1,
-	})
+	total = frappe.db.count(
+		"Purchase Invoice",
+		filters={
+			"supplier": supplier_name,
+			"docstatus": 1,
+		},
+	)
 	if not total:
 		return 50  # No data — neutral score
 
-	matched = frappe.db.count("Purchase Invoice", filters={
-		"supplier": supplier_name, "docstatus": 1,
-		"custom_kra_match_status": ["in", ["Matched", "Mismatched"]],
-	})
+	matched = frappe.db.count(
+		"Purchase Invoice",
+		filters={
+			"supplier": supplier_name,
+			"docstatus": 1,
+			"custom_kra_match_status": ["in", ["Matched", "Mismatched"]],
+		},
+	)
 
 	rate = (matched / total) * 100
 	# Update transmission rate field
-	frappe.db.set_value("Supplier", supplier_name,
-		"custom_etims_transmission_rate", rate, update_modified=False)
+	frappe.db.set_value(
+		"Supplier", supplier_name, "custom_etims_transmission_rate", rate, update_modified=False
+	)
 	return rate
 
 
 def _get_credit_note_score(supplier_name):
 	"""Score based on credit note frequency — lower ratio = higher score."""
-	total = frappe.db.count("Purchase Invoice", filters={
-		"supplier": supplier_name, "docstatus": 1,
-	})
+	total = frappe.db.count(
+		"Purchase Invoice",
+		filters={
+			"supplier": supplier_name,
+			"docstatus": 1,
+		},
+	)
 	if not total:
 		return 100
 
-	returns = frappe.db.count("Purchase Invoice", filters={
-		"supplier": supplier_name, "docstatus": 1, "is_return": 1,
-	})
+	returns = frappe.db.count(
+		"Purchase Invoice",
+		filters={
+			"supplier": supplier_name,
+			"docstatus": 1,
+			"is_return": 1,
+		},
+	)
 
 	ratio = returns / total
 	if ratio <= 0.05:
@@ -110,9 +143,14 @@ def _get_credit_note_score(supplier_name):
 
 def _get_payment_score(supplier_name):
 	"""Score based on whether payments exist for this supplier."""
-	has_payments = frappe.db.count("Payment Entry", filters={
-		"party_type": "Supplier", "party": supplier_name, "docstatus": 1,
-	})
+	has_payments = frappe.db.count(
+		"Payment Entry",
+		filters={
+			"party_type": "Supplier",
+			"party": supplier_name,
+			"docstatus": 1,
+		},
+	)
 	return 100 if has_payments else 50
 
 

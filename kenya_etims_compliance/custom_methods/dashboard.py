@@ -1,7 +1,8 @@
 """eTIMS Compliance Dashboard data methods."""
+
 import frappe
 from frappe import _
-from frappe.utils import now_datetime, getdate
+from frappe.utils import getdate, now_datetime
 
 
 @frappe.whitelist()
@@ -11,32 +12,46 @@ def get_dashboard_data():
 	month_start = today.replace(day=1)
 
 	# Sales transmitted this month
-	sales_transmitted = frappe.db.count("Sales Invoice", filters={
-		"docstatus": 1,
-		"posting_date": [">=", month_start],
-		"custom_update_sales_to_etims": 1,
-	})
+	sales_transmitted = frappe.db.count(
+		"Sales Invoice",
+		filters={
+			"docstatus": 1,
+			"posting_date": [">=", month_start],
+			"custom_update_sales_to_etims": 1,
+		},
+	)
 
 	# Sales pending
-	sales_pending = frappe.db.count("Sales Invoice", filters={
-		"docstatus": 1,
-		"custom_update_invoice_in_tims": 1,
-		"custom_update_sales_to_etims": 0,
-	})
+	sales_pending = frappe.db.count(
+		"Sales Invoice",
+		filters={
+			"docstatus": 1,
+			"custom_update_invoice_in_tims": 1,
+			"custom_update_sales_to_etims": 0,
+		},
+	)
 
 	# Purchase matched
-	purchase_matched = frappe.db.count("Purchase Invoice", filters={
-		"docstatus": 1,
-		"posting_date": [">=", month_start],
-		"custom_kra_match_status": "Matched",
-	})
+	purchase_matched = frappe.db.count(
+		"Purchase Invoice",
+		filters={
+			"docstatus": 1,
+			"posting_date": [">=", month_start],
+			"custom_kra_match_status": "Matched",
+		},
+	)
 
 	# Input VAT at risk
-	at_risk_pis = frappe.get_all("Purchase Invoice", filters={
-		"docstatus": 1,
-		"posting_date": [">=", month_start],
-		"custom_kra_match_status": ["not in", ["Matched", ""]],
-	}, fields=["base_total_taxes_and_charges"], limit_page_length=0)
+	at_risk_pis = frappe.get_all(
+		"Purchase Invoice",
+		filters={
+			"docstatus": 1,
+			"posting_date": [">=", month_start],
+			"custom_kra_match_status": ["not in", ["Matched", ""]],
+		},
+		fields=["base_total_taxes_and_charges"],
+		limit_page_length=0,
+	)
 	input_vat_at_risk = sum(p.base_total_taxes_and_charges or 0 for p in at_risk_pis)
 
 	# Queue status
@@ -52,17 +67,26 @@ def get_dashboard_data():
 		days_to_deadline = filing_day - today.day
 	else:
 		import calendar
+
 		days_in_month = calendar.monthrange(today.year, today.month)[1]
 		days_to_deadline = (days_in_month - today.day) + filing_day
 
 	# Supplier verification
-	total_suppliers = frappe.db.count("Supplier", filters={
-		"disabled": 0, "custom_supplier_pin": ["is", "set"],
-	})
-	verified_suppliers = frappe.db.count("Supplier", filters={
-		"disabled": 0, "custom_supplier_pin": ["is", "set"],
-		"custom_kra_pin_verified": 1,
-	})
+	total_suppliers = frappe.db.count(
+		"Supplier",
+		filters={
+			"disabled": 0,
+			"custom_supplier_pin": ["is", "set"],
+		},
+	)
+	verified_suppliers = frappe.db.count(
+		"Supplier",
+		filters={
+			"disabled": 0,
+			"custom_supplier_pin": ["is", "set"],
+			"custom_kra_pin_verified": 1,
+		},
+	)
 
 	return {
 		"sales_transmitted": sales_transmitted,

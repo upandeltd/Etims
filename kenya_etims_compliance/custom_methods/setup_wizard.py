@@ -12,17 +12,20 @@
 
 Each step is a separate whitelisted method called from the client wizard page.
 """
+
+import re
+
 import frappe
+import requests
 from frappe import _
 from frappe.utils import now_datetime
-import re
 
 
 @frappe.whitelist()
 def get_setup_status():
 	"""Check what's already configured — wizard skips completed steps."""
 	if "System Manager" not in frappe.get_roles() and "eTIMS Administrator" not in frappe.get_roles():
-		frappe.throw("Not permitted", frappe.PermissionError)
+		frappe.throw(_("Not permitted"), frappe.PermissionError)
 	status = {
 		"company": None,
 		"pin": None,
@@ -35,15 +38,20 @@ def get_setup_status():
 	}
 
 	# Check company with Tax ID
-	companies = frappe.get_all("Company", filters={"tax_id": ["is", "set"]},
-		fields=["name", "tax_id"], limit=1)
+	companies = frappe.get_all(
+		"Company", filters={"tax_id": ["is", "set"]}, fields=["name", "tax_id"], limit=1
+	)
 	if companies:
 		status["company"] = companies[0].name
 		status["pin"] = companies[0].tax_id
 
 	# Check device initialization
-	devices = frappe.get_all("TIS Device Initialization", filters={"active": 1},
-		fields=["name", "branch_id", "api_mode", "communication_key"], limit=1)
+	devices = frappe.get_all(
+		"TIS Device Initialization",
+		filters={"active": 1},
+		fields=["name", "branch_id", "api_mode", "communication_key"],
+		limit=1,
+	)
 	if devices and devices[0].communication_key:
 		status["device_initialized"] = True
 
@@ -57,15 +65,20 @@ def get_setup_status():
 	status["classifications_fetched"] = classifications > 0
 
 	# Check tax templates
-	templates = frappe.get_all("Item Tax Template",
-		filters={"custom_code": ["in", ["A", "B", "C", "D", "E"]]}, limit=5)
+	templates = frappe.get_all(
+		"Item Tax Template", filters={"custom_code": ["in", ["A", "B", "C", "D", "E"]]}, limit=5
+	)
 	status["tax_templates_exist"] = len(templates) >= 5
 
 	# Check items
 	status["items_total"] = frappe.db.count("Item", filters={"disabled": 0})
-	status["items_registered"] = frappe.db.count("Item", filters={
-		"disabled": 0, "custom_registered_in_tims": 1,
-	})
+	status["items_registered"] = frappe.db.count(
+		"Item",
+		filters={
+			"disabled": 0,
+			"custom_registered_in_tims": 1,
+		},
+	)
 
 	return status
 
@@ -74,14 +87,16 @@ def get_setup_status():
 def step1_validate_company(company):
 	"""Step 1: Validate company has a KRA PIN."""
 	if "System Manager" not in frappe.get_roles() and "eTIMS Administrator" not in frappe.get_roles():
-		frappe.throw("Not permitted", frappe.PermissionError)
+		frappe.throw(_("Not permitted"), frappe.PermissionError)
 	tax_id = frappe.db.get_value("Company", company, "tax_id")
 	if not tax_id:
 		return {"status": "error", "message": "Company has no Tax ID (KRA PIN) configured"}
 
-	if not re.match(r'^[A-Z]\d{9}$', tax_id):
-		return {"status": "warning",
-				"message": f"PIN format may be incorrect: {tax_id}. Expected: letter + 9 digits"}
+	if not re.match(r"^[A-Z]\d{9}$", tax_id):
+		return {
+			"status": "warning",
+			"message": f"PIN format may be incorrect: {tax_id}. Expected: letter + 9 digits",
+		}
 
 	return {"status": "success", "pin": tax_id, "company": company}
 
@@ -90,8 +105,10 @@ def step1_validate_company(company):
 def step2_test_connectivity(api_mode="Sandbox"):
 	"""Step 2: Test connectivity to KRA eTIMS API."""
 	if "System Manager" not in frappe.get_roles() and "eTIMS Administrator" not in frappe.get_roles():
-		frappe.throw("Not permitted", frappe.PermissionError)
-	from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import get_api_url
+		frappe.throw(_("Not permitted"), frappe.PermissionError)
+	from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import (
+		get_api_url,
+	)
 	from kenya_etims_compliance.utils.kra_client import KRAClient
 
 	url = get_api_url(api_mode)
@@ -103,7 +120,7 @@ def step2_test_connectivity(api_mode="Sandbox"):
 			# we reached the API successfully.
 			return {"status": "success", "message": f"Connected to {api_mode} API", "url": url}
 		return {"status": "error", "message": result.get("Error", "API unreachable")}
-	except Exception as e:
+	except (requests.ConnectionError, requests.Timeout, requests.HTTPError) as e:
 		return {"status": "error", "message": str(e)[:200]}
 
 
@@ -111,13 +128,15 @@ def step2_test_connectivity(api_mode="Sandbox"):
 def step3_initialize_device(company, branch_id, serial_number, api_mode="Sandbox"):
 	"""Step 3: Initialize TIS device with KRA."""
 	if "System Manager" not in frappe.get_roles() and "eTIMS Administrator" not in frappe.get_roles():
-		frappe.throw("Not permitted", frappe.PermissionError)
+		frappe.throw(_("Not permitted"), frappe.PermissionError)
 	# Create Tax Branch Office if not exists
 	if not frappe.db.exists("Tax Branch Office", branch_id):
-		frappe.get_doc({
-			"doctype": "Tax Branch Office",
-			"branch_id": branch_id,
-		}).insert(ignore_permissions=True)
+		frappe.get_doc(
+			{
+				"doctype": "Tax Branch Office",
+				"branch_id": branch_id,
+			}
+		).insert(ignore_permissions=True)
 
 	# Create or update TIS Device Initialization
 	existing = frappe.db.exists("TIS Device Initialization", {"branch_id": branch_id})
@@ -144,8 +163,7 @@ def step3_initialize_device(company, branch_id, serial_number, api_mode="Sandbox
 	if "Success" in result:
 		# Assign branch to current user
 		_assign_branch_to_user(branch_id)
-		return {"status": "success", "message": result["Success"],
-				"device": doc.name}
+		return {"status": "success", "message": result["Success"], "device": doc.name}
 	else:
 		return {"status": "error", "message": result.get("Error", "Device initialization failed")}
 
@@ -154,7 +172,7 @@ def step3_initialize_device(company, branch_id, serial_number, api_mode="Sandbox
 def step4_assign_branch(branch_id):
 	"""Step 4: Assign Tax Branch Office to current user."""
 	if "System Manager" not in frappe.get_roles() and "eTIMS Administrator" not in frappe.get_roles():
-		frappe.throw("Not permitted", frappe.PermissionError)
+		frappe.throw(_("Not permitted"), frappe.PermissionError)
 	_assign_branch_to_user(branch_id)
 	return {"status": "success", "message": f"Branch {branch_id} assigned to {frappe.session.user}"}
 
@@ -163,33 +181,38 @@ def step4_assign_branch(branch_id):
 def step5_fetch_classifications():
 	"""Step 5: Fetch item classification codes from KRA."""
 	if "System Manager" not in frappe.get_roles() and "eTIMS Administrator" not in frappe.get_roles():
-		frappe.throw("Not permitted", frappe.PermissionError)
+		frappe.throw(_("Not permitted"), frappe.PermissionError)
 	from kenya_etims_compliance.utils.kra_client import KRAClient
 
 	client = KRAClient()
 	result = client.post("selectItemClsList", {"lastReqDt": "20200101000000"})
 
-	if "Success" in result and result["Success"]:
+	if result.get("Success"):
 		data = result["Success"]
 		cls_list = data.get("itemClsList") if isinstance(data, dict) else []
 
 		created = 0
-		for cls in (cls_list or []):
+		for cls in cls_list or []:
 			code = cls.get("itemClsCd")
 			if code and not frappe.db.exists("eTIMS Item Classification", code):
-				frappe.get_doc({
-					"doctype": "eTIMS Item Classification",
-					"item_class_code": code,
-					"item_class_name": cls.get("itemClsNm", ""),
-					"item_class_level": cls.get("itemClsLvl"),
-					"taxation_type_code": cls.get("taxTyCd", ""),
-					"usedunused": cls.get("useYn", "Y"),
-				}).insert(ignore_permissions=True)
+				frappe.get_doc(
+					{
+						"doctype": "eTIMS Item Classification",
+						"item_class_code": code,
+						"item_class_name": cls.get("itemClsNm", ""),
+						"item_class_level": cls.get("itemClsLvl"),
+						"taxation_type_code": cls.get("taxTyCd", ""),
+						"usedunused": cls.get("useYn", "Y"),
+					}
+				).insert(ignore_permissions=True)
 				created += 1
 
 		frappe.db.commit()
-		return {"status": "success", "created": created,
-				"total": frappe.db.count("eTIMS Item Classification")}
+		return {
+			"status": "success",
+			"created": created,
+			"total": frappe.db.count("eTIMS Item Classification"),
+		}
 	else:
 		return {"status": "error", "message": result.get("Error", "Failed to fetch classifications")}
 
@@ -198,7 +221,7 @@ def step5_fetch_classifications():
 def step6_create_tax_templates(company):
 	"""Step 6: Auto-create Item Tax Templates for KRA tax codes A-E."""
 	if "System Manager" not in frappe.get_roles() and "eTIMS Administrator" not in frappe.get_roles():
-		frappe.throw("Not permitted", frappe.PermissionError)
+		frappe.throw(_("Not permitted"), frappe.PermissionError)
 	tax_codes = {
 		"A": {"name": "VAT 16%", "rate": 16},
 		"B": {"name": "Zero Rated", "rate": 0},
@@ -208,11 +231,16 @@ def step6_create_tax_templates(company):
 	}
 
 	# Find the default VAT account
-	vat_accounts = frappe.get_all("Account", filters={
-		"company": company,
-		"account_type": "Tax",
-		"is_group": 0,
-	}, fields=["name", "tax_rate"], limit=5)
+	vat_accounts = frappe.get_all(
+		"Account",
+		filters={
+			"company": company,
+			"account_type": "Tax",
+			"is_group": 0,
+		},
+		fields=["name", "tax_rate"],
+		limit=5,
+	)
 
 	created = 0
 	for code, info in tax_codes.items():
@@ -220,20 +248,25 @@ def step6_create_tax_templates(company):
 		if frappe.db.exists("Item Tax Template", {"custom_code": code}):
 			continue
 
-		template = frappe.get_doc({
-			"doctype": "Item Tax Template",
-			"title": template_name,
-			"company": company,
-			"custom_code": code,
-			"custom_code_name": info["name"],
-		})
+		template = frappe.get_doc(
+			{
+				"doctype": "Item Tax Template",
+				"title": template_name,
+				"company": company,
+				"custom_code": code,
+				"custom_code_name": info["name"],
+			}
+		)
 
 		# Add tax row if we have a VAT account
 		if vat_accounts:
-			template.append("taxes", {
-				"tax_type": vat_accounts[0].name,
-				"tax_rate": info["rate"],
-			})
+			template.append(
+				"taxes",
+				{
+					"tax_type": vat_accounts[0].name,
+					"tax_rate": info["rate"],
+				},
+			)
 
 		template.insert(ignore_permissions=True)
 		created += 1
@@ -246,14 +279,19 @@ def step6_create_tax_templates(company):
 def step7_bulk_register_items(limit=50):
 	"""Step 7: Register unregistered items to eTIMS in batch."""
 	if "System Manager" not in frappe.get_roles() and "eTIMS Administrator" not in frappe.get_roles():
-		frappe.throw("Not permitted", frappe.PermissionError)
+		frappe.throw(_("Not permitted"), frappe.PermissionError)
 	from kenya_etims_compliance.custom_methods.bulk_operations import bulk_register_items
 
-	items = frappe.get_all("Item", filters={
-		"custom_registered_in_tims": 0,
-		"custom_item_classification_code": ["is", "set"],
-		"disabled": 0,
-	}, fields=["name"], limit=limit)
+	items = frappe.get_all(
+		"Item",
+		filters={
+			"custom_registered_in_tims": 0,
+			"custom_item_classification_code": ["is", "set"],
+			"disabled": 0,
+		},
+		fields=["name"],
+		limit=limit,
+	)
 
 	item_names = [i.name for i in items]
 	if not item_names:
@@ -267,7 +305,7 @@ def step7_bulk_register_items(limit=50):
 def step8_verify_setup():
 	"""Step 8: Verify everything is configured correctly."""
 	if "System Manager" not in frappe.get_roles() and "eTIMS Administrator" not in frappe.get_roles():
-		frappe.throw("Not permitted", frappe.PermissionError)
+		frappe.throw(_("Not permitted"), frappe.PermissionError)
 	checks = []
 
 	# Check 1: Company PIN
@@ -275,8 +313,9 @@ def step8_verify_setup():
 	checks.append({"check": "Company KRA PIN", "passed": bool(companies)})
 
 	# Check 2: Active device
-	devices = frappe.get_all("TIS Device Initialization",
-		filters={"active": 1, "communication_key": ["is", "set"]}, limit=1)
+	devices = frappe.get_all(
+		"TIS Device Initialization", filters={"active": 1, "communication_key": ["is", "set"]}, limit=1
+	)
 	checks.append({"check": "Device Initialized", "passed": bool(devices)})
 
 	# Check 3: Branch configured
@@ -285,6 +324,7 @@ def step8_verify_setup():
 
 	# Check 4: User has branch permission
 	from kenya_etims_compliance.utils.etims_utils import eTIMS
+
 	branch_id = eTIMS.get_user_branch_id()
 	checks.append({"check": "User Branch Permission", "passed": bool(branch_id)})
 
@@ -293,12 +333,15 @@ def step8_verify_setup():
 	checks.append({"check": f"Item Classifications ({cls_count})", "passed": cls_count > 0})
 
 	# Check 6: Tax templates exist
-	templates = frappe.get_all("Item Tax Template",
-		filters={"custom_code": ["in", ["A", "B", "C", "D", "E"]]}, limit=5)
+	templates = frappe.get_all(
+		"Item Tax Template", filters={"custom_code": ["in", ["A", "B", "C", "D", "E"]]}, limit=5
+	)
 	checks.append({"check": f"Tax Templates ({len(templates)}/5)", "passed": len(templates) >= 5})
 
 	# Check 7: Scheduler running
-	checks.append({"check": "Scheduler Active", "passed": frappe.utils.scheduler.is_scheduler_inactive() is False})
+	checks.append(
+		{"check": "Scheduler Active", "passed": frappe.utils.scheduler.is_scheduler_inactive() is False}
+	)
 
 	all_passed = all(c["passed"] for c in checks)
 	return {
@@ -311,15 +354,22 @@ def step8_verify_setup():
 def _assign_branch_to_user(branch_id):
 	"""Assign Tax Branch Office to current user via User Permission."""
 	user = frappe.session.user
-	existing = frappe.db.exists("User Permission", {
-		"user": user, "allow": "Tax Branch Office", "for_value": branch_id,
-	})
-	if not existing:
-		frappe.get_doc({
-			"doctype": "User Permission",
+	existing = frappe.db.exists(
+		"User Permission",
+		{
 			"user": user,
 			"allow": "Tax Branch Office",
 			"for_value": branch_id,
-			"is_default": 1,
-		}).insert(ignore_permissions=True)
+		},
+	)
+	if not existing:
+		frappe.get_doc(
+			{
+				"doctype": "User Permission",
+				"user": user,
+				"allow": "Tax Branch Office",
+				"for_value": branch_id,
+				"is_default": 1,
+			}
+		).insert(ignore_permissions=True)
 		frappe.db.commit()

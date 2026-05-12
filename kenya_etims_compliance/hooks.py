@@ -4,20 +4,20 @@ app_publisher = "Upande Ltd"
 app_description = "Frappe Etims Compliance App"
 app_email = "dev@upande.com"
 app_license = "mit"
-# required_apps = []
+required_apps = ["frappe", "erpnext"]
 
 setup_wizard_requires_login = 0
 setup_wizard_not_required = 1
 
 # App screen tile (v16 desk home)
 add_to_apps_screen = [
-    {
-        "name": "kenya_etims_compliance",
-        "logo": "/assets/kenya_etims_compliance/images/etims-logo.svg",
-        "title": "eTIMS Compliance",
-        "route": "/app/etims-compliance",
-        "has_permission": "kenya_etims_compliance.check_app_permission",
-    }
+	{
+		"name": "kenya_etims_compliance",
+		"logo": "/assets/kenya_etims_compliance/images/etims-logo.svg",
+		"title": "eTIMS Compliance",
+		"route": "/app/etims-compliance",
+		"has_permission": "kenya_etims_compliance.check_app_permission",
+	}
 ]
 
 # Includes in <head>
@@ -41,17 +41,17 @@ app_include_js = "/assets/kenya_etims_compliance/js/etims_icons.js"
 # include js in page
 doctype_js = {
 	# "doctype" : "public/js/doctype.js"
-	"Item" : "custom_methods/item.js",
-    "Customer" : "custom_methods/customer.js",
-    "BOM" : "custom_methods/bom.js",
-    "Sales Invoice": "custom_methods/sales_invoice.js",
-    "Purchase Invoice": "custom_methods/purchase_invoice.js",
-    "Supplier": "custom_methods/supplier.js"
+	"Item": "custom_methods/item.js",
+	"Customer": "custom_methods/customer.js",
+	"BOM": "custom_methods/bom.js",
+	"Sales Invoice": "custom_methods/sales_invoice.js",
+	"Purchase Invoice": "custom_methods/purchase_invoice.js",
+	"Supplier": "custom_methods/supplier.js",
 }
 
 # include js in doctype views
 doctype_list_js = {
-    "Item": "custom_methods/item_list.js",
+	"Item": "custom_methods/item_list.js",
 }
 
 # Svg Icons
@@ -67,7 +67,7 @@ doctype_list_js = {
 
 # website user home page (by Role)
 # role_home_page = {
-#	"Role": "home_page"
+# "Role": "home_page"
 # }
 
 # Generators
@@ -81,8 +81,8 @@ doctype_list_js = {
 
 # add methods and filters to jinja environment
 # jinja = {
-#	"methods": "kenya_etims_compliance.utils.jinja_methods",
-#	"filters": "kenya_etims_compliance.utils.jinja_filters"
+# "methods": "kenya_etims_compliance.utils.jinja_methods",
+# "filters": "kenya_etims_compliance.utils.jinja_filters"
 # }
 
 # Installation
@@ -91,8 +91,8 @@ doctype_list_js = {
 before_install = "kenya_etims_compliance.installation.etims_roles.before_install"
 after_install = "kenya_etims_compliance.installation.after_install.after_install"
 after_migrate = [
-    "kenya_etims_compliance.installation.after_install.setup_workspace_sidebar",
-    "kenya_etims_compliance.custom_methods.install_queue_fields.install_queue_fields",
+	"kenya_etims_compliance.installation.after_install.setup_workspace_sidebar",
+	"kenya_etims_compliance.custom_methods.install_queue_fields.install_queue_fields",
 ]
 
 # Uninstallation
@@ -128,11 +128,11 @@ after_migrate = [
 # Permissions evaluated in scripted ways
 
 # permission_query_conditions = {
-#	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
+# "Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
 # }
 #
 # has_permission = {
-#	"Event": "frappe.desk.doctype.event.event.has_permission",
+# "Event": "frappe.desk.doctype.event.event.has_permission",
 # }
 
 # DocType Class
@@ -140,7 +140,7 @@ after_migrate = [
 # Override standard doctype classes
 
 # override_doctype_class = {
-#	"ToDo": "custom_app.overrides.CustomToDo"
+# "ToDo": "custom_app.overrides.CustomToDo"
 # }
 
 # Document Events
@@ -148,61 +148,57 @@ after_migrate = [
 # Hook on document methods and events
 
 doc_events = {
-        "Sales Invoice": {
-            "before_save": "kenya_etims_compliance.custom_methods.sales_invoice.validate",
-            "before_submit": "kenya_etims_compliance.custom_methods.sales_invoice.trnsSalesSaveWrReq",
-            "on_update": "kenya_etims_compliance.custom_methods.sales_invoice.insert_invoice_number",
-            "on_submit": "kenya_etims_compliance.custom_methods.bin.on_submit"
-        },
-        "Stock Entry": {
-            "before_submit": "kenya_etims_compliance.custom_methods.stock.update_stock_to_etims",
-            "before_validate": "kenya_etims_compliance.custom_methods.stock.insert_tax_rate_and_amount",
-            "on_submit": "kenya_etims_compliance.custom_methods.bin_stock_entry.on_submit"
-        },
-        "Item": {
-            "before_save": "kenya_etims_compliance.custom_methods.item.autofill_tims_info"
-        },
-        "Purchase Invoice": {
-            "before_save": "kenya_etims_compliance.custom_methods.purchase_invoice.validate",
-            "before_submit": "kenya_etims_compliance.custom_methods.purchase_invoice.trnsPurchaseSaveReq",
-            "on_update": "kenya_etims_compliance.custom_methods.purchase_invoice.insert_invoice_number",
-            "on_change": "kenya_etims_compliance.custom_methods.purchase_invoice.add_taxes",
-            "on_submit": "kenya_etims_compliance.custom_methods.bin.on_submit"
-        },
-        # Phase 1: Invoice Checker API Integration - Payment Validation
-        "Payment Entry": {
-            "before_submit": "kenya_etims_compliance.custom_methods.payment_entry.validate_payment_for_etims_invoice"
-        }
-        # "eTIMS Purchase Invoice": {
-        #     "on_update": "kenya_etims_compliance.custom_methods.etims_purchase_invoice.update_stock_to_etims",
-        # },
-        # "eTIMS Stock Movement": {
-        #     "on_update": "kenya_etims_compliance.custom_methods.etims_stock_movement.update_stock_to_etims",
-        # }
+	"Sales Invoice": {
+		"before_save": "kenya_etims_compliance.custom_methods.sales_invoice.validate",
+		"before_submit": "kenya_etims_compliance.custom_methods.sales_invoice.trnsSalesSaveWrReq",
+		"on_update": "kenya_etims_compliance.custom_methods.sales_invoice.insert_invoice_number",
+		"on_submit": "kenya_etims_compliance.custom_methods.bin.on_submit",
+	},
+	"Stock Entry": {
+		"before_submit": "kenya_etims_compliance.custom_methods.stock.update_stock_to_etims",
+		"before_validate": "kenya_etims_compliance.custom_methods.stock.insert_tax_rate_and_amount",
+		"on_submit": "kenya_etims_compliance.custom_methods.bin_stock_entry.on_submit",
+	},
+	"Item": {"before_save": "kenya_etims_compliance.custom_methods.item.autofill_tims_info"},
+	"Purchase Invoice": {
+		"before_save": "kenya_etims_compliance.custom_methods.purchase_invoice.validate",
+		"before_submit": "kenya_etims_compliance.custom_methods.purchase_invoice.trnsPurchaseSaveReq",
+		"on_update": "kenya_etims_compliance.custom_methods.purchase_invoice.insert_invoice_number",
+		"on_change": "kenya_etims_compliance.custom_methods.purchase_invoice.add_taxes",
+		"on_submit": "kenya_etims_compliance.custom_methods.bin.on_submit",
+	},
+	# Phase 1: Invoice Checker API Integration - Payment Validation
+	"Payment Entry": {
+		"before_submit": "kenya_etims_compliance.custom_methods.payment_entry.validate_payment_for_etims_invoice"
+	},
+	# "eTIMS Purchase Invoice": {
+	#     "on_update": "kenya_etims_compliance.custom_methods.etims_purchase_invoice.update_stock_to_etims",
+	# },
+	# "eTIMS Stock Movement": {
+	#     "on_update": "kenya_etims_compliance.custom_methods.etims_stock_movement.update_stock_to_etims",
+	# }
 }
 # Scheduled Tasks
 # ---------------
 
 scheduler_events = {
-    "cron": {
-        "*/5 * * * *": [
-            "kenya_etims_compliance.custom_methods.queue_processor.retry_failed_invoices"
-        ],
-    },
-    "daily": [
-        "kenya_etims_compliance.tasks.fetch_kra_notices",
-        "kenya_etims_compliance.tasks.fetch_purchase_transactions",
-        "kenya_etims_compliance.tasks.run_reconciliation_task",
-        "kenya_etims_compliance.tasks.fetch_import_items",
-        "kenya_etims_compliance.tasks.send_deadline_reminders",
-    ],
-    "weekly": [
-        "kenya_etims_compliance.tasks.verify_supplier_pins",
-        "kenya_etims_compliance.tasks.calculate_supplier_scores",
-    ],
-    "monthly": [
-        "kenya_etims_compliance.tasks.generate_compliance_score",
-    ],
+	"cron": {
+		"*/5 * * * *": ["kenya_etims_compliance.custom_methods.queue_processor.retry_failed_invoices"],
+	},
+	"daily": [
+		"kenya_etims_compliance.tasks.fetch_kra_notices",
+		"kenya_etims_compliance.tasks.fetch_purchase_transactions",
+		"kenya_etims_compliance.tasks.run_reconciliation_task",
+		"kenya_etims_compliance.tasks.fetch_import_items",
+		"kenya_etims_compliance.tasks.send_deadline_reminders",
+	],
+	"weekly": [
+		"kenya_etims_compliance.tasks.verify_supplier_pins",
+		"kenya_etims_compliance.tasks.calculate_supplier_scores",
+	],
+	"monthly": [
+		"kenya_etims_compliance.tasks.generate_compliance_score",
+	],
 }
 
 # Testing
@@ -214,14 +210,14 @@ scheduler_events = {
 # ------------------------------
 #
 # override_whitelisted_methods = {
-#	"frappe.desk.doctype.event.event.get_events": "kenya_etims_compliance.event.get_events"
+# "frappe.desk.doctype.event.event.get_events": "kenya_etims_compliance.event.get_events"
 # }
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,
 # along with any modifications made in other Frappe apps
 # override_doctype_dashboards = {
-#	"Task": "kenya_etims_compliance.task.get_dashboard_data"
+# "Task": "kenya_etims_compliance.task.get_dashboard_data"
 # }
 
 # exempt linked doctypes from being automatically cancelled
@@ -247,40 +243,54 @@ scheduler_events = {
 # --------------------
 
 # user_data_fields = [
-#	{
-#		"doctype": "{doctype_1}",
-#		"filter_by": "{filter_by}",
-#		"redact_fields": ["{field_1}", "{field_2}"],
-#		"partial": 1,
-#	},
-#	{
-#		"doctype": "{doctype_2}",
-#		"filter_by": "{filter_by}",
-#		"partial": 1,
-#	},
-#	{
-#		"doctype": "{doctype_3}",
-#		"strict": False,
-#	},
-#	{
-#		"doctype": "{doctype_4}"
-#	}
+# {
+# "doctype": "{doctype_1}",
+# "filter_by": "{filter_by}",
+# "redact_fields": ["{field_1}", "{field_2}"],
+# "partial": 1,
+# },
+# {
+# "doctype": "{doctype_2}",
+# "filter_by": "{filter_by}",
+# "partial": 1,
+# },
+# {
+# "doctype": "{doctype_3}",
+# "strict": False,
+# },
+# {
+# "doctype": "{doctype_4}"
+# }
 # ]
 
 # Authentication and authorization
 # --------------------------------
 
 # auth_hooks = [
-#	"kenya_etims_compliance.auth.validate"
+# "kenya_etims_compliance.auth.validate"
 # ]
 
 fixtures = [
-    {"dt": "Custom Field", "filters": [["module", "=", "Kenya Etims Compliance"]]},
-    {"dt": "Workspace", "filters": [["name", "=", "eTIMS Compliance"]]},
-    {"dt": "Workspace Sidebar", "filters": [["module", "=", "Kenya Etims Compliance"]]},
-    {"dt": "Role", "filters": [["name", "in", [
-        "eTIMS Administrator", "eTIMS Manager", "eTIMS Operator",
-        "eTIMS Auditor", "eTIMS Sales Clerk", "eTIMS Purchase Clerk", "eTIMS Store Keeper"
-    ]]]},
-    {"dt": "eTIMS Credit Note Reason", "filters": [["code", "!=", ""]]}
+	{"dt": "Custom Field", "filters": [["module", "=", "Kenya Etims Compliance"]]},
+	{"dt": "Workspace", "filters": [["name", "=", "eTIMS Compliance"]]},
+	{"dt": "Workspace Sidebar", "filters": [["module", "=", "Kenya Etims Compliance"]]},
+	{
+		"dt": "Role",
+		"filters": [
+			[
+				"name",
+				"in",
+				[
+					"eTIMS Administrator",
+					"eTIMS Manager",
+					"eTIMS Operator",
+					"eTIMS Auditor",
+					"eTIMS Sales Clerk",
+					"eTIMS Purchase Clerk",
+					"eTIMS Store Keeper",
+				],
+			]
+		],
+	},
+	{"dt": "eTIMS Credit Note Reason", "filters": [["code", "!=", ""]]},
 ]

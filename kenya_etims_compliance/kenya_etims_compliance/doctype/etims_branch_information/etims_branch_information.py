@@ -4,108 +4,113 @@
 import traceback
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
+
 from kenya_etims_compliance.utils.etims_utils import eTIMS
 from kenya_etims_compliance.utils.kra_client import KRAClient
 
+
 class eTIMSBranchInformation(Document):
-    @frappe.whitelist()
-    def bhfSearchReq(self):
-        self.set("branch_details_tab", [])
-        self.save()
+	@frappe.whitelist()
+	def bhfSearchReq(self):
+		self.set("branch_details_tab", [])
+		self.save()
 
-        request_datetime = self.data_from_datetime
-        date_time_str = eTIMS.strf_datetime_object(request_datetime)
+		request_datetime = self.data_from_datetime
+		date_time_str = eTIMS.strf_datetime_object(request_datetime)
 
-        payload = {
-                "tin": self.tin,
-                "lastReqDt" : date_time_str
-        }
+		payload = {"tin": self.tin, "lastReqDt": date_time_str}
 
-        try:
-            result = KRAClient().post("selectBhfList", payload)
+		try:
+			result = KRAClient().post("selectBhfList", payload)
 
-            if result.get("Error"):
-                return {"Error": result.get("Error")}
+			if result.get("Error"):
+				return {"Error": result.get("Error")}
 
-            response_result = {"data": result.get("Success")}
-            item_list = process_branch_information(response_result)
+			response_result = {"data": result.get("Success")}
+			item_list = process_branch_information(response_result)
 
-            for item in item_list:
-                branch_info_exists = check_if_branch_info_exists(item.get("pin"), item.get("branch_office_id"))
-                if not branch_info_exists == True:
-                    self.append("branch_details_tab", item)
-                    self.save()
+			for item in item_list:
+				branch_info_exists = check_if_branch_info_exists(
+					item.get("pin"), item.get("branch_office_id")
+				)
+				if not branch_info_exists:
+					self.append("branch_details_tab", item)
+					self.save()
 
-            return {"Success": "Branch search completed"}
+			return {"Success": "Branch search completed"}
 
-        except Exception as e:
-            frappe.log_error(title="Branch Information", message=traceback.format_exc())
-            return {"Error":"Oops Bad Request!"}
+		except (frappe.ValidationError, frappe.DoesNotExistError):
+			frappe.log_error(title="eTIMS: Branch Information failed", message=traceback.format_exc())
+			return {"Error": "Oops Bad Request!"}
 
 
 def process_branch_information(response_result):
-    item_list = []
-    data = response_result.get("data")
+	item_list = []
+	data = response_result.get("data")
 
-    for item in data.get("bhfList"):
-        item_dict = {
-            "pin": item.get("tin"),
-            "branch_office_id": item.get("bhfId"),
-            "branch_office_name": item.get("bhfNm"),
-            "branch_status_code": item.get("bhfSttsCd"),
-            "county_name": item.get("prvncNm"),
-            "sub_county_name": item.get("dstrtNm"),
-            "tax_locality_name": item.get("sctrNm"),
-            "location_description": item.get("locDesc"),
-            "manager_name": item.get("mgrNm"),
-            "manager_contact": item.get("mgrTelNo"),
-            "manager_email": item.get("mgrEmail"),
-            "head_office_yesno": item.get("hqYn")
-        }
+	for item in data.get("bhfList"):
+		item_dict = {
+			"pin": item.get("tin"),
+			"branch_office_id": item.get("bhfId"),
+			"branch_office_name": item.get("bhfNm"),
+			"branch_status_code": item.get("bhfSttsCd"),
+			"county_name": item.get("prvncNm"),
+			"sub_county_name": item.get("dstrtNm"),
+			"tax_locality_name": item.get("sctrNm"),
+			"location_description": item.get("locDesc"),
+			"manager_name": item.get("mgrNm"),
+			"manager_contact": item.get("mgrTelNo"),
+			"manager_email": item.get("mgrEmail"),
+			"head_office_yesno": item.get("hqYn"),
+		}
 
-        if item_dict not in item_list:
-            item_list.append(item_dict)
+		if item_dict not in item_list:
+			item_list.append(item_dict)
 
-    return item_list
+	return item_list
 
-def check_if_branch_info_exists(pin,branch_id):
-    branch_info_exists = False
-    branch_info_items = frappe.db.get_all("eTIMS Branch Item",filters = {"pin": pin, "branch_office_id":branch_id})
 
-    if branch_info_items:
-        branch_info_exists = True
+def check_if_branch_info_exists(pin, branch_id):
+	branch_info_exists = False
+	branch_info_items = frappe.db.get_all(
+		"eTIMS Branch Item", filters={"pin": pin, "branch_office_id": branch_id}
+	)
 
-    return branch_info_exists
+	if branch_info_items:
+		branch_info_exists = True
 
+	return branch_info_exists
 
 
 def get_tims_customer():
-    item_tims_info_list = []
-    item_list = frappe.db.get_all("Customer", filters={"disabled": 0, "custom_is_registered":0}, fields=["*"])
+	item_tims_info_list = []
+	item_list = frappe.db.get_all(
+		"Customer", filters={"disabled": 0, "custom_is_registered": 0}, fields=["*"]
+	)
 
-    if item_list:
-        for item in item_list:
-            payload = {
-                        "custNo": item.get("custom_customer_number"),
-                        "custTin": item.get("custom_customer_pin"),
-                        "custNm": item.get("custom_customer_name"),
-                        "adrs": item.get("custom_address"),
-                        "telNo": item.get("custom_contact"),
-                        "email": item.get("custom_email"),
-                        "faxNo": item.get("custom_fax_number"),
-                        "useYn": item.get("custom_used_yn"),
-                        "remark": item.get("custom_remark"),
-                        "regrId": item.get("custom_registration_id"),
-                        "regrNm": item.get("custom_registration_name"),
-                        "modrId": item.get("custom_modifier_id"),
-                        "modrNm": item.get("custom_modifier_name")
-                    }
-            if not payload in item_tims_info_list:
-                item_tims_info_list.append(payload)
+	if item_list:
+		for item in item_list:
+			payload = {
+				"custNo": item.get("custom_customer_number"),
+				"custTin": item.get("custom_customer_pin"),
+				"custNm": item.get("custom_customer_name"),
+				"adrs": item.get("custom_address"),
+				"telNo": item.get("custom_contact"),
+				"email": item.get("custom_email"),
+				"faxNo": item.get("custom_fax_number"),
+				"useYn": item.get("custom_used_yn"),
+				"remark": item.get("custom_remark"),
+				"regrId": item.get("custom_registration_id"),
+				"regrNm": item.get("custom_registration_name"),
+				"modrId": item.get("custom_modifier_id"),
+				"modrNm": item.get("custom_modifier_name"),
+			}
+			if payload not in item_tims_info_list:
+				item_tims_info_list.append(payload)
 
-    else:
-        frappe.throw("No Unregistered Customer Found!")
+	else:
+		frappe.throw(_("No Unregistered Customer Found!"))
 
-
-    return item_tims_info_list
+	return item_tims_info_list

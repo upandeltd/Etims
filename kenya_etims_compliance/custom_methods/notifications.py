@@ -3,6 +3,7 @@
 Uses Frappe's built-in Notification system — no custom DocTypes needed.
 Call these from scheduler tasks to send alerts.
 """
+
 import frappe
 from frappe import _
 from frappe.utils import getdate
@@ -50,18 +51,22 @@ def send_kra_notice_alert(notice_name):
 	notice = frappe.get_doc("eTIMS Notice", notice_name)
 
 	subject = _("New KRA Notice: {0}").format(notice.title)
-	message = _("KRA has published a new notice: {0}\n\n{1}").format(
-		notice.title, notice.contents or ""
-	)
+	message = _("KRA has published a new notice: {0}\n\n{1}").format(notice.title, notice.contents or "")
 
 	_send_to_etims_admins(subject, message)
 
 
 def _send_to_etims_admins(subject, message):
 	"""Send notification to all users with eTIMS Administrator role."""
-	admins = frappe.get_all("Has Role", filters={
-		"role": "eTIMS Administrator", "parenttype": "User",
-	}, fields=["parent"], limit_page_length=0)
+	admins = frappe.get_all(
+		"Has Role",
+		filters={
+			"role": "eTIMS Administrator",
+			"parenttype": "User",
+		},
+		fields=["parent"],
+		limit_page_length=0,
+	)
 
 	for admin in admins:
 		user = admin.parent

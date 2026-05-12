@@ -3,11 +3,12 @@
 Matches KRA's auto-populated purchase data against local Purchase Invoices.
 Builds on existing eTIMS Purchase Invoice DocType which stores raw KRA data.
 """
+
 import calendar
 
 import frappe
 from frappe import _
-from frappe.utils import now_datetime, flt, add_months, getdate
+from frappe.utils import add_months, flt, getdate, now_datetime
 
 
 def run_reconciliation(period=None, branch=None):
@@ -71,8 +72,9 @@ def run_reconciliation(period=None, branch=None):
 	not_in_kra = 0
 	for pi in local_pis:
 		if pi.name not in matched_pi_names and pi.custom_kra_match_status != "Matched":
-			frappe.db.set_value("Purchase Invoice", pi.name,
-				"custom_kra_match_status", "Not in KRA", update_modified=False)
+			frappe.db.set_value(
+				"Purchase Invoice", pi.name, "custom_kra_match_status", "Not in KRA", update_modified=False
+			)
 			not_in_kra += 1
 
 	# Step 5: Log
@@ -80,20 +82,22 @@ def run_reconciliation(period=None, branch=None):
 	total_entries = len(kra_entries)
 	match_rate = round((total_matched_all / total_entries) * 100, 1) if total_entries > 0 else 0
 
-	frappe.get_doc({
-		"doctype": "eTIMS Reconciliation Log",
-		"period": period,
-		"branch": branch,
-		"run_date": now_datetime(),
-		"run_by": frappe.session.user,
-		"total_kra_entries": total_entries,
-		"match_rate": match_rate,
-		"total_matched": total_matched_all,
-		"total_mismatched": mismatched,
-		"total_missing_locally": missing_locally,
-		"total_not_in_kra": not_in_kra,
-		"total_variance": total_variance,
-	}).insert(ignore_permissions=True)
+	frappe.get_doc(
+		{
+			"doctype": "eTIMS Reconciliation Log",
+			"period": period,
+			"branch": branch,
+			"run_date": now_datetime(),
+			"run_by": frappe.session.user,
+			"total_kra_entries": total_entries,
+			"match_rate": match_rate,
+			"total_matched": total_matched_all,
+			"total_mismatched": mismatched,
+			"total_missing_locally": missing_locally,
+			"total_not_in_kra": not_in_kra,
+			"total_variance": total_variance,
+		}
+	).insert(ignore_permissions=True)
 	frappe.db.commit()
 
 	return {
@@ -117,12 +121,12 @@ def _prematch_auto_created(from_date, to_date, branch=None):
 	if branch:
 		filters["custom_tax_branch_office"] = branch
 
-	auto_pis = frappe.get_all("Purchase Invoice", filters=filters,
-		fields=["name"], limit_page_length=0)
+	auto_pis = frappe.get_all("Purchase Invoice", filters=filters, fields=["name"], limit_page_length=0)
 
 	for pi in auto_pis:
-		frappe.db.set_value("Purchase Invoice", pi.name,
-			"custom_kra_match_status", "Matched", update_modified=False)
+		frappe.db.set_value(
+			"Purchase Invoice", pi.name, "custom_kra_match_status", "Matched", update_modified=False
+		)
 
 	return len(auto_pis)
 
@@ -132,11 +136,22 @@ def _get_kra_entries(from_date, to_date, branch=None):
 	if branch:
 		filters["branch"] = branch
 
-	return frappe.get_all("eTIMS Purchase Register Entry", filters=filters,
-		fields=["name", "supplier_pin", "supplier_name", "kra_invoice_number",
-			"invoice_date", "total_amount", "tax_amount", "match_status",
-			"matched_purchase_invoice"],
-		limit_page_length=0)
+	return frappe.get_all(
+		"eTIMS Purchase Register Entry",
+		filters=filters,
+		fields=[
+			"name",
+			"supplier_pin",
+			"supplier_name",
+			"kra_invoice_number",
+			"invoice_date",
+			"total_amount",
+			"tax_amount",
+			"match_status",
+			"matched_purchase_invoice",
+		],
+		limit_page_length=0,
+	)
 
 
 def _get_local_purchase_invoices(from_date, to_date, branch=None):
@@ -147,12 +162,22 @@ def _get_local_purchase_invoices(from_date, to_date, branch=None):
 	if branch:
 		filters["custom_tax_branch_office"] = branch
 
-	return frappe.get_all("Purchase Invoice", filters=filters,
-		fields=["name", "supplier", "tax_id", "posting_date",
-			"base_grand_total", "base_total_taxes_and_charges",
-			"custom_invoice_number", "custom_purchase_is_from_etims",
-			"custom_kra_match_status"],
-		limit_page_length=0)
+	return frappe.get_all(
+		"Purchase Invoice",
+		filters=filters,
+		fields=[
+			"name",
+			"supplier",
+			"tax_id",
+			"posting_date",
+			"base_grand_total",
+			"base_total_taxes_and_charges",
+			"custom_invoice_number",
+			"custom_purchase_is_from_etims",
+			"custom_kra_match_status",
+		],
+		limit_page_length=0,
+	)
 
 
 def _match_entry(entry, local_pis, already_matched):
@@ -176,8 +201,13 @@ def _match_entry(entry, local_pis, already_matched):
 	candidates.sort(key=lambda x: (x["date_diff"], abs(x["variance"])))
 
 	if not candidates:
-		frappe.db.set_value("eTIMS Purchase Register Entry", entry.name,
-			"match_status", "Missing Locally", update_modified=False)
+		frappe.db.set_value(
+			"eTIMS Purchase Register Entry",
+			entry.name,
+			"match_status",
+			"Missing Locally",
+			update_modified=False,
+		)
 		return {"status": "Missing Locally"}
 
 	candidates.sort(key=lambda x: abs(x["variance"]))
@@ -188,22 +218,31 @@ def _match_entry(entry, local_pis, already_matched):
 		return {"status": "Matched", "pi_name": best["pi"].name}
 	else:
 		_record_match(entry, best["pi"], "Amount Mismatch", best["variance"])
-		return {"status": "Amount Mismatch", "pi_name": best["pi"].name,
-			"variance": best["variance"]}
+		return {"status": "Amount Mismatch", "pi_name": best["pi"].name, "variance": best["variance"]}
 
 
 def _record_match(entry, pi, status, variance):
-	frappe.db.set_value("eTIMS Purchase Register Entry", entry.name, {
-		"match_status": status,
-		"matched_purchase_invoice": pi.name,
-		"variance_amount": variance,
-	}, update_modified=False)
+	frappe.db.set_value(
+		"eTIMS Purchase Register Entry",
+		entry.name,
+		{
+			"match_status": status,
+			"matched_purchase_invoice": pi.name,
+			"variance_amount": variance,
+		},
+		update_modified=False,
+	)
 
 	pi_status = "Matched" if status == "Matched" else "Mismatched"
-	frappe.db.set_value("Purchase Invoice", pi.name, {
-		"custom_kra_match_status": pi_status,
-		"custom_kra_variance_amount": variance,
-	}, update_modified=False)
+	frappe.db.set_value(
+		"Purchase Invoice",
+		pi.name,
+		{
+			"custom_kra_match_status": pi_status,
+			"custom_kra_variance_amount": variance,
+		},
+		update_modified=False,
+	)
 
 
 @frappe.whitelist()
@@ -212,8 +251,10 @@ def run_reconciliation_manual(period=None, branch=None):
 	frappe.has_permission("eTIMS Reconciliation Log", "create", throw=True)
 	result = run_reconciliation(period, branch)
 	frappe.msgprint(
-		_("Reconciliation: {matched} matched, {mismatched} mismatched, "
-		  "{missing_locally} missing locally, {not_in_kra} not in KRA").format(**result)
+		_(
+			"Reconciliation: {matched} matched, {mismatched} mismatched, "
+			"{missing_locally} missing locally, {not_in_kra} not in KRA"
+		).format(**result)
 	)
 	return result
 
@@ -222,10 +263,14 @@ def run_reconciliation_manual(period=None, branch=None):
 def accept_variance(entry_name, reason):
 	"""Accept a variance with a reason."""
 	frappe.has_permission("eTIMS Purchase Register Entry", "write", throw=True)
-	frappe.db.set_value("eTIMS Purchase Register Entry", entry_name, {
-		"variance_accepted": 1,
-		"variance_reason": reason,
-	})
+	frappe.db.set_value(
+		"eTIMS Purchase Register Entry",
+		entry_name,
+		{
+			"variance_accepted": 1,
+			"variance_reason": reason,
+		},
+	)
 	frappe.db.commit()
 	return {"status": "success"}
 
@@ -241,11 +286,13 @@ def reconcile_credit_notes(period=None, branch=None):
 
 	if not period:
 		from frappe.utils import add_months, getdate
+
 		last_month = add_months(getdate(), -1)
 		period = last_month.strftime("%Y-%m")
 
 	year, month = period.split("-")
 	import calendar
+
 	from_date = f"{year}-{month}-01"
 	last_day = calendar.monthrange(int(year), int(month))[1]
 	to_date = f"{year}-{month}-{last_day}"
@@ -258,10 +305,12 @@ def reconcile_credit_notes(period=None, branch=None):
 	if branch:
 		kra_filters["branch"] = branch
 
-	kra_credit_notes = frappe.get_all("eTIMS Purchase Register Entry",
+	kra_credit_notes = frappe.get_all(
+		"eTIMS Purchase Register Entry",
 		filters=kra_filters,
 		fields=["name", "supplier_pin", "invoice_date", "total_amount", "match_status"],
-		limit_page_length=0)
+		limit_page_length=0,
+	)
 
 	# Local return Purchase Invoices
 	pi_filters = {
@@ -272,10 +321,19 @@ def reconcile_credit_notes(period=None, branch=None):
 	if branch:
 		pi_filters["custom_tax_branch_office"] = branch
 
-	local_returns = frappe.get_all("Purchase Invoice", filters=pi_filters,
-		fields=["name", "tax_id", "posting_date", "base_grand_total",
-				"return_against", "custom_kra_match_status"],
-		limit_page_length=0)
+	local_returns = frappe.get_all(
+		"Purchase Invoice",
+		filters=pi_filters,
+		fields=[
+			"name",
+			"tax_id",
+			"posting_date",
+			"base_grand_total",
+			"return_against",
+			"custom_kra_match_status",
+		],
+		limit_page_length=0,
+	)
 
 	matched = 0
 	matched_pi_names = set()
@@ -302,8 +360,9 @@ def reconcile_credit_notes(period=None, branch=None):
 				matched += 1
 				break
 
-	orphaned_kra = len([c for c in kra_credit_notes
-		if c.match_status not in ("Matched", "Matched (Auto-Created)")])
+	orphaned_kra = len(
+		[c for c in kra_credit_notes if c.match_status not in ("Matched", "Matched (Auto-Created)")]
+	)
 	orphaned_local = len([p for p in local_returns if p.name not in matched_pi_names])
 
 	frappe.db.commit()

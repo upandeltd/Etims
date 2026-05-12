@@ -7,10 +7,11 @@ Generates a scorecard per month per branch:
 - Error rate (10%): % of submissions that succeeded without retry
 - Filing timeliness (15%): stub — tracks if scoring ran before 20th
 """
+
 import calendar
 
 import frappe
-from frappe.utils import flt, add_months, getdate, now_datetime
+from frappe.utils import add_months, flt, getdate, now_datetime
 
 
 def generate_monthly_score(period=None, branch=None):
@@ -36,11 +37,11 @@ def generate_monthly_score(period=None, branch=None):
 	filing = _filing_timeliness_score()
 
 	overall = (
-		transmission * 0.35 +
-		reconciliation * 0.25 +
-		supplier_health * 0.15 +
-		error_rate * 0.10 +
-		filing * 0.15
+		transmission * 0.35
+		+ reconciliation * 0.25
+		+ supplier_health * 0.15
+		+ error_rate * 0.10
+		+ filing * 0.15
 	)
 
 	grade = "A" if overall >= 90 else "B" if overall >= 75 else "C" if overall >= 60 else "D"
@@ -66,12 +67,14 @@ def generate_monthly_score(period=None, branch=None):
 	if frappe.db.exists("eTIMS Compliance Score", doc_name):
 		frappe.db.set_value("eTIMS Compliance Score", doc_name, values)
 	else:
-		frappe.get_doc({
-			"doctype": "eTIMS Compliance Score",
-			"period": period,
-			"branch": branch,
-			**values,
-		}).insert(ignore_permissions=True)
+		frappe.get_doc(
+			{
+				"doctype": "eTIMS Compliance Score",
+				"period": period,
+				"branch": branch,
+				**values,
+			}
+		).insert(ignore_permissions=True)
 
 	frappe.db.commit()
 	return {"period": period, "overall": round(overall, 1), "grade": grade}
@@ -83,26 +86,40 @@ def _transmission_score(from_date, to_date, branch=None):
 	transmitted = 0
 
 	# Sales Invoices
-	si_filters = {"docstatus": 1, "posting_date": ["between", [from_date, to_date]],
-				  "custom_update_invoice_in_tims": 1}
+	si_filters = {
+		"docstatus": 1,
+		"posting_date": ["between", [from_date, to_date]],
+		"custom_update_invoice_in_tims": 1,
+	}
 	if branch:
 		si_filters["custom_tax_branch_office"] = branch
 
 	si_total = frappe.db.count("Sales Invoice", filters=si_filters)
-	si_transmitted = frappe.db.count("Sales Invoice", filters={
-		**si_filters, "custom_update_sales_to_etims": 1,
-	})
+	si_transmitted = frappe.db.count(
+		"Sales Invoice",
+		filters={
+			**si_filters,
+			"custom_update_sales_to_etims": 1,
+		},
+	)
 
 	# Purchase Invoices
-	pi_filters = {"docstatus": 1, "posting_date": ["between", [from_date, to_date]],
-				  "custom_update_purchase_in_tims": 1}
+	pi_filters = {
+		"docstatus": 1,
+		"posting_date": ["between", [from_date, to_date]],
+		"custom_update_purchase_in_tims": 1,
+	}
 	if branch:
 		pi_filters["custom_tax_branch_office"] = branch
 
 	pi_total = frappe.db.count("Purchase Invoice", filters=pi_filters)
-	pi_transmitted = frappe.db.count("Purchase Invoice", filters={
-		**pi_filters, "custom_invoice_number": [">", 0],
-	})
+	pi_transmitted = frappe.db.count(
+		"Purchase Invoice",
+		filters={
+			**pi_filters,
+			"custom_invoice_number": [">", 0],
+		},
+	)
 
 	total = si_total + pi_total
 	transmitted = si_transmitted + pi_transmitted
@@ -125,9 +142,13 @@ def _reconciliation_score(from_date, to_date, branch=None):
 	if not total:
 		return 100
 
-	matched = frappe.db.count("eTIMS Purchase Register Entry", filters={
-		**filters, "match_status": ["in", ["Matched", "Matched (Auto-Created)"]],
-	})
+	matched = frappe.db.count(
+		"eTIMS Purchase Register Entry",
+		filters={
+			**filters,
+			"match_status": ["in", ["Matched", "Matched (Auto-Created)"]],
+		},
+	)
 	return round((matched / total) * 100)
 
 
@@ -145,11 +166,16 @@ def _filing_timeliness_score():
 
 def _supplier_health_score():
 	"""Average supplier compliance score using Frappe ORM."""
-	suppliers = frappe.get_all("Supplier", filters={
-		"disabled": 0,
-		"custom_supplier_pin": ["is", "set"],
-		"custom_etims_compliance_score": [">", 0],
-	}, fields=["custom_etims_compliance_score"], limit_page_length=0)
+	suppliers = frappe.get_all(
+		"Supplier",
+		filters={
+			"disabled": 0,
+			"custom_supplier_pin": ["is", "set"],
+			"custom_etims_compliance_score": [">", 0],
+		},
+		fields=["custom_etims_compliance_score"],
+		limit_page_length=0,
+	)
 
 	if not suppliers:
 		return 50
@@ -163,17 +189,23 @@ def _error_rate_score(from_date, to_date):
 	if not frappe.db.exists("DocType", "eTIMS Invoice Queue"):
 		return 100
 
-	total = frappe.db.count("eTIMS Invoice Queue", filters={
-		"creation": ["between", [from_date, to_date]],
-	})
+	total = frappe.db.count(
+		"eTIMS Invoice Queue",
+		filters={
+			"creation": ["between", [from_date, to_date]],
+		},
+	)
 	if not total:
 		return 100
 
-	first_try_success = frappe.db.count("eTIMS Invoice Queue", filters={
-		"creation": ["between", [from_date, to_date]],
-		"status": "Sent",
-		"retry_count": ["<=", 1],
-	})
+	first_try_success = frappe.db.count(
+		"eTIMS Invoice Queue",
+		filters={
+			"creation": ["between", [from_date, to_date]],
+			"status": "Sent",
+			"retry_count": ["<=", 1],
+		},
+	)
 	return round((first_try_success / total) * 100)
 
 
@@ -193,8 +225,12 @@ def _build_description(grade, transmission, reconciliation, supplier_health):
 	if transmission < 90:
 		lines.append(f"Transmission at {transmission}% — check for pending/failed invoice submissions.")
 	if reconciliation < 80:
-		lines.append(f"Reconciliation at {reconciliation}% — run purchase reconciliation and resolve mismatches.")
+		lines.append(
+			f"Reconciliation at {reconciliation}% — run purchase reconciliation and resolve mismatches."
+		)
 	if supplier_health < 60:
-		lines.append(f"Supplier health at {supplier_health}% — verify supplier PINs and check eTIMS registration.")
+		lines.append(
+			f"Supplier health at {supplier_health}% — verify supplier PINs and check eTIMS registration."
+		)
 
 	return " ".join(lines)

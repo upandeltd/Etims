@@ -6,8 +6,7 @@ class eTIMSPurchaseRegisterEntry(Document):
 	def before_save(self):
 		# Auto-link to Supplier by PIN
 		if self.supplier_pin and not self.supplier:
-			supplier = frappe.db.get_value("Supplier",
-				{"custom_supplier_pin": self.supplier_pin}, "name")
+			supplier = frappe.db.get_value("Supplier", {"custom_supplier_pin": self.supplier_pin}, "name")
 			if supplier:
 				self.supplier = supplier
 

@@ -6,20 +6,20 @@ from frappe.model.document import Document
 
 
 class eTIMSPurchaseOrderTrackingControllers:
-    """Controllers for eTIMS Purchase Order Tracking"""
+	"""Controllers for eTIMS Purchase Order Tracking"""
 
-    def validate(self):
-        """Validate document"""
-        pass
+	def validate(self):
+		"""Validate document"""
+		pass
 
-    def on_update(self):
-        """On update"""
-        pass
+	def on_update(self):
+		"""On update"""
+		pass
 
-    def on_submit(self):
-        """On submit"""
-        pass
+	def on_submit(self):
+		"""On submit"""
+		pass
 
-    def on_cancel(self):
-        """On cancel"""
-        pass
+	def on_cancel(self):
+		"""On cancel"""
+		pass

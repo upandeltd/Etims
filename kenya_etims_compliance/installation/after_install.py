@@ -23,22 +23,28 @@ def setup_workspace_sidebar():
 		return
 
 	from kenya_etims_compliance.utils.version_utils import is_v16_or_later
+
 	if not is_v16_or_later():
 		return
 
 	if not frappe.db.exists("Workspace Sidebar", {"module": "Kenya Etims Compliance"}):
 		try:
-			from frappe.modules.import_file import import_file_by_path
 			import os
+
+			from frappe.modules.import_file import import_file_by_path
+
 			sidebar_path = os.path.join(
 				os.path.dirname(__file__),
-				"..", "kenya_etims_compliance", "workspace_sidebar",
-				"etims_compliance", "etims_compliance.json"
+				"..",
+				"kenya_etims_compliance",
+				"workspace_sidebar",
+				"etims_compliance",
+				"etims_compliance.json",
 			)
 			if os.path.exists(sidebar_path):
 				import_file_by_path(sidebar_path)
 		except ImportError:
 			pass  # import_file_by_path not available on this Frappe version
 		except Exception as e:
-			frappe.log_error("eTIMS: After install error", str(e))
+			frappe.log_error(title="eTIMS: Workspace sidebar import failed", message=str(e))
 			pass  # Not critical - workspace JSON handles navigation

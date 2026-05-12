@@ -14,13 +14,23 @@ def execute(filters=None):
 
 def get_columns():
 	return [
-		{"fieldname": "supplier", "label": _("Supplier"), "fieldtype": "Link",
-		 "options": "Supplier", "width": 200},
+		{
+			"fieldname": "supplier",
+			"label": _("Supplier"),
+			"fieldtype": "Link",
+			"options": "Supplier",
+			"width": 200,
+		},
 		{"fieldname": "supplier_pin", "label": _("PIN"), "fieldtype": "Data", "width": 120},
 		{"fieldname": "status", "label": _("Status"), "fieldtype": "Data", "width": 120},
 		{"fieldname": "score", "label": _("Score"), "fieldtype": "Int", "width": 80},
 		{"fieldname": "pin_verified", "label": _("PIN Verified"), "fieldtype": "Check", "width": 100},
-		{"fieldname": "transmission_rate", "label": _("Transmission %"), "fieldtype": "Percent", "width": 120},
+		{
+			"fieldname": "transmission_rate",
+			"label": _("Transmission %"),
+			"fieldtype": "Percent",
+			"width": 120,
+		},
 		{"fieldname": "open_invoices", "label": _("Open PIs"), "fieldtype": "Int", "width": 80},
 		{"fieldname": "total_exposure", "label": _("Exposure (KES)"), "fieldtype": "Currency", "width": 140},
 	]
@@ -34,33 +44,49 @@ def get_data(filters):
 	if filters.get("status"):
 		supplier_filters["custom_etims_compliance_status"] = filters["status"]
 
-	suppliers = frappe.get_all("Supplier", filters=supplier_filters,
-		fields=["name", "custom_supplier_pin", "custom_etims_compliance_status",
-				"custom_etims_compliance_score", "custom_kra_pin_verified",
-				"custom_etims_transmission_rate"],
+	suppliers = frappe.get_all(
+		"Supplier",
+		filters=supplier_filters,
+		fields=[
+			"name",
+			"custom_supplier_pin",
+			"custom_etims_compliance_status",
+			"custom_etims_compliance_score",
+			"custom_kra_pin_verified",
+			"custom_etims_transmission_rate",
+		],
 		order_by="custom_etims_compliance_score asc",
-		limit_page_length=0)
+		limit_page_length=0,
+	)
 
 	data = []
 	for s in suppliers:
 		# Count unmatched PIs = exposure
-		unmatched_pis = frappe.get_all("Purchase Invoice", filters={
-			"supplier": s.name, "docstatus": 1,
-			"custom_kra_match_status": ["not in", ["Matched", ""]],
-		}, fields=["base_grand_total"], limit_page_length=0)
+		unmatched_pis = frappe.get_all(
+			"Purchase Invoice",
+			filters={
+				"supplier": s.name,
+				"docstatus": 1,
+				"custom_kra_match_status": ["not in", ["Matched", ""]],
+			},
+			fields=["base_grand_total"],
+			limit_page_length=0,
+		)
 
 		exposure = sum(flt(p.base_grand_total) for p in unmatched_pis)
 
-		data.append({
-			"supplier": s.name,
-			"supplier_pin": s.custom_supplier_pin,
-			"status": s.custom_etims_compliance_status or "Unknown",
-			"score": s.custom_etims_compliance_score or 0,
-			"pin_verified": s.custom_kra_pin_verified,
-			"transmission_rate": s.custom_etims_transmission_rate or 0,
-			"open_invoices": len(unmatched_pis),
-			"total_exposure": exposure,
-		})
+		data.append(
+			{
+				"supplier": s.name,
+				"supplier_pin": s.custom_supplier_pin,
+				"status": s.custom_etims_compliance_status or "Unknown",
+				"score": s.custom_etims_compliance_score or 0,
+				"pin_verified": s.custom_kra_pin_verified,
+				"transmission_rate": s.custom_etims_transmission_rate or 0,
+				"open_invoices": len(unmatched_pis),
+				"total_exposure": exposure,
+			}
+		)
 
 	return data
 

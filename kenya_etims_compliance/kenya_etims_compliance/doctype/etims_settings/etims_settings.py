@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
 
 
@@ -15,25 +16,25 @@ class eTIMSSettings(Document):
 	def validate_timeout(self):
 		"""Validate API timeout is positive and reasonable"""
 		if self.api_timeout and self.api_timeout < 1:
-			frappe.throw("API Timeout must be at least 1 second")
+			frappe.throw(_("API Timeout must be at least 1 second"))
 		if self.api_timeout and self.api_timeout > 300:
-			frappe.msgprint("Warning: API timeout exceeds 5 minutes. This may cause issues.")
+			frappe.msgprint(_("Warning: API timeout exceeds 5 minutes. This may cause issues."))
 
 	def validate_retry_settings(self):
 		"""Validate retry settings"""
 		if self.enable_retry_logic:
 			if self.max_retry_attempts and self.max_retry_attempts < 1:
-				frappe.throw("Max Retry Attempts must be at least 1")
+				frappe.throw(_("Max Retry Attempts must be at least 1"))
 			if self.max_retry_attempts and self.max_retry_attempts > 10:
-				frappe.msgprint("Warning: High retry count may cause delays.")
+				frappe.msgprint(_("Warning: High retry count may cause delays."))
 			if self.retry_delay and self.retry_delay < 0:
-				frappe.throw("Retry Delay cannot be negative")
+				frappe.throw(_("Retry Delay cannot be negative"))
 
 	def validate_search_limits(self):
 		"""Validate search result limits"""
 		if self.max_search_limit and self.default_search_limit:
 			if self.default_search_limit > self.max_search_limit:
-				frappe.throw("Default Search Limit cannot exceed Max Search Limit")
+				frappe.throw(_("Default Search Limit cannot exceed Max Search Limit"))
 
 
 @frappe.whitelist()
@@ -60,8 +61,8 @@ def get_etims_settings():
 
 	try:
 		settings = frappe.get_single("eTIMS Settings")
-	except Exception as e:
-		frappe.log_error("eTIMS: Settings error", str(e))
+	except frappe.DoesNotExistError as e:
+		frappe.log_error(title="eTIMS: Settings load failed", message=str(e))
 		# Return defaults if the Single record has not been saved yet
 		return _defaults
 
@@ -77,11 +78,17 @@ def get_etims_settings():
 		"retry_delay": settings.retry_delay or 2,
 		"default_search_limit": settings.default_search_limit or 100,
 		"max_search_limit": settings.max_search_limit or 1000,
-		"enable_error_logging": settings.enable_error_logging if settings.enable_error_logging is not None else 1,
+		"enable_error_logging": settings.enable_error_logging
+		if settings.enable_error_logging is not None
+		else 1,
 		"enable_auto_sync": settings.enable_auto_sync if settings.enable_auto_sync is not None else 1,
-		"enable_queue": settings.enable_queue if hasattr(settings, "enable_queue") and settings.enable_queue is not None else 1,
+		"enable_queue": settings.enable_queue
+		if hasattr(settings, "enable_queue") and settings.enable_queue is not None
+		else 1,
 		"queue_max_retries": settings.queue_max_retries if hasattr(settings, "queue_max_retries") else 10,
-		"queue_retry_interval": settings.queue_retry_interval if hasattr(settings, "queue_retry_interval") else 5,
+		"queue_retry_interval": settings.queue_retry_interval
+		if hasattr(settings, "queue_retry_interval")
+		else 5,
 	}
 
 
@@ -146,4 +153,3 @@ def is_permission_logging_enabled():
 	"""Check if permission logging is enabled"""
 	settings = get_etims_settings()
 	return settings.get("enable_permission_logging", 1)
-

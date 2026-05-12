@@ -1,210 +1,221 @@
 # Copyright (c) 2023, Upande Ltd and contributors
 # For license information, please see license.txt
 
-from datetime  import datetime
 import traceback
+from datetime import datetime
 
 import frappe
 from frappe import enqueue
 from frappe.model.document import Document
+
 from kenya_etims_compliance.utils.etims_utils import eTIMS
 from kenya_etims_compliance.utils.kra_client import KRAClient
 
+
 class eTIMSStockInformation(Document):
-    @frappe.whitelist()
-    def stockMoveReq(self):
-        request_datetime = self.from_date_and_time
-        date_time_str = eTIMS.strf_datetime_object(request_datetime)
+	@frappe.whitelist()
+	def stockMoveReq(self):
+		request_datetime = self.from_date_and_time
+		date_time_str = eTIMS.strf_datetime_object(request_datetime)
 
-        payload = {
-                "lastReqDt" : date_time_str,
-        }
+		payload = {
+			"lastReqDt": date_time_str,
+		}
 
-        try:
-            result = KRAClient().post("selectStockMoveList", payload)
+		try:
+			result = KRAClient().post("selectStockMoveList", payload)
 
-            if result.get("Error"):
-                return {"Error": result.get("Error")}
+			if result.get("Error"):
+				return {"Error": result.get("Error")}
 
-            response_result = {"data": result.get("Success")}
-            create_stock_mvnt_doc(response_result)
+			response_result = {"data": result.get("Success")}
+			create_stock_mvnt_doc(response_result)
 
-            self.last_search_date_and_time = request_datetime
-            self.save()
+			self.last_search_date_and_time = request_datetime
+			self.save()
 
-            return {"Success": "Stock move search completed"}
+			return {"Success": "Stock move search completed"}
 
-        except Exception as e:
-            frappe.log_error(title="Stock Move Request", message=traceback.format_exc())
-            return {"Error":"Oops Bad Request!"}
+		except (frappe.ValidationError, frappe.DoesNotExistError):
+			frappe.log_error(title="eTIMS: Stock Move Request failed", message=traceback.format_exc())
+			return {"Error": "Oops Bad Request!"}
 
-    @frappe.whitelist()
-    def stockMasterSaveReq(self):
-        for item in self.items:
-            if not item.get("saved") == 1:
-                payload = {
-                    "itemCd": item.get("etims_code"),
-                    "rsdQty": item.get("quantity"),
-                    "regrId": self.owner,
-                    "regrNm": self.owner,
-                    "modrId": self.modified_by,
-                    "modrNm": self.modified_by
-                }
+	@frappe.whitelist()
+	def stockMasterSaveReq(self):
+		for item in self.items:
+			if not item.get("saved") == 1:
+				payload = {
+					"itemCd": item.get("etims_code"),
+					"rsdQty": item.get("quantity"),
+					"regrId": self.owner,
+					"regrNm": self.owner,
+					"modrId": self.modified_by,
+					"modrNm": self.modified_by,
+				}
 
-                try:
-                    result = KRAClient().post("saveStockMaster", payload)
+				try:
+					result = KRAClient().post("saveStockMaster", payload)
 
-                    if result.get("Error"):
-                        return {"Error": result.get("Error")}
+					if result.get("Error"):
+						return {"Error": result.get("Error")}
 
-                    item.saved = 1
-                    self.save()
-                    self.stockMasterSaveReq()
-                    return {"Success": "Stock master saved"}
+					item.saved = 1
+					self.save()
+					self.stockMasterSaveReq()
+					return {"Success": "Stock master saved"}
 
-                except Exception as e:
-                    frappe.log_error(title="Stock Master Save", message=traceback.format_exc())
-                    return {"Error":"Oops Bad Request!"}
+				except (frappe.ValidationError, frappe.DoesNotExistError):
+					frappe.log_error(title="eTIMS: Stock Master Save failed", message=traceback.format_exc())
+					return {"Error": "Oops Bad Request!"}
 
-    @frappe.whitelist()
-    def insert_items(self):
-        items_to_insert = self.consolidate_stock_bin()
+	@frappe.whitelist()
+	def insert_items(self):
+		items_to_insert = self.consolidate_stock_bin()
 
-        for key, value in items_to_insert.items():
-            # check if the key is already added for the etims_code
-            qty = get_bin_qty(key)
+		for key, value in items_to_insert.items():
+			# check if the key is already added for the etims_code
+			qty = get_bin_qty(key)
 
-            item_added = False
-            for item in self.items:
-                if item.item_code == key:
-                    item_added = True
-                    item.quantity = qty
-                    item.etims_code = value
+			item_added = False
+			for item in self.items:
+				if item.item_code == key:
+					item_added = True
+					item.quantity = qty
+					item.etims_code = value
 
-            if not item_added:
-                self.append("items",
-                    {
-                        "item_code": key,
-                        "etims_code": value,
-                        "quantity": qty
-                    })
+			if not item_added:
+				self.append("items", {"item_code": key, "etims_code": value, "quantity": qty})
 
-        return {"status": True}
+		return {"status": True}
 
-    @frappe.whitelist()
-    def consolidate_stock_bin(self):
-        item_dict = {}
-        items = frappe.db.get_all("Item", filters={"custom_registered_in_tims":1, "disabled":0}, fields = ["item_code", "custom_item_code"])
+	@frappe.whitelist()
+	def consolidate_stock_bin(self):
+		item_dict = {}
+		items = frappe.db.get_all(
+			"Item",
+			filters={"custom_registered_in_tims": 1, "disabled": 0},
+			fields=["item_code", "custom_item_code"],
+		)
 
-        if items:
-            for item in items:
-                if not item.get("item_code") in item_dict.keys():
-                    item_dict[item.get("item_code")] = ""
+		if items:
+			for item in items:
+				if item.get("item_code") not in item_dict.keys():
+					item_dict[item.get("item_code")] = ""
 
-                item_dict[item.get("item_code")] = item.get("custom_item_code")
+				item_dict[item.get("item_code")] = item.get("custom_item_code")
 
-        return item_dict
+		return item_dict
 
 
 def get_bin_qty(item_code):
-    tax_branch = eTIMS.get_user_branch_id()
+	tax_branch = eTIMS.get_user_branch_id()
 
-    store_warehouse = frappe.db.get_all("Warehouse", filters={"warehouse_type": "Stores", "is_group": 0, "custom_tax_branch_office": tax_branch}, fields=["warehouse_name", "name"])
+	store_warehouse = frappe.db.get_all(
+		"Warehouse",
+		filters={"warehouse_type": "Stores", "is_group": 0, "custom_tax_branch_office": tax_branch},
+		fields=["warehouse_name", "name"],
+	)
 
-    bin_docs = frappe.db.get_all("Bin", filters={"item_code":item_code, "warehouse": store_warehouse[0].get("name")}, fields=["actual_qty"])
+	bin_docs = frappe.db.get_all(
+		"Bin",
+		filters={"item_code": item_code, "warehouse": store_warehouse[0].get("name")},
+		fields=["actual_qty"],
+	)
 
-    if bin_docs:
+	if bin_docs:
+		return bin_docs[0].get("actual_qty")
 
-        return bin_docs[0].get("actual_qty")
 
 def create_stock_mvnt_doc(response_result):
-    data = response_result.get("data")
-    if data.get("stockList"):
-        for item in data.get("stockList"):
-            doc_exists = check_if_doc_exists(
-                        "eTIMS Stock Movement", "stored_and_released_number", item.get("sarNo")
-                    )
+	data = response_result.get("data")
+	if data.get("stockList"):
+		for item in data.get("stockList"):
+			doc_exists = check_if_doc_exists(
+				"eTIMS Stock Movement", "stored_and_released_number", item.get("sarNo")
+			)
 
-            occurence_date = eTIMS.strp_date_object(item.get("ocrnDt"))
+			occurence_date = eTIMS.strp_date_object(item.get("ocrnDt"))
 
-            if not doc_exists == True:
-                new_doc = frappe.new_doc("eTIMS Stock Movement")
-                new_doc.customer_tin = item.get("custTin")
-                new_doc.customer_branch = item.get("custBhfId")
-                new_doc.stored_and_released_number = item.get("sarNo")
-                new_doc.occurred_date = occurence_date
-                new_doc.total_item_count = item.get("totItemCnt")
-                new_doc.total_supply_price = item.get("totTaxblAmt")
-                new_doc.total_vat = item.get("totTaxAmt")
-                new_doc.total_amount = item.get("totAmt")
-                new_doc.remark = item.get("remark")
+			if not doc_exists:
+				new_doc = frappe.new_doc("eTIMS Stock Movement")
+				new_doc.customer_tin = item.get("custTin")
+				new_doc.customer_branch = item.get("custBhfId")
+				new_doc.stored_and_released_number = item.get("sarNo")
+				new_doc.occurred_date = occurence_date
+				new_doc.total_item_count = item.get("totItemCnt")
+				new_doc.total_supply_price = item.get("totTaxblAmt")
+				new_doc.total_vat = item.get("totTaxAmt")
+				new_doc.total_amount = item.get("totAmt")
+				new_doc.remark = item.get("remark")
 
-                for item_detail in item.get("itemList"):
-                    eTIMS.map_new_item(item_detail)
+				for item_detail in item.get("itemList"):
+					eTIMS.map_new_item(item_detail)
 
-                    if item_detail.get("itemExprDt"):
-                        expiry_date = eTIMS.strp_datetime_object(item_detail.get("itemExprDt"))
+					if item_detail.get("itemExprDt"):
+						expiry_date = eTIMS.strp_datetime_object(item_detail.get("itemExprDt"))
 
-                        item_dict = assign_stock_mvnt_item(item_detail, expiry_date)
-                        new_doc.append("items", item_dict)
-                    else:
-                        item_dict = assign_stock_mvnt_item_no_date(item_detail)
-                        new_doc.append("items", item_dict)
+						item_dict = assign_stock_mvnt_item(item_detail, expiry_date)
+						new_doc.append("items", item_dict)
+					else:
+						item_dict = assign_stock_mvnt_item_no_date(item_detail)
+						new_doc.append("items", item_dict)
 
-                new_doc.insert()
+				new_doc.insert()
+
 
 def check_if_doc_exists(doc, doc_filter, doc_value):
-    cdcls_exists = False
-    code_info_docs = frappe.db.get_all(doc, filters={doc_filter: doc_value})
+	cdcls_exists = False
+	code_info_docs = frappe.db.get_all(doc, filters={doc_filter: doc_value})
 
-    if code_info_docs:
-        cdcls_exists = True
+	if code_info_docs:
+		cdcls_exists = True
 
-    return cdcls_exists
+	return cdcls_exists
 
 
 def assign_stock_mvnt_item(item_detail, item_expiry_date):
-    item_dict = {
-        "item_sequence": item_detail.get("itemSeq"),
-        "item_code": item_detail.get("itemCd"),
-        "item_class_code": item_detail.get("itemClsCd"),
-        "item_name": item_detail.get("itemNm"),
-        "barcode": item_detail.get("bcd"),
-        "package_unit_code": item_detail.get("pkgUnitCd"),
-        "package_quantity": item_detail.get("pkg"),
-        "unit_quantity_code": item_detail.get("qtyUnitCd"),
-        "unit_quantity": item_detail.get("qty"),
-        "item_expired_date": item_expiry_date,
-        "unit_price": item_detail.get("prc"),
-        "supply_amount": item_detail.get("splyAmt"),
-        "discount_rate": item_detail.get("totDcAmt"),
-        "taxable_amount": item_detail.get("taxblAmt"),
-        "taxation_type_code": item_detail.get("taxTyCd"),
-        "tax_amount": item_detail.get("taxAmt"),
-        "total_amount": item_detail.get("totAmt")
-    }
+	item_dict = {
+		"item_sequence": item_detail.get("itemSeq"),
+		"item_code": item_detail.get("itemCd"),
+		"item_class_code": item_detail.get("itemClsCd"),
+		"item_name": item_detail.get("itemNm"),
+		"barcode": item_detail.get("bcd"),
+		"package_unit_code": item_detail.get("pkgUnitCd"),
+		"package_quantity": item_detail.get("pkg"),
+		"unit_quantity_code": item_detail.get("qtyUnitCd"),
+		"unit_quantity": item_detail.get("qty"),
+		"item_expired_date": item_expiry_date,
+		"unit_price": item_detail.get("prc"),
+		"supply_amount": item_detail.get("splyAmt"),
+		"discount_rate": item_detail.get("totDcAmt"),
+		"taxable_amount": item_detail.get("taxblAmt"),
+		"taxation_type_code": item_detail.get("taxTyCd"),
+		"tax_amount": item_detail.get("taxAmt"),
+		"total_amount": item_detail.get("totAmt"),
+	}
 
-    return item_dict
+	return item_dict
+
 
 def assign_stock_mvnt_item_no_date(item_detail):
-    item_dict = {
-        "item_sequence": item_detail.get("itemSeq"),
-        "item_code": item_detail.get("itemCd"),
-        "item_class_code": item_detail.get("itemClsCd"),
-        "item_name": item_detail.get("itemNm"),
-        "barcode": item_detail.get("bcd"),
-        "package_unit_code": item_detail.get("pkgUnitCd"),
-        "package_quantity": item_detail.get("pkg"),
-        "unit_quantity_code": item_detail.get("qtyUnitCd"),
-        "unit_quantity": item_detail.get("qty"),
-        "item_expired_date": item_detail.get("itemExprDt"),
-        "unit_price": item_detail.get("prc"),
-        "supply_amount": item_detail.get("splyAmt"),
-        "discount_rate": item_detail.get("totDcAmt"),
-        "taxable_amount": item_detail.get("taxblAmt"),
-        "taxation_type_code": item_detail.get("taxTyCd"),
-        "tax_amount": item_detail.get("taxAmt"),
-        "total_amount": item_detail.get("totAmt")
-    }
+	item_dict = {
+		"item_sequence": item_detail.get("itemSeq"),
+		"item_code": item_detail.get("itemCd"),
+		"item_class_code": item_detail.get("itemClsCd"),
+		"item_name": item_detail.get("itemNm"),
+		"barcode": item_detail.get("bcd"),
+		"package_unit_code": item_detail.get("pkgUnitCd"),
+		"package_quantity": item_detail.get("pkg"),
+		"unit_quantity_code": item_detail.get("qtyUnitCd"),
+		"unit_quantity": item_detail.get("qty"),
+		"item_expired_date": item_detail.get("itemExprDt"),
+		"unit_price": item_detail.get("prc"),
+		"supply_amount": item_detail.get("splyAmt"),
+		"discount_rate": item_detail.get("totDcAmt"),
+		"taxable_amount": item_detail.get("taxblAmt"),
+		"taxation_type_code": item_detail.get("taxTyCd"),
+		"tax_amount": item_detail.get("taxAmt"),
+		"total_amount": item_detail.get("totAmt"),
+	}
 
-    return item_dict
+	return item_dict

@@ -1,144 +1,167 @@
 import frappe
+
 from kenya_etims_compliance.utils.kra_client import KRAClient
 
 
 def fetch_kra_notices():
-    """Daily: Fetch new KRA notices from eTIMS."""
-    from kenya_etims_compliance.utils.etims_utils import eTIMS
+	"""Daily: Fetch new KRA notices from eTIMS."""
+	from kenya_etims_compliance.utils.etims_utils import eTIMS
 
-    headers = eTIMS.get_headers()
-    if not headers:
-        return
+	headers = eTIMS.get_headers()
+	if not headers:
+		return
 
-    result = KRAClient().post("selectNoticeList", {}, headers)
-    if "Success" not in result or not result["Success"]:
-        return
+	result = KRAClient().post("selectNoticeList", {}, headers)
+	if "Success" not in result or not result["Success"]:
+		return
 
-    notices = result["Success"]
-    if isinstance(notices, dict):
-        notices = notices.get("noticeList", [])
+	notices = result["Success"]
+	if isinstance(notices, dict):
+		notices = notices.get("noticeList", [])
 
-    for notice in (notices or []):
-        ntc_no = notice.get("ntcNo")
-        if ntc_no and not frappe.db.exists("eTIMS Notice", {"notice_number": ntc_no}):
-            frappe.get_doc({
-                "doctype": "eTIMS Notice",
-                "notice_number": ntc_no,
-                "title": notice.get("title", ""),
-                "contents": notice.get("cont", ""),
-                "detail_url": notice.get("dtlUrl", ""),
-            }).insert(ignore_permissions=True)
+	for notice in notices or []:
+		ntc_no = notice.get("ntcNo")
+		if ntc_no and not frappe.db.exists("eTIMS Notice", {"notice_number": ntc_no}):
+			frappe.get_doc(
+				{
+					"doctype": "eTIMS Notice",
+					"notice_number": ntc_no,
+					"title": notice.get("title", ""),
+					"contents": notice.get("cont", ""),
+					"detail_url": notice.get("dtlUrl", ""),
+				}
+			).insert(ignore_permissions=True)
 
-    frappe.db.commit()
+	frappe.db.commit()
 
 
 def verify_supplier_pins():
-    """Weekly: Batch verify active supplier PINs."""
-    from kenya_etims_compliance.utils.etims_utils import eTIMS
+	"""Weekly: Batch verify active supplier PINs."""
+	from kenya_etims_compliance.utils.etims_utils import eTIMS
 
-    suppliers = frappe.get_all("Supplier", filters={
-        "disabled": 0,
-        "custom_supplier_pin": ["is", "set"],
-    }, fields=["name", "custom_supplier_pin"],
-       order_by="custom_kra_pin_verified_date asc",
-       limit=100)
+	suppliers = frappe.get_all(
+		"Supplier",
+		filters={
+			"disabled": 0,
+			"custom_supplier_pin": ["is", "set"],
+		},
+		fields=["name", "custom_supplier_pin"],
+		order_by="custom_kra_pin_verified_date asc",
+		limit=100,
+	)
 
-    for s in suppliers:
-        result = eTIMS.verify_supplier_pin(s.custom_supplier_pin)
-        frappe.db.set_value("Supplier", s.name, {
-            "custom_kra_pin_verified": 1 if "Success" in result else 0,
-            "custom_kra_pin_verified_date": frappe.utils.now_datetime(),
-        }, update_modified=False)
+	for s in suppliers:
+		result = eTIMS.verify_supplier_pin(s.custom_supplier_pin)
+		frappe.db.set_value(
+			"Supplier",
+			s.name,
+			{
+				"custom_kra_pin_verified": 1 if "Success" in result else 0,
+				"custom_kra_pin_verified_date": frappe.utils.now_datetime(),
+			},
+			update_modified=False,
+		)
 
-    frappe.db.commit()
+	frappe.db.commit()
 
 
 def fetch_purchase_transactions():
-    """Daily: Fetch KRA purchase data and create register entries."""
-    if not frappe.db.exists("DocType", "eTIMS Purchase Register Entry"):
-        return
+	"""Daily: Fetch KRA purchase data and create register entries."""
+	if not frappe.db.exists("DocType", "eTIMS Purchase Register Entry"):
+		return
 
-    from kenya_etims_compliance.utils.etims_utils import eTIMS
+	from kenya_etims_compliance.utils.etims_utils import eTIMS
 
-    last_fetch = frappe.db.get_single_value("eTIMS Purchase Information", "last_search_date_and_time")
-    if not last_fetch:
-        last_fetch = "20260101000000"
-    else:
-        last_fetch = eTIMS.strf_datetime_format(last_fetch)
+	last_fetch = frappe.db.get_single_value("eTIMS Purchase Information", "last_search_date_and_time")
+	if not last_fetch:
+		last_fetch = "20260101000000"
+	else:
+		last_fetch = eTIMS.strf_datetime_format(last_fetch)
 
-    result = KRAClient().post("selectTrnsPurchaseSalesList", {"lastReqDt": last_fetch})
-    if "Success" not in result or not result["Success"]:
-        return
+	result = KRAClient().post("selectTrnsPurchaseSalesList", {"lastReqDt": last_fetch})
+	if "Success" not in result or not result["Success"]:
+		return
 
-    data = result["Success"]
-    invoices = data.get("saleList") if isinstance(data, dict) else []
+	data = result["Success"]
+	invoices = data.get("saleList") if isinstance(data, dict) else []
 
-    for inv in (invoices or []):
-        supplier_pin = inv.get("spplrTin", "")
-        kra_inv_no = inv.get("spplrInvcNo", 0)
+	for inv in invoices or []:
+		supplier_pin = inv.get("spplrTin", "")
+		kra_inv_no = inv.get("spplrInvcNo", 0)
 
-        if frappe.db.exists("eTIMS Purchase Register Entry", {
-            "supplier_pin": supplier_pin, "kra_invoice_number": kra_inv_no,
-        }):
-            continue
+		if frappe.db.exists(
+			"eTIMS Purchase Register Entry",
+			{
+				"supplier_pin": supplier_pin,
+				"kra_invoice_number": kra_inv_no,
+			},
+		):
+			continue
 
-        sale_date = None
-        try:
-            sale_date = eTIMS.strp_date_object(inv.get("salesDt"))
-        except Exception as e:
-            frappe.log_error("eTIMS: Task error", str(e))
-            pass
+		sale_date = None
+		try:
+			sale_date = eTIMS.strp_date_object(inv.get("salesDt"))
+		except Exception as e:
+			frappe.log_error("eTIMS: Task error", str(e))
+			pass
 
-        frappe.get_doc({
-            "doctype": "eTIMS Purchase Register Entry",
-            "supplier_pin": supplier_pin,
-            "supplier_name": inv.get("spplrNm", ""),
-            "kra_invoice_number": kra_inv_no,
-            "invoice_date": sale_date,
-            "total_amount": inv.get("totAmt", 0),
-            "tax_amount": inv.get("totTaxAmt", 0),
-            "item_count": inv.get("totItemCnt", 0),
-            "fetch_date": frappe.utils.now_datetime(),
-            "match_status": "Pending",
-        }).insert(ignore_permissions=True)
+		frappe.get_doc(
+			{
+				"doctype": "eTIMS Purchase Register Entry",
+				"supplier_pin": supplier_pin,
+				"supplier_name": inv.get("spplrNm", ""),
+				"kra_invoice_number": kra_inv_no,
+				"invoice_date": sale_date,
+				"total_amount": inv.get("totAmt", 0),
+				"tax_amount": inv.get("totTaxAmt", 0),
+				"item_count": inv.get("totItemCnt", 0),
+				"fetch_date": frappe.utils.now_datetime(),
+				"match_status": "Pending",
+			}
+		).insert(ignore_permissions=True)
 
-    frappe.db.commit()
+	frappe.db.commit()
 
 
 def run_reconciliation_task():
-    """Daily (after fetch): Run purchase reconciliation for previous month."""
-    if not frappe.db.exists("DocType", "eTIMS Purchase Register Entry"):
-        return
+	"""Daily (after fetch): Run purchase reconciliation for previous month."""
+	if not frappe.db.exists("DocType", "eTIMS Purchase Register Entry"):
+		return
 
-    from kenya_etims_compliance.custom_methods.reconciliation import run_reconciliation
-    result = run_reconciliation()
-    frappe.logger().info("eTIMS Reconciliation: %s", result)
+	from kenya_etims_compliance.custom_methods.reconciliation import run_reconciliation
+
+	result = run_reconciliation()
+	frappe.logger().info("eTIMS Reconciliation: %s", result)
 
 
 def calculate_supplier_scores():
-    """Weekly: Recalculate supplier compliance scores."""
-    from kenya_etims_compliance.custom_methods.supplier_scoring import calculate_supplier_scores as calc
-    result = calc()
-    frappe.logger().info("Supplier scoring: %s", result)
+	"""Weekly: Recalculate supplier compliance scores."""
+	from kenya_etims_compliance.custom_methods.supplier_scoring import calculate_supplier_scores as calc
+
+	result = calc()
+	frappe.logger().info("Supplier scoring: %s", result)
 
 
 def generate_compliance_score():
-    """Monthly: Generate compliance scorecard for previous month."""
-    if not frappe.db.exists("DocType", "eTIMS Compliance Score"):
-        return
-    from kenya_etims_compliance.custom_methods.compliance_scoring import generate_monthly_score
-    result = generate_monthly_score()
-    frappe.logger().info("Compliance score: %s", result)
+	"""Monthly: Generate compliance scorecard for previous month."""
+	if not frappe.db.exists("DocType", "eTIMS Compliance Score"):
+		return
+	from kenya_etims_compliance.custom_methods.compliance_scoring import generate_monthly_score
+
+	result = generate_monthly_score()
+	frappe.logger().info("Compliance score: %s", result)
 
 
 def fetch_import_items():
-    """Daily: Fetch and process pending import items from KRA."""
-    from kenya_etims_compliance.custom_methods.import_workflow import fetch_and_process_imports
-    result = fetch_and_process_imports()
-    frappe.logger().info("Import items: %s", result)
+	"""Daily: Fetch and process pending import items from KRA."""
+	from kenya_etims_compliance.custom_methods.import_workflow import fetch_and_process_imports
+
+	result = fetch_and_process_imports()
+	frappe.logger().info("Import items: %s", result)
 
 
 def send_deadline_reminders():
-    """Daily: Send VAT filing deadline reminders (5 days and 1 day before 20th)."""
-    from kenya_etims_compliance.custom_methods.notifications import send_filing_deadline_reminder
-    send_filing_deadline_reminder()
+	"""Daily: Send VAT filing deadline reminders (5 days and 1 day before 20th)."""
+	from kenya_etims_compliance.custom_methods.notifications import send_filing_deadline_reminder
+
+	send_filing_deadline_reminder()

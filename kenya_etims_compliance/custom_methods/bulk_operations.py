@@ -1,4 +1,5 @@
 """Bulk eTIMS operations — item registration, invoice submission, verification."""
+
 import frappe
 from frappe import _
 
@@ -12,17 +13,23 @@ def bulk_register_items(items=None):
 	"""
 	frappe.has_permission("Item", "write", throw=True)
 	import json
+
 	from kenya_etims_compliance.utils.etims_utils import eTIMS
 
 	if isinstance(items, str):
 		items = json.loads(items)
 
 	if not items:
-		items = frappe.get_all("Item", filters={
-			"custom_registered_in_tims": 0,
-			"custom_item_classification_code": ["is", "set"],
-			"disabled": 0,
-		}, fields=["name"], limit=200)
+		items = frappe.get_all(
+			"Item",
+			filters={
+				"custom_registered_in_tims": 0,
+				"custom_item_classification_code": ["is", "set"],
+				"disabled": 0,
+			},
+			fields=["name"],
+			limit=200,
+		)
 		items = [i.name for i in items]
 
 	total = len(items)
@@ -30,9 +37,14 @@ def bulk_register_items(items=None):
 	failed = 0
 
 	for i, item_name in enumerate(items):
-		frappe.publish_realtime("etims_bulk_progress", {
-			"current": i + 1, "total": total, "item": item_name,
-		})
+		frappe.publish_realtime(
+			"etims_bulk_progress",
+			{
+				"current": i + 1,
+				"total": total,
+				"item": item_name,
+			},
+		)
 
 		result = eTIMS.itemSaveReq(item_name)
 		if result and "Success" in result:
@@ -48,7 +60,9 @@ def bulk_register_items(items=None):
 def bulk_submit_invoices(doctype, from_date=None, to_date=None):
 	"""Submit unsubmitted invoices to eTIMS in batch."""
 	frappe.has_permission("eTIMS Invoice Queue", "create", throw=True)
-	flag_field = "custom_update_invoice_in_tims" if doctype == "Sales Invoice" else "custom_update_purchase_in_tims"
+	flag_field = (
+		"custom_update_invoice_in_tims" if doctype == "Sales Invoice" else "custom_update_purchase_in_tims"
+	)
 
 	filters = {
 		flag_field: 1,
@@ -64,13 +78,15 @@ def bulk_submit_invoices(doctype, from_date=None, to_date=None):
 	queued = 0
 
 	for inv in invoices:
-		frappe.get_doc({
-			"doctype": "eTIMS Invoice Queue",
-			"reference_doctype": doctype,
-			"reference_name": inv.name,
-			"api_endpoint": "saveTrnsSalesOsdc" if doctype == "Sales Invoice" else "insertTrnsPurchase",
-			"status": "Queued",
-		}).insert(ignore_permissions=True)
+		frappe.get_doc(
+			{
+				"doctype": "eTIMS Invoice Queue",
+				"reference_doctype": doctype,
+				"reference_name": inv.name,
+				"api_endpoint": "saveTrnsSalesOsdc" if doctype == "Sales Invoice" else "insertTrnsPurchase",
+				"status": "Queued",
+			}
+		).insert(ignore_permissions=True)
 		queued += 1
 
 	frappe.db.commit()
@@ -90,19 +106,26 @@ def bulk_verify_purchase_invoices(from_date=None, to_date=None):
 	if from_date and to_date:
 		filters["posting_date"] = ["between", [from_date, to_date]]
 
-	invoices = frappe.get_all("Purchase Invoice", filters=filters,
-		fields=["name", "custom_invoice_number", "custom_supplier_pin",
-				"posting_date", "base_grand_total"],
-		limit=100)
+	invoices = frappe.get_all(
+		"Purchase Invoice",
+		filters=filters,
+		fields=["name", "custom_invoice_number", "custom_supplier_pin", "posting_date", "base_grand_total"],
+		limit=100,
+	)
 
 	total = len(invoices)
 	verified = 0
 	failed = 0
 
 	for i, inv in enumerate(invoices):
-		frappe.publish_realtime("etims_bulk_progress", {
-			"current": i + 1, "total": total, "item": inv.name,
-		})
+		frappe.publish_realtime(
+			"etims_bulk_progress",
+			{
+				"current": i + 1,
+				"total": total,
+				"item": inv.name,
+			},
+		)
 
 		if not inv.custom_supplier_pin or not inv.custom_invoice_number:
 			failed += 1
@@ -116,10 +139,15 @@ def bulk_verify_purchase_invoices(from_date=None, to_date=None):
 		)
 
 		if result and result.get("verified"):
-			frappe.db.set_value("Purchase Invoice", inv.name, {
-				"custom_invoice_verified": 1,
-				"custom_verification_date": frappe.utils.now_datetime(),
-			}, update_modified=False)
+			frappe.db.set_value(
+				"Purchase Invoice",
+				inv.name,
+				{
+					"custom_invoice_verified": 1,
+					"custom_verification_date": frappe.utils.now_datetime(),
+				},
+				update_modified=False,
+			)
 			verified += 1
 		else:
 			failed += 1

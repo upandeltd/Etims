@@ -3,15 +3,9 @@
 
 
 def get_list_context(context):
-    return {
-        "title": "eTIMS Purchase Order Tracking",
-        "show_sidebar": True,
-        "show_search": True,
-        "toolbar": [
-            {
-                "label": "Refresh",
-                "href": "#",
-                "onclick": "location.reload();"
-            }
-        ]
-    }
+	return {
+		"title": "eTIMS Purchase Order Tracking",
+		"show_sidebar": True,
+		"show_search": True,
+		"toolbar": [{"label": "Refresh", "href": "#", "onclick": "location.reload();"}],
+	}

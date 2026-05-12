@@ -13,7 +13,7 @@ import frappe
 
 def create_etims_roles():
 	"""Create all eTIMS-specific roles"""
-	
+
 	roles = [
 		{
 			"doctype": "Role",
@@ -72,7 +72,7 @@ def create_etims_roles():
 			"restrict_to_domain": 0,
 		},
 	]
-	
+
 	created_roles = []
 	for role_data in roles:
 		if not frappe.db.exists("Role", {"role_name": role_data["role_name"]}):
@@ -82,13 +82,13 @@ def create_etims_roles():
 			frappe.msgprint(f"Created role: {role.role_name}")
 		else:
 			frappe.msgprint(f"Role already exists: {role_data['role_name']}")
-	
+
 	return created_roles
 
 
 def update_existing_doctype_permissions():
 	"""Update existing doctypes with proper eTIMS role permissions"""
-	
+
 	# Doctypes that should restrict delete for non-admin roles
 	restricted_delete_doctypes = [
 		"eTIMS Stock Release Number",
@@ -99,10 +99,10 @@ def update_existing_doctype_permissions():
 		"eTIMS Code Information",
 		"eTIMS Settings",
 	]
-	
+
 	# Remove delete permission from Sales User, Purchase User, Stock User
 	standard_roles = ["Sales User", "Purchase User", "Stock User"]
-	
+
 	for doctype_name in restricted_delete_doctypes:
 		if frappe.db.exists("DocType", doctype_name):
 			try:
@@ -115,48 +115,92 @@ def update_existing_doctype_permissions():
 							if perm.delete == 1:
 								perm.delete = 0
 								updated = True
-								frappe.msgprint(f"Removed delete permission from {perm.get('role')} for {doctype_name}")
-					
+								frappe.msgprint(
+									f"Removed delete permission from {perm.get('role')} for {doctype_name}"
+								)
+
 					if updated:
 						doc.save()
-			except Exception as e:
-				frappe.msgprint(f"Error updating {doctype_name}: {str(e)}")
+			except (frappe.DoesNotExistError, frappe.ValidationError) as e:
+				frappe.msgprint(f"Error updating {doctype_name}: {e!s}")
 
 
 def add_etims_role_permissions():
 	"""Add eTIMS-specific role permissions to key doctypes"""
-	
+
 	# Define permission sets for different role levels
 	admin_permissions = {
-		"create": 1, "delete": 1, "email": 1, "export": 1,
-		"print": 1, "read": 1, "report": 1, "share": 1, "write": 1
+		"create": 1,
+		"delete": 1,
+		"email": 1,
+		"export": 1,
+		"print": 1,
+		"read": 1,
+		"report": 1,
+		"share": 1,
+		"write": 1,
 	}
-	
+
 	manager_permissions = {
-		"create": 1, "delete": 1, "email": 1, "export": 1,
-		"print": 1, "read": 1, "report": 1, "share": 1, "write": 1
+		"create": 1,
+		"delete": 1,
+		"email": 1,
+		"export": 1,
+		"print": 1,
+		"read": 1,
+		"report": 1,
+		"share": 1,
+		"write": 1,
 	}
-	
+
 	operator_permissions = {
-		"create": 1, "delete": 0, "email": 0, "export": 1,
-		"print": 1, "read": 1, "report": 1, "share": 1, "write": 1
+		"create": 1,
+		"delete": 0,
+		"email": 0,
+		"export": 1,
+		"print": 1,
+		"read": 1,
+		"report": 1,
+		"share": 1,
+		"write": 1,
 	}
-	
+
 	auditor_permissions = {
-		"create": 0, "delete": 0, "email": 0, "export": 1,
-		"print": 1, "read": 1, "report": 1, "share": 0, "write": 0
+		"create": 0,
+		"delete": 0,
+		"email": 0,
+		"export": 1,
+		"print": 1,
+		"read": 1,
+		"report": 1,
+		"share": 0,
+		"write": 0,
 	}
-	
+
 	clerk_permissions = {
-		"create": 1, "delete": 0, "email": 1, "export": 1,
-		"print": 1, "read": 1, "report": 1, "share": 1, "write": 1
+		"create": 1,
+		"delete": 0,
+		"email": 1,
+		"export": 1,
+		"print": 1,
+		"read": 1,
+		"report": 1,
+		"share": 1,
+		"write": 1,
 	}
-	
+
 	store_keeper_permissions = {
-		"create": 1, "delete": 0, "email": 1, "export": 1,
-		"print": 1, "read": 1, "report": 1, "share": 1, "write": 1
+		"create": 1,
+		"delete": 0,
+		"email": 1,
+		"export": 1,
+		"print": 1,
+		"read": 1,
+		"report": 1,
+		"share": 1,
+		"write": 1,
 	}
-	
+
 	# Define which roles get which permissions per doctype
 	doctype_permissions = {
 		"eTIMS Stock Release Number": {
@@ -215,31 +259,34 @@ def add_etims_role_permissions():
 			"eTIMS Auditor": auditor_permissions,
 		},
 	}
-	
+
 	# Update doctypes with new role permissions
 	for doctype_name, role_perms in doctype_permissions.items():
 		if not frappe.db.exists("DocType", doctype_name):
 			continue
-			
+
 		try:
 			doc = frappe.get_doc("DocType", doctype_name)
-			
+
 			# Get existing permissions to avoid duplicates
 			existing_roles = {p.get("role") for p in doc.permissions} if doc.permissions else set()
-			
+
 			for role_name, permissions in role_perms.items():
 				# Check if role permission already exists
 				if role_name not in existing_roles:
-					doc.append("permissions", {
-						**permissions,
-						"role": role_name,
-					})
-			
+					doc.append(
+						"permissions",
+						{
+							**permissions,
+							"role": role_name,
+						},
+					)
+
 			doc.save()
 			frappe.msgprint(f"Updated permissions for {doctype_name}")
-			
-		except Exception as e:
-			frappe.msgprint(f"Error updating {doctype_name}: {str(e)}")
+
+		except (frappe.DoesNotExistError, frappe.ValidationError) as e:
+			frappe.msgprint(f"Error updating {doctype_name}: {e!s}")
 
 
 def before_install():
@@ -250,7 +297,7 @@ def before_install():
 		add_etims_role_permissions()
 		frappe.msgprint("eTIMS roles installed successfully!")
 	except Exception as e:
-		frappe.msgprint(f"Error installing eTIMS roles: {str(e)}")
+		frappe.msgprint(f"Error installing eTIMS roles: {e!s}")
 		raise
 
 

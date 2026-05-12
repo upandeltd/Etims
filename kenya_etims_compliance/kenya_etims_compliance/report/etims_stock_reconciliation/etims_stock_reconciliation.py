@@ -14,11 +14,21 @@ def execute(filters=None):
 
 def get_columns():
 	return [
-		{"fieldname": "item_code", "label": _("Item Code"), "fieldtype": "Link",
-		 "options": "Item", "width": 150},
+		{
+			"fieldname": "item_code",
+			"label": _("Item Code"),
+			"fieldtype": "Link",
+			"options": "Item",
+			"width": 150,
+		},
 		{"fieldname": "item_name", "label": _("Item"), "fieldtype": "Data", "width": 180},
-		{"fieldname": "branch", "label": _("Branch"), "fieldtype": "Link",
-		 "options": "Tax Branch Office", "width": 80},
+		{
+			"fieldname": "branch",
+			"label": _("Branch"),
+			"fieldtype": "Link",
+			"options": "Tax Branch Office",
+			"width": 80,
+		},
 		{"fieldname": "kra_qty_in", "label": _("KRA In"), "fieldtype": "Float", "width": 90},
 		{"fieldname": "kra_qty_out", "label": _("KRA Out"), "fieldtype": "Float", "width": 90},
 		{"fieldname": "local_qty_in", "label": _("Local In"), "fieldtype": "Float", "width": 90},
