@@ -209,33 +209,16 @@ def get_status_code(code_name):
 
 def autofill_tims_info(doc, method):
 	"""
-	Method autofills tims info for item and validates eTIMS readiness.
+	Method autofills tims info for item.
 
-	Validations (from Property bench, enhanced):
-	- Branch user registration (creator & modifier must be eTIMS Branch Users)
-	- Required fields (classification code, price, tax template)
-	- Item code uniqueness (prevents duplicate KRA registrations)
+	Save-time guards (data integrity) only. Branch-user and full eTIMS
+	readiness checks belong at registration time (see validate_item_for_etims
+	/ itemSaveReq) so items can be created by e.g. Administrator.
 	"""
 	if doc.custom_update_item_to_tims == 1:
-		# 1. Branch User Validation
+		# 1. Resolve branch users (soft — fall back to raw user name)
 		creator = _get_branch_user_name(doc.owner)
 		modifier = _get_branch_user_name(doc.modified_by)
-
-		if not creator:
-			frappe.throw(
-				_(
-					"Item creator '{0}' is not registered as an eTIMS Branch User. "
-					"Please register the user in eTIMS Branch User before saving."
-				).format(doc.owner)
-			)
-
-		if not modifier:
-			frappe.throw(
-				_(
-					"Item modifier '{0}' is not registered as an eTIMS Branch User. "
-					"Please register the user in eTIMS Branch User before saving."
-				).format(doc.modified_by)
-			)
 
 		# 2. Required Fields Guard
 		missing = []
@@ -263,9 +246,9 @@ def autofill_tims_info(doc, method):
 		doc.custom_used__unused = get_item_status(doc)
 		doc.custom_item_type_code = get_item_type_code(doc)
 		doc.custom_registration_id = doc.owner
-		doc.custom_registration_name = creator
+		doc.custom_registration_name = creator or doc.owner
 		doc.custom_modifier_id = doc.modified_by
-		doc.custom_modifier_name = modifier
+		doc.custom_modifier_name = modifier or doc.modified_by
 
 		if doc.taxes:
 			for tax_item in doc.taxes:
