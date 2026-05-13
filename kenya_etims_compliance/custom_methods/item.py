@@ -22,7 +22,7 @@ def _get_branch_user_name(system_user):
 	try:
 		return frappe.db.get_value(
 			"eTIMS Branch User",
-			{"system_user": system_user, "saved": 1},
+			{"user_id": system_user, "saved": 1},
 			"user_name",
 		)
 	except Exception:
@@ -211,14 +211,28 @@ def autofill_tims_info(doc, method):
 	"""
 	Method autofills tims info for item.
 
-	Save-time guards (data integrity) only. Branch-user and full eTIMS
-	readiness checks belong at registration time (see validate_item_for_etims
-	/ itemSaveReq) so items can be created by e.g. Administrator.
+	Save-time validation for eTIMS-bound items. Both creator and modifier
+	must be registered eTIMS Branch Users before the item can be saved
+	for registration.
 	"""
-	if doc.custom_update_item_to_tims == 1:
-		# 1. Resolve branch users (soft — fall back to raw user name)
+	if doc.custom_update_item_to_tims == 1 and not doc.custom_registered_in_tims == 1:
+		# 1. Resolve branch users (strict)
 		creator = _get_branch_user_name(doc.owner)
 		modifier = _get_branch_user_name(doc.modified_by)
+
+		if not creator:
+			frappe.throw(
+				_(
+					"Creator '{0}' is not a registered eTIMS Branch User."
+				).format(doc.owner)
+			)
+
+		if not modifier:
+			frappe.throw(
+				_(
+					"Modifier '{0}' is not a registered eTIMS Branch User."
+				).format(doc.modified_by)
+			)
 
 		# 2. Required Fields Guard
 		missing = []
@@ -246,9 +260,9 @@ def autofill_tims_info(doc, method):
 		doc.custom_used__unused = get_item_status(doc)
 		doc.custom_item_type_code = get_item_type_code(doc)
 		doc.custom_registration_id = doc.owner
-		doc.custom_registration_name = creator or doc.owner
+		doc.custom_registration_name = creator
 		doc.custom_modifier_id = doc.modified_by
-		doc.custom_modifier_name = modifier or doc.modified_by
+		doc.custom_modifier_name = modifier
 
 		if doc.taxes:
 			for tax_item in doc.taxes:
