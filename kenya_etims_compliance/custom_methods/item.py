@@ -11,6 +11,121 @@ from kenya_etims_compliance.utils.kra_client import KRAClient
 # This part describes the components of SaveItem API function (url : /saveItem) and data types for each item.
 # This API function is divided into 'Request: Argument' and 'Response: Return Object'.
 # The ItemSaveReq is an Argument Object of Request, The ItemSaveRes is a Return Object of Response
+def _get_branch_user_name(system_user):
+	"""Resolve system user to registered eTIMS Branch User name.
+
+	Returns the `user_name` if the user is registered and saved,
+	otherwise returns None.
+	"""
+	if not system_user:
+		return None
+	try:
+		return frappe.db.get_value(
+			"eTIMS Branch User",
+			{"system_user": system_user, "saved": 1},
+			"user_name",
+		)
+	except Exception:
+		return None
+
+
+@frappe.whitelist()
+def validate_items_for_etims(items=None):
+	"""Bulk pre-registration validation for multiple Items.
+
+	Args:
+	    items: JSON list of item names
+
+	Returns:
+	    {"valid": ["Item-1", ...], "invalid": [{"item": "Item-2", "errors": [...]}]}
+	"""
+	import json
+
+	if isinstance(items, str):
+		items = json.loads(items)
+
+	valid = []
+	invalid = []
+
+	for item_name in items:
+		result = validate_item_for_etims(item_name)
+		if result.get("valid"):
+			valid.append(item_name)
+		else:
+			invalid.append({"item": item_name, "errors": result.get("errors", [])})
+
+	return {"valid": valid, "invalid": invalid}
+
+
+@frappe.whitelist()
+def validate_item_for_etims(doc_name):
+	"""Pre-registration validation for an Item.
+
+	Returns a dict with validation results so the client can show
+	inline errors before calling the KRA API.
+
+	Returns:
+	    {"valid": True} or {"valid": False, "errors": ["msg1", "msg2"]}
+	"""
+	item = frappe.get_doc("Item", doc_name)
+	errors = []
+
+	# 1. Branch users
+	creator = _get_branch_user_name(item.owner)
+	modifier = _get_branch_user_name(item.modified_by)
+	if not creator:
+		errors.append(
+			_(
+				"Creator '{0}' is not a registered eTIMS Branch User."
+			).format(item.owner)
+		)
+	if not modifier:
+		errors.append(
+			_(
+				"Modifier '{0}' is not a registered eTIMS Branch User."
+			).format(item.modified_by)
+		)
+
+	# 2. Required fields
+	if not item.custom_item_classification_code:
+		errors.append(_("Item Classification Code is required."))
+	if not item.custom_default_packing_unit:
+		errors.append(_("Default Packing Unit is required."))
+	if not item.custom_default_quantity_unit:
+		errors.append(_("Default Quantity Unit is required."))
+	if not item.custom_country_of_origin:
+		errors.append(_("Country of Origin is required."))
+	if not item.custom_default_unit_price:
+		errors.append(_("Default Unit Price is required."))
+	if not item.taxes:
+		errors.append(_("Tax Template is required."))
+
+	# 3. Item code uniqueness
+	if item.custom_item_code:
+		_duplicate = frappe.db.exists(
+			"Item",
+			{
+				"custom_item_code": item.custom_item_code,
+				"name": ["!=", item.name],
+			},
+		)
+		if _duplicate:
+			errors.append(
+				_(
+					"Item code '{0}' is already used by item '{1}'."
+				).format(item.custom_item_code, _duplicate)
+			)
+
+	# 4. Already registered check
+	if item.custom_registered_in_tims:
+		errors.append(_("Item is already registered in eTIMS."))
+
+	if errors:
+		return {"valid": False, "errors": errors}
+
+	return {"valid": True}
+
+
 @frappe.whitelist()
 def itemSaveReq(doc_name):
 	response = eTIMS.itemSaveReq(doc_name)
@@ -78,7 +193,7 @@ def importItemUpdateReq(doc_name):
 
 		except Exception:
 			eTIMS.log_errors("Import Item Update", traceback.format_exc())
-			return {"Error": "Oops Bad Request!"}
+			return {"Error": _("Import item update failed. Please check the error log for details.")}
 
 
 def get_status_code(code_name):
@@ -94,23 +209,63 @@ def get_status_code(code_name):
 
 def autofill_tims_info(doc, method):
 	"""
-	Method autofills tims info for item
+	Method autofills tims info for item and validates eTIMS readiness.
+
+	Validations (from Property bench, enhanced):
+	- Branch user registration (creator & modifier must be eTIMS Branch Users)
+	- Required fields (classification code, price, tax template)
+	- Item code uniqueness (prevents duplicate KRA registrations)
 	"""
 	if doc.custom_update_item_to_tims == 1:
+		# 1. Branch User Validation
+		creator = _get_branch_user_name(doc.owner)
+		modifier = _get_branch_user_name(doc.modified_by)
+
+		if not creator:
+			frappe.throw(
+				_(
+					"Item creator '{0}' is not registered as an eTIMS Branch User. "
+					"Please register the user in eTIMS Branch User before saving."
+				).format(doc.owner)
+			)
+
+		if not modifier:
+			frappe.throw(
+				_(
+					"Item modifier '{0}' is not registered as an eTIMS Branch User. "
+					"Please register the user in eTIMS Branch User before saving."
+				).format(doc.modified_by)
+			)
+
+		# 2. Required Fields Guard
+		missing = []
+		if not doc.custom_item_classification_code:
+			missing.append(_("Item Classification Code"))
+		if not doc.custom_default_packing_unit:
+			missing.append(_("Default Packing Unit"))
+		if not doc.custom_default_quantity_unit:
+			missing.append(_("Default Quantity Unit"))
+		if not doc.custom_country_of_origin:
+			missing.append(_("Country of Origin"))
+
+		if missing:
+			frappe.throw(
+				_(
+					"The following eTIMS fields are required before registration:<br>{0}"
+				).format("<br>".join(f"• {m}" for m in missing))
+			)
+
+		# 3. Auto-fill fields
 		doc.custom_item_name = doc.item_code
 		doc.custom_item_standard_name = doc.item_name
 		doc.custom_quantity_unit_code = get_item_qty_unit_codes(doc.custom_default_quantity_unit)
 		doc.custom_packaging_unit_code = get_item_pkg_unit_codes(doc.custom_default_packing_unit)
 		doc.custom_used__unused = get_item_status(doc)
-		# doc.custom_group1_unit_price = get_item_prices(doc)
-		# doc.custom_group2_unit_price = get_item_prices(doc)
-		# doc.custom_group3_unit_price = get_item_prices(doc)
-		# doc.custom_group4_unit_price = get_item_prices(doc)
 		doc.custom_item_type_code = get_item_type_code(doc)
 		doc.custom_registration_id = doc.owner
-		doc.custom_registration_name = doc.owner
+		doc.custom_registration_name = creator
 		doc.custom_modifier_id = doc.modified_by
-		doc.custom_modifier_name = doc.modified_by
+		doc.custom_modifier_name = modifier
 
 		if doc.taxes:
 			for tax_item in doc.taxes:
@@ -123,6 +278,22 @@ def autofill_tims_info(doc, method):
 
 		if not doc.custom_item_code:
 			doc.custom_item_code = get_item_code(doc)
+		else:
+			# 4. Duplicate Item Code Check
+			_duplicate = frappe.db.exists(
+				"Item",
+				{
+					"custom_item_code": doc.custom_item_code,
+					"name": ["!=", doc.name],
+				}
+			)
+			if _duplicate:
+				frappe.throw(
+					_(
+						"Item code '{0}' is already assigned to item '{1}'. "
+						"Each item must have a unique eTIMS item code."
+					).format(doc.custom_item_code, _duplicate)
+				)
 
 
 def get_item_pkg_unit_codes(pkg_unit):
@@ -184,10 +355,37 @@ def get_item_type_code(doc):
 		return item_type_doc.get("custom_etims_item_type_code")
 
 
+def get_country_code(country):
+	"""Resolve country name to eTIMS country code.
+
+	If the input is already a code (e.g., 'KE'), return it directly.
+	If it's a country name, look up `eTIMS Country` for the code.
+	"""
+	if not country:
+		return None
+
+	# If it looks like a 2-letter code, return as-is
+	if len(country) == 2 and country.isalpha():
+		return country.upper()
+
+	try:
+		code = frappe.db.get_value("eTIMS Country", country, "code_name")
+		if code:
+			return code
+	except Exception:
+		pass
+
+	return country
+
+
 def get_item_code(doc):
-	if doc.custom_origin_place_code_nation:
+	origin_code = doc.custom_origin_place_code_nation
+	if not origin_code and doc.custom_country_of_origin:
+		origin_code = get_country_code(doc.custom_country_of_origin)
+
+	if origin_code:
 		str_item_code = (
-			doc.custom_origin_place_code_nation
+			origin_code
 			+ str(get_item_type_code(doc))
 			+ get_item_pkg_unit_codes(doc.custom_default_packing_unit)
 			+ get_item_qty_unit_codes(doc.custom_default_quantity_unit)

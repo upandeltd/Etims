@@ -308,6 +308,13 @@ class eTIMS:
 		if not item.get("custom_item_classification_code"):
 			frappe.throw(_("Missing Item Classification Code!"))
 
+		# Resolve origin place code if needed
+		origin_code = item.get("custom_origin_place_code_nation")
+		if not origin_code and item.get("custom_country_of_origin"):
+			from kenya_etims_compliance.custom_methods.item import get_country_code
+
+			origin_code = get_country_code(item.get("custom_country_of_origin"))
+
 		payload = {
 			"itemCd": item.get("custom_item_code"),
 			"itemClsCd": item.get("custom_item_classification_code"),
@@ -315,22 +322,22 @@ class eTIMS:
 			"itemTyCd": item.get("custom_item_type_code"),
 			"itemNm": item.get("custom_item_name"),
 			"itemStdNm": item.get("custom_item_standard_name"),
-			"orgnNatCd": item.get("custom_origin_place_code_nation"),
+			"orgnNatCd": origin_code,
 			"pkgUnitCd": item.get("custom_packaging_unit_code"),
 			"qtyUnitCd": item.get("custom_quantity_unit_code"),
 			"taxTyCd": item.get("custom_taxation_type_code"),
-			"btchNo": item.get("custom_batch_number"),
-			"bcd": item.get("custom_barcode"),
-			"dftPrc": item.get("custom_default_unit_price"),
-			"grpPrcL1": item.get("custom_group1_unit_price"),
-			"grpPrcL2": item.get("custom_group2_unit_price"),
-			"grpPrcL3": item.get("custom_group3_unit_price"),
-			"grpPrcL4": item.get("custom_group4_unit_price"),
-			"grpPrcL5": item.get("custom_group5_unit_price"),
-			"addInfo": item.get("custom_additional_information"),
-			"sftyQty": item.get("custom_safety_quantity"),
-			"isrcAplcbYn": item.get("custom_insurance_appicableyn"),
-			"useYn": item.get("custom_used__unused"),
+			"btchNo": item.get("custom_batch_number") or "",
+			"bcd": item.get("custom_barcode") or "",
+			"dftPrc": item.get("custom_default_unit_price") or 0,
+			"grpPrcL1": item.get("custom_group1_unit_price") or 0,
+			"grpPrcL2": item.get("custom_group2_unit_price") or 0,
+			"grpPrcL3": item.get("custom_group3_unit_price") or 0,
+			"grpPrcL4": item.get("custom_group4_unit_price") or 0,
+			"grpPrcL5": item.get("custom_group5_unit_price") or 0,
+			"addInfo": item.get("custom_additional_information") or "",
+			"sftyQty": item.get("custom_safety_quantity") or 0,
+			"isrcAplcbYn": item.get("custom_insurance_appicableyn") or "N",
+			"useYn": item.get("custom_used__unused") or "Y",
 			"regrId": item.get("custom_registration_id"),
 			"regrNm": item.get("custom_registration_name"),
 			"modrId": item.get("custom_modifier_id"),

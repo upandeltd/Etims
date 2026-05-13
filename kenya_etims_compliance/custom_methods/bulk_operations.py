@@ -14,6 +14,7 @@ def bulk_register_items(items=None):
 	frappe.has_permission("Item", "write", throw=True)
 	import json
 
+	from kenya_etims_compliance.custom_methods.item import validate_items_for_etims
 	from kenya_etims_compliance.utils.etims_utils import eTIMS
 
 	if isinstance(items, str):
@@ -32,11 +33,24 @@ def bulk_register_items(items=None):
 		)
 		items = [i.name for i in items]
 
-	total = len(items)
+	# Pre-validate all items
+	validation = validate_items_for_etims(items)
+	valid_items = validation.get("valid", [])
+	invalid_items = validation.get("invalid", [])
+
+	if not valid_items:
+		return {
+			"total": len(items),
+			"success": 0,
+			"failed": len(items),
+			"invalid": invalid_items,
+		}
+
+	total = len(valid_items)
 	success = 0
 	failed = 0
 
-	for i, item_name in enumerate(items):
+	for i, item_name in enumerate(valid_items):
 		frappe.publish_realtime(
 			"etims_bulk_progress",
 			{
@@ -53,7 +67,12 @@ def bulk_register_items(items=None):
 			failed += 1
 
 	frappe.db.commit()
-	return {"total": total, "success": success, "failed": failed}
+	return {
+		"total": len(items),
+		"success": success,
+		"failed": failed + len(invalid_items),
+		"invalid": invalid_items,
+	}
 
 
 @frappe.whitelist()
