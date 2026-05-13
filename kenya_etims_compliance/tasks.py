@@ -7,11 +7,10 @@ def fetch_kra_notices():
 	"""Daily: Fetch new KRA notices from eTIMS."""
 	from kenya_etims_compliance.utils.etims_utils import eTIMS
 
-	headers = eTIMS.get_headers()
-	if not headers:
+	if not eTIMS.get_headers():
 		return
 
-	result = KRAClient().post("selectNoticeList", {}, headers)
+	result = KRAClient().post("selectNoticeList", {})
 	if "Success" not in result or not result["Success"]:
 		return
 

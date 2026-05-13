@@ -305,7 +305,7 @@ class KRAClient:
 			).insert(ignore_permissions=True)
 		except (frappe.DoesNotExistError, frappe.ValidationError) as e:
 			frappe.log_error(title="eTIMS: API audit logging failed", message=str(e))
-			pass  # Never let audit logging break the main operation
+			# Never let audit logging break the main operation
 
 	def _log_error(self, title, description):
 		"""Log errors using frappe.log_error (transaction-safe).
@@ -319,4 +319,4 @@ class KRAClient:
 			frappe.log_error(title=f"KRA API: {title}"[:140], message=str(description)[:2000])
 		except Exception as e:
 			frappe.log_error(title="eTIMS: KRA client logging fallback failed", message=str(e))
-			pass  # Never let logging break the actual operation
+			# Never let logging break the actual operation

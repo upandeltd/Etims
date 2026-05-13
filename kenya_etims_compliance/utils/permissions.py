@@ -360,7 +360,7 @@ def log_permission_check(doctype, action, result):
 		log_doc.insert()
 	except (frappe.DoesNotExistError, frappe.ValidationError) as e:
 		frappe.log_error(title="eTIMS: Permission check logging failed", message=str(e))
-		pass  # Silently fail if logging fails
+		# Silently fail if logging fails
 
 
 # Permission check decorators for common operations

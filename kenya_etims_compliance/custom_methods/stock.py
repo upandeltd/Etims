@@ -5,7 +5,7 @@ import frappe
 import requests
 from frappe import _
 
-from kenya_etims_compliance.utils.etims_utils import eTIMS, get_next_sar_number
+from kenya_etims_compliance.utils.etims_utils import eTIMS, get_next_sar_number, get_tax_template_details
 from kenya_etims_compliance.utils.kra_client import KRAClient
 
 
@@ -38,7 +38,7 @@ def insert_tax_rate_and_amount(doc, method):
 				if account_head_list:
 					item.custom_rate = account_head_list[0].get("tax_rate")
 
-				if account_head_list[0].get("tax_rate") > 0:
+				if account_head_list and account_head_list[0].get("tax_rate") > 0:
 					if item.get("basic_amount"):
 						tax_rate = account_head_list[0].get("tax_rate") / 100
 						taxable_amount = item.get("basic_amount") / (1 + tax_rate)
@@ -257,13 +257,3 @@ def etims_stock_item_list(doc):
 	return stock_item_list
 
 
-def get_tax_template_details(item_code):
-	item_doc = frappe.get_doc("Item", item_code)
-	if item_doc:
-		for tax_item in item_doc.taxes:
-			tax_code = frappe.get_doc("Item Tax Template", tax_item.get("item_tax_template"))
-
-			if tax_code:
-				return tax_code.get("custom_code")
-	else:
-		return "D"

@@ -18,7 +18,8 @@ def on_submit(doc, method):
 		if item.get("custom_maintain_stock") == 1:
 			try:
 				stockMasterSaveReq(item, doc, reg_user_name, mod_user_name)
-				item.custom_stock_master_updated = 1
+				# Persist the flag to DB — in-memory child row assignment is not saved by the parent
+				frappe.db.set_value(item.doctype, item.name, "custom_stock_master_updated", 1)
 				frappe.msgprint(_("Master Stock updated successfully"))
 			except (
 				frappe.DoesNotExistError,

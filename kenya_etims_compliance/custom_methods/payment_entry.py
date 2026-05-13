@@ -229,13 +229,12 @@ def get_payment_verification_summary(from_date=None, to_date=None):
 	try:
 		filters = {"docstatus": 1}
 
-		if from_date:
+		if from_date and to_date:
+			filters["posting_date"] = ["between", [from_date, to_date]]
+		elif from_date:
 			filters["posting_date"] = [">=", from_date]
-		if to_date:
-			if "posting_date" in filters:
-				filters["posting_date"].append("<=", to_date)
-			else:
-				filters["posting_date"] = ["<=", to_date]
+		elif to_date:
+			filters["posting_date"] = ["<=", to_date]
 
 		# Get all payment entries
 		payments = frappe.db.get_all("Payment Entry", filters=filters, fields=["name"])

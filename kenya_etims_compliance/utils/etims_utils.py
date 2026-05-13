@@ -145,20 +145,17 @@ class eTIMS:
 
 	@staticmethod
 	def log_errors(title, description):
-		"""Log errors to Error Logging doctype if enabled in settings"""
-		from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import (
-			get_etims_settings,
-		)
+		"""Log errors using frappe.log_error (transaction-safe).
 
-		settings = get_etims_settings()
-		if not settings.get("enable_error_logging", 1):
-			return
-
-		new_doc = frappe.new_doc("Error Logging")
-		new_doc.title = title
-		new_doc.description = description
-
-		new_doc.insert()
+		frappe.log_error writes to the Error Log doctype which is committed
+		independently of the current transaction — safe to call inside
+		before_submit and other hooks. The old frappe.new_doc('Error Logging').insert()
+		pattern is unsafe inside transactions.
+		"""
+		try:
+			frappe.log_error(title=str(title)[:140], message=str(description))
+		except Exception:
+			pass  # Never let logging break the main operation
 
 	@staticmethod
 	def handle_api_response(response_json):
@@ -535,12 +532,29 @@ class eTIMS:
 
 
 def check_if_item_exits(item_code):
-	item_exists = frappe.db.exists({"doctype": "Item", "item_code": item_code})
+	item_exists = frappe.db.exists("Item", {"item_code": item_code})
 
 	if item_exists:
 		return True
 	else:
 		return False
+
+
+def get_tax_template_details(item_code):
+	"""Return the eTIMS tax code for an item, falling back to 'D' (exempt)."""
+	tax_rows = frappe.db.get_all(
+		"Item Tax",
+		filters={"parent": item_code},
+		fields=["item_tax_template"],
+	)
+	for row in tax_rows:
+		template = row.get("item_tax_template")
+		if not template:
+			continue
+		code = frappe.db.get_value("Item Tax Template", template, "custom_code")
+		if code:
+			return code
+	return "D"
 
 
 def create_new_item_doctype(item):
@@ -572,10 +586,8 @@ def create_new_item_doctype(item):
 		tax_template = get_item_tax_template(item.get("taxTyCd"))
 		new_item_doc.append("taxes", {"item_tax_template": tax_template})
 
-	new_item_doc.insert()
 	new_item_doc.custom_update_item_to_tims = 1
-
-	new_item_doc.save()
+	new_item_doc.insert()
 
 	eTIMS.itemSaveReq(new_item_doc.name)
 
@@ -614,7 +626,8 @@ def get_country_of_origin(item_code):
 			return country_name
 	except frappe.ValidationError as e:
 		frappe.log_error(title="eTIMS: Country lookup failed", message=str(e))
-		return "KE", "Kenya"
+
+	return "Kenya"
 
 
 def get_item_type(item_code):

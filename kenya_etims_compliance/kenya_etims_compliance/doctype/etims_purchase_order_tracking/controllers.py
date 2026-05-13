@@ -5,7 +5,7 @@ import frappe
 from frappe.model.document import Document
 
 
-class eTIMSPurchaseOrderTrackingControllers:
+class eTIMSPurchaseOrderTrackingControllers(Document):
 	"""Controllers for eTIMS Purchase Order Tracking"""
 
 	def validate(self):

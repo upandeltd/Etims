@@ -7,7 +7,8 @@ import requests
 from frappe import _, scrub
 from frappe.utils import flt
 
-from kenya_etims_compliance.utils.etims_utils import eTIMS, get_next_sar_number, get_org_sar_number
+from kenya_etims_compliance.utils.etims_utils import eTIMS, get_next_sar_number, get_org_sar_number, get_tax_template_details
+from kenya_etims_compliance.utils.permissions import can_modify_doctype
 from kenya_etims_compliance.utils.kra_client import KRAClient
 
 
@@ -104,6 +105,8 @@ def insert_invoice_number(doc, method):
 	"""
 	if doc.name:
 		branch_id = eTIMS.get_user_branch_id()
+		# Initialize pur_warehouse before conditional to avoid UnboundLocalError
+		pur_warehouse = None
 		init_docs = frappe.db.get_all(
 			"TIS Device Initialization", filters={"branch_id": branch_id}, fields=["default_stores_warehouse"]
 		)
@@ -112,7 +115,6 @@ def insert_invoice_number(doc, method):
 
 		last_inv_number = get_last_inv_number(doc, branch_id)
 
-		# frappe.db.set_value('Purchase Invoice', doc.name, 'custom_invoice_number', last_inv_number, update_modified=True)
 		if doc.items:
 			insert_tax_amounts(doc)
 
@@ -133,7 +135,13 @@ def insert_invoice_number(doc, method):
 			update_modified=True,
 		)
 
-		doc.reload()
+		# Sync in-memory doc fields to match what was written to DB
+		doc.custom_invoice_number = last_inv_number
+		doc.update_stock = 1
+		doc.custom_tax_branch_office = branch_id
+		doc.set_warehouse = pur_warehouse
+		doc.custom_total_taxable_amount = total_vat_amount
+		doc.custom_total_nontaxable_amount = total_non_vat_amount
 
 
 def insert_tax_amounts(doc):
@@ -264,7 +272,6 @@ def handle_reverse_invoice(doc):
 	return result.get("Success")
 
 
-@frappe.whitelist()
 def trnsPurchaseSaveReq(doc, method):
 	# Handle reverse invoicing (buyer-initiated)
 	if getattr(doc, "custom_is_reverse_invoice", False):
@@ -548,11 +555,10 @@ def get_original_invoice_number(doc):
 		org_invoice = frappe.get_all(
 			"Purchase Invoice", filters={"name": doc.amended_from}, fields=["custom_invoice_number"]
 		)
+		if org_invoice:
+			org_invoice_no = org_invoice[0].get("custom_invoice_number")
 
-		org_invoice_no = org_invoice[0].get("custom_invoice_number")
-
-	else:
-		return org_invoice_no
+	return org_invoice_no
 
 
 def validate_inv_number(doc):
@@ -666,17 +672,6 @@ def etims_stock_item_list(doc):
 	return stock_item_list
 
 
-def get_tax_template_details(item_code):
-	item_doc = frappe.get_doc("Item", item_code)
-	if item_doc:
-		if item_doc.taxes:
-			for tax_item in item_doc.taxes:
-				tax_code = frappe.get_doc("Item Tax Template", tax_item.get("item_tax_template"))
-
-				if tax_code:
-					return tax_code.get("custom_code")
-	else:
-		return "D"
 
 
 def get_tax_account_rate(account_head):
@@ -733,6 +728,8 @@ def verify_supplier_invoice(docname):
 	        "details": {...}  # if verified
 	    }
 	"""
+	if not can_modify_doctype("Purchase Invoice", "write"):
+		frappe.throw(_("Not permitted"), frappe.PermissionError)
 	try:
 		doc = frappe.get_doc("Purchase Invoice", docname)
 
@@ -822,7 +819,6 @@ def verify_supplier_invoice(docname):
 		}
 
 
-@frappe.whitelist()
 def auto_verify_invoice(doc, method):
 	"""Automatically verify invoice when created (if configured)
 
@@ -885,6 +881,8 @@ def get_supplier_invoice_status(supplier):
 	        "verification_rate": "xx%"
 	    }
 	"""
+	if not can_modify_doctype("Purchase Invoice", "read"):
+		frappe.throw(_("Not permitted"), frappe.PermissionError)
 	try:
 		total_invoices = frappe.db.count("Purchase Invoice", filters={"supplier": supplier, "docstatus": 1})
 
@@ -930,6 +928,8 @@ def mark_invoice_as_manually_verified(docname, reason):
 	Returns:
 	    {"success": True/False, "message": "..."}
 	"""
+	if not can_modify_doctype("Purchase Invoice", "write"):
+		frappe.throw(_("Not permitted"), frappe.PermissionError)
 	try:
 		doc = frappe.get_doc("Purchase Invoice", docname)
 

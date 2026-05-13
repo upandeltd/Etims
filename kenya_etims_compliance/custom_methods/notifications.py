@@ -82,4 +82,4 @@ def _send_to_etims_admins(subject, message):
 			)
 		except Exception as e:
 			frappe.log_error("eTIMS: Notification error", str(e))
-			pass  # Don't break on email errors
+			# Don't break on email errors

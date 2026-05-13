@@ -111,7 +111,17 @@ def insert_invoice_number(doc, method):
 			update_modified=True,
 		)
 
-		doc.reload()
+		# Sync in-memory doc fields to match what was written to DB
+		doc.custom_invoice_number = last_inv_number
+		doc.custom_sales_control_unit = scu
+		doc.update_stock = 1
+		doc.set_warehouse = sales_warehouse
+		doc.custom_tax_branch_office = branch_id
+		doc.custom_total_taxable_amount = total_vat_amount
+		doc.custom_total_nontaxable_amount = total_non_vat_amount
+		doc.custom_item_count = item_count
+		doc.custom_total_discount_amount = total_discount_amount
+		doc.custom_total_before_discount = total_discount_amount + doc.base_grand_total
 
 
 def insert_tax_amounts(doc):
@@ -136,8 +146,9 @@ def insert_tax_amounts(doc):
 									},
 									update_modified=True,
 								)
-
-								doc.reload()
+								# Sync in-memory child row to match DB write
+								item.custom_total_taxable_amount = round(value, 2)
+								item.custom_code_name = tax_templates[0].get("custom_code_name")
 			except (frappe.DoesNotExistError, frappe.DatabaseError) as e:
 				frappe.throw(_("Error calculating tax amounts: {0}").format(str(e)))
 
@@ -192,7 +203,6 @@ def fetch_total_non_vat(doc):
 	return taxable_non_vat_amount
 
 
-@frappe.whitelist()
 def trnsSalesSaveWrReq(doc, method):
 	"""
 	Method that collects sales information and updates it to tims server.
