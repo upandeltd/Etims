@@ -1,10 +1,11 @@
 {
   "context": {
     "lastMatchedPatterns": [
-      "mem-template_salary_structures-workspace-updates--done",
-      "mem-sidebar_debug-what-was-tried",
-      "mem-v15-v16-implementation-progress-future-work"
+      "mem-v15-v16-implementation-progress-implementation-plan",
+      "mem-MEMORY-key-files",
+      "mem-MEMORY-lessons-learned",
+      "mem-MEMORY-project-structure"
     ]
   },
-  "updatedAt": "2026-05-14T07:16:00.820Z"
+  "updatedAt": "2026-05-14T08:38:17.165Z"
 }
