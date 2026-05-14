@@ -259,7 +259,7 @@ def get_all_unreconciled_pos():
 			"total_amount": total_amount,
 		}
 
-	except frappe.DatabaseError as e:
+	except frappe.DataError as e:
 		return {"unreconciled_pos": [], "count": 0, "total_amount": 0, "error": str(e)}
 
 
@@ -303,5 +303,5 @@ def get_supplier_po_status(supplier):
 			"paid": paid,
 		}
 
-	except frappe.DatabaseError as e:
+	except frappe.DataError as e:
 		return {"error": str(e), "supplier": supplier}

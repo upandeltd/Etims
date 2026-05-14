@@ -236,5 +236,5 @@ def get_unverified_invoices(limit=100):
 
 		return {"success": True, "invoices": invoices, "count": len(invoices)}
 
-	except frappe.DatabaseError as e:
+	except frappe.DataError as e:
 		return {"success": False, "error": str(e), "invoices": [], "count": 0}

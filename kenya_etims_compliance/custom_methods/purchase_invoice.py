@@ -158,7 +158,7 @@ def insert_tax_amounts(doc):
 							round(value, 2),
 							update_modified=True,
 						)
-		except (frappe.DoesNotExistError, frappe.DatabaseError) as e:
+		except (frappe.DoesNotExistError, frappe.DataError) as e:
 			frappe.throw(_("Error calculating tax amounts: {0}").format(str(e)))
 
 
@@ -541,7 +541,7 @@ def get_last_inv_number(doc, branch_id):
 
 		cur_number = last_inv_no + 1
 
-	except frappe.DatabaseError as e:
+	except frappe.DataError as e:
 		frappe.log_error("eTIMS: Invoice number calculation error", str(e))
 		cur_number = last_inv_no + 1
 
@@ -901,7 +901,7 @@ def get_supplier_invoice_status(supplier):
 			"verification_rate": f"{verification_rate:.1f}%",
 		}
 
-	except frappe.DatabaseError as e:
+	except frappe.DataError as e:
 		return {
 			"error": str(e),
 			"supplier": supplier,
@@ -958,5 +958,5 @@ def mark_invoice_as_manually_verified(docname, reason):
 
 		return {"success": True, "message": "Invoice marked as manually verified"}
 
-	except (frappe.DoesNotExistError, frappe.DatabaseError) as e:
+	except (frappe.DoesNotExistError, frappe.DataError) as e:
 		return {"success": False, "message": f"Error: {e!s}"}

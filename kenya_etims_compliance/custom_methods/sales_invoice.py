@@ -39,6 +39,18 @@ def selectSalesTrnsInfoReq(invoice_no):
 			return {"Error": value}
 
 
+def show_etims_queued_message(doc, method):
+	"""on_submit hook — show the "queued" msgprint only if submit actually succeeded.
+
+	Runs after ERPNext's submit logic (incl. GL posting and fiscal year check).
+	If anything in the submit chain failed earlier, this hook never runs and
+	the misleading "queued" message is never shown.
+	"""
+	if frappe.flags.get("_etims_show_queued_msg"):
+		frappe.msgprint(_("Sales invoice queued for eTIMS submission"), indicator="blue")
+		frappe.flags._etims_show_queued_msg = False
+
+
 def validate(doc, method):
 	"""
 	Method validate invoice number before submitting invoice
@@ -149,7 +161,7 @@ def insert_tax_amounts(doc):
 								# Sync in-memory child row to match DB write
 								item.custom_total_taxable_amount = round(value, 2)
 								item.custom_code_name = tax_templates[0].get("custom_code_name")
-			except (frappe.DoesNotExistError, frappe.DatabaseError) as e:
+			except (frappe.DoesNotExistError, frappe.DataError) as e:
 				frappe.throw(_("Error calculating tax amounts: {0}").format(str(e)))
 
 
@@ -355,7 +367,10 @@ def trnsSalesSaveWrReq(doc, method):
 				api_endpoint="save_sales",
 				branch_id=branch_id,
 			)
-			frappe.msgprint(_("Sales invoice queued for eTIMS submission"), indicator="blue")
+			# Defer the msgprint until after the submit transaction commits.
+			# If submit later fails (e.g., fiscal year missing), the queue insert
+			# rolls back and this message must NOT appear.
+			frappe.flags._etims_show_queued_msg = True
 		else:
 			# Synchronous fallback (original behavior)
 			try:
@@ -505,15 +520,14 @@ def get_last_inv_number(doc, branch_id):
 				page_length=1,
 			)
 
-			if last_inv[0]:
-				# print(last_inv)
+			if last_inv and last_inv[0].get("custom_invoice_number"):
 				last_inv_no = last_inv[0].get("custom_invoice_number")
 
-			cur_number = last_inv_no + 1
+			cur_number = (last_inv_no or 0) + 1
 
-		except frappe.DatabaseError as e:
+		except Exception as e:
 			frappe.log_error("eTIMS: Invoice number calculation error", str(e))
-			cur_number = last_inv_no + 1
+			cur_number = (last_inv_no or 0) + 1
 
 	return cur_number
 

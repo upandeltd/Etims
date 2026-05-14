@@ -141,13 +141,7 @@ def process_queue_entry(queue_entry_name):
 		# Update the source document with KRA response data
 		_handle_success(queue_entry, result)
 
-	except (
-		frappe.DoesNotExistError,
-		requests.ConnectionError,
-		requests.Timeout,
-		requests.HTTPError,
-		ValueError,
-	) as e:
+	except Exception as e:
 		frappe.db.rollback()
 		error_msg = str(e)[:2000]
 
@@ -269,19 +263,31 @@ def _update_source_status(queue_entry, status, error_msg=None):
 
 
 def _handle_success(queue_entry, result):
-	"""Update the source document with KRA response data after successful API call."""
-	data = result.get("Success", {})
+	"""Update the source document with KRA response data after successful API call.
+
+	Mark status as "Sent" FIRST — KRA already accepted the submission, so the
+	queue status must reflect that even if downstream work (QR/attachments/stock
+	IO) fails. Wrap the supplementary work so a failure there does not leave the
+	queue entry stuck on "Processing".
+	"""
+	_update_source_status(queue_entry, "Sent")
+
+	data = result.get("Success") or {}
 	doctype = queue_entry.reference_doctype
 	docname = queue_entry.reference_name
 
-	if doctype == "Sales Invoice":
-		_handle_sales_invoice_success(docname, data, queue_entry)
-	elif doctype == "Purchase Invoice":
-		_handle_purchase_invoice_success(docname, data, queue_entry)
-	elif doctype == "Stock Entry":
-		_handle_stock_entry_success(docname, data, queue_entry)
-
-	_update_source_status(queue_entry, "Sent")
+	try:
+		if doctype == "Sales Invoice":
+			_handle_sales_invoice_success(docname, data, queue_entry)
+		elif doctype == "Purchase Invoice":
+			_handle_purchase_invoice_success(docname, data, queue_entry)
+		elif doctype == "Stock Entry":
+			_handle_stock_entry_success(docname, data, queue_entry)
+	except Exception:
+		frappe.log_error(
+			title=f"eTIMS post-success processing failed: {docname}"[:140],
+			message=traceback.format_exc(),
+		)
 
 
 def _handle_sales_invoice_success(docname, data, queue_entry):

@@ -278,7 +278,7 @@ def get_payment_verification_summary(from_date=None, to_date=None):
 			"verification_rate": f"{verification_rate:.1f}%",
 		}
 
-	except (frappe.DoesNotExistError, frappe.DatabaseError) as e:
+	except (frappe.DoesNotExistError, frappe.DataError) as e:
 		return {
 			"error": str(e),
 			"total_payments": 0,
@@ -336,7 +336,7 @@ def get_unpaid_invoices_summary():
 			"verified_amount": verified_amount,
 		}
 
-	except frappe.DatabaseError as e:
+	except frappe.DataError as e:
 		return {
 			"error": str(e),
 			"unverified_unpaid": 0,
