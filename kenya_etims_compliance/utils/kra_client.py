@@ -28,7 +28,7 @@ class KRAClient:
 			self._settings = get_etims_settings()
 		return self._settings
 
-	def post(self, endpoint, payload, reference_doctype=None, reference_name=None):
+	def post(self, endpoint, payload, reference_doctype=None, reference_name=None, require_auth=True):
 		"""POST to KRA API with circuit breaker, timeout, retry, and audit trail.
 
 		Args:
@@ -36,6 +36,7 @@ class KRAClient:
 		    payload: dict to POST as JSON
 		    reference_doctype: optional — for audit trail (e.g. 'Sales Invoice')
 		    reference_name: optional — for audit trail (e.g. 'ACC-SINV-2026-00001')
+		    require_auth: set False for bootstrap endpoints that don't need auth headers
 
 		Returns:
 		    {"Success": <data>} or {"Error": "<message>", "Retryable": bool}
@@ -48,7 +49,7 @@ class KRAClient:
 				"Retryable": True,
 			}
 
-		if not self.headers:
+		if require_auth and not self.headers:
 			return {
 				"Error": (
 					f"No active TIS Device Initialization for branch '{self.branch_id}'. "

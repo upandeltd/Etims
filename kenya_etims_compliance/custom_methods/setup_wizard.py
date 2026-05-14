@@ -146,6 +146,7 @@ def step3_initialize_device(company, branch_id, serial_number, api_mode="Sandbox
 		doc = frappe.new_doc("TIS Device Initialization")
 
 	doc.company = company
+	doc.pin = frappe.db.get_value("Company", company, "tax_id")
 	doc.branch_id = branch_id
 	doc.device_serial_number = serial_number
 	doc.api_mode = api_mode
