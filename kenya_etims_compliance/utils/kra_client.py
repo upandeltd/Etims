@@ -28,7 +28,7 @@ class KRAClient:
 			self._settings = get_etims_settings()
 		return self._settings
 
-	def post(self, endpoint, payload, reference_doctype=None, reference_name=None):
+	def post(self, endpoint, payload, reference_doctype=None, reference_name=None, require_auth=True):
 		"""POST to KRA API with circuit breaker, timeout, retry, and audit trail.
 
 		Args:
@@ -36,6 +36,7 @@ class KRAClient:
 		    payload: dict to POST as JSON
 		    reference_doctype: optional — for audit trail (e.g. 'Sales Invoice')
 		    reference_name: optional — for audit trail (e.g. 'ACC-SINV-2026-00001')
+		    require_auth: set False for bootstrap endpoints that don't need auth headers
 
 		Returns:
 		    {"Success": <data>} or {"Error": "<message>", "Retryable": bool}
@@ -48,7 +49,7 @@ class KRAClient:
 				"Retryable": True,
 			}
 
-		if not self.headers:
+		if require_auth and not self.headers:
 			return {
 				"Error": (
 					f"No active TIS Device Initialization for branch '{self.branch_id}'. "
@@ -215,7 +216,18 @@ class KRAClient:
 			filters={"user": current_user, "allow": "Tax Branch Office", "is_default": 1},
 			fields=["for_value"],
 		)
-		return perms[0].get("for_value") if perms else None
+		if perms:
+			return perms[0].get("for_value")
+		# Fallback for single-branch setups: use the only active TIS Device
+		devices = frappe.db.get_all(
+			"TIS Device Initialization",
+			filters={"active": 1},
+			fields=["branch_id"],
+			limit=2,
+		)
+		if len(devices) == 1:
+			return devices[0].get("branch_id")
+		return None
 
 	def _load_headers(self):
 		if not self.branch_id:
@@ -265,6 +277,11 @@ class KRAClient:
 		if result_cd == "000":
 			frappe.cache.delete_value("etims_circuit_breaker")
 			return {"Success": response_json.get("data")}
+
+		# 001 = empty result set (no data matching query) — not a true error
+		if result_cd == "001":
+			frappe.cache.delete_value("etims_circuit_breaker")
+			return {"Success": None, "Empty": True}
 
 		# Look up specific error message from error code mapping
 		mapped_msg, recommended_action = get_error_message(result_cd)

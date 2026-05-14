@@ -17,19 +17,13 @@ class TISDeviceInitialization(Document):
 		payload = {"tin": self.pin, "bhfId": self.branch_id, "dvcSrlNo": self.device_serial_number}
 
 		try:
-			# For device initialization, we create a KRAClient that will have
-			# empty headers since no active TIS Device exists yet.
-			# We override the base URL manually via the post endpoint.
 			api_url = get_api_url(self.api_mode or "Sandbox")
 
-			# Use KRAClient with empty headers for bootstrap endpoint
-			client = KRAClient()
-			# Override headers to empty since selectInitOsdcInfo doesn't need auth
-			client.headers = {}
-			# Store original _get_base_url and override
+			# selectInitOsdcInfo is a bootstrap endpoint — no auth headers required
+			client = KRAClient(branch_id=self.branch_id)
 			client._get_base_url = lambda: api_url
 
-			result = client.post("selectInitOsdcInfo", payload)
+			result = client.post("selectInitOsdcInfo", payload, require_auth=False)
 
 			if result.get("Error"):
 				return {"Error": result.get("Error")}

@@ -10,6 +10,15 @@ class eTIMS:
 	@staticmethod
 	def get_headers():
 		branch_id = eTIMS.get_user_branch_id()
+		if not branch_id:
+			# Fallback for single-branch setups
+			devices = frappe.db.get_all(
+				"TIS Device Initialization", filters={"active": 1}, fields=["branch_id"], limit=2
+			)
+			if len(devices) == 1:
+				branch_id = devices[0].get("branch_id")
+		if not branch_id:
+			return None
 		header_docs = frappe.db.get_all(
 			"TIS Device Initialization",
 			filters={"branch_id": branch_id, "active": 1},
@@ -17,13 +26,11 @@ class eTIMS:
 		)
 
 		if header_docs:
-			headers = {
+			return {
 				"tin": header_docs[0].get("pin"),
 				"bhfId": header_docs[0].get("branch_id"),
 				"cmcKey": header_docs[0].get("communication_key"),
 			}
-
-			return headers
 
 	@staticmethod
 	def get_base_url():
@@ -312,13 +319,26 @@ class eTIMS:
 
 			origin_code = get_country_code(item.get("custom_country_of_origin"))
 
+		# Auto-fill identity fields from item.owner / modified_by when blank,
+		# and item name fields from item_code / item_name as a sensible default
+		regr_id = item.get("custom_registration_id") or item.owner
+		regr_nm = item.get("custom_registration_name") or item.owner
+		modr_id = item.get("custom_modifier_id") or item.modified_by
+		modr_nm = item.get("custom_modifier_name") or item.modified_by
+		item_nm = item.get("custom_item_name") or item.item_code
+		item_std_nm = item.get("custom_item_standard_name") or item.item_name or item.item_code
+		item_cls_nm = item.get("custom_item_classification_name") or item.get("custom_item_classification_code")
+		# Valid KRA Item Type codes: 1=Raw Material, 2=Finished Product, 3=Service
+		_raw_ty = item.get("custom_item_type_code")
+		item_ty_cd = _raw_ty if _raw_ty in ("1", "2", "3") else "2"
+
 		payload = {
 			"itemCd": item.get("custom_item_code"),
 			"itemClsCd": item.get("custom_item_classification_code"),
-			"itemClsNm": item.get("custom_item_classification_name"),
-			"itemTyCd": item.get("custom_item_type_code"),
-			"itemNm": item.get("custom_item_name"),
-			"itemStdNm": item.get("custom_item_standard_name"),
+			"itemClsNm": item_cls_nm,
+			"itemTyCd": item_ty_cd,
+			"itemNm": item_nm,
+			"itemStdNm": item_std_nm,
 			"orgnNatCd": origin_code,
 			"pkgUnitCd": item.get("custom_packaging_unit_code"),
 			"qtyUnitCd": item.get("custom_quantity_unit_code"),
@@ -335,11 +355,34 @@ class eTIMS:
 			"sftyQty": item.get("custom_safety_quantity") or 0,
 			"isrcAplcbYn": item.get("custom_insurance_appicableyn") or "N",
 			"useYn": item.get("custom_used__unused") or "Y",
-			"regrId": item.get("custom_registration_id"),
-			"regrNm": item.get("custom_registration_name"),
-			"modrId": item.get("custom_modifier_id"),
-			"modrNm": item.get("custom_modifier_name"),
+			"regrId": regr_id,
+			"regrNm": regr_nm,
+			"modrId": modr_id,
+			"modrNm": modr_nm,
 		}
+
+		# Pre-flight validation — name the missing fields BEFORE sending to KRA
+		required_labels = {
+			"itemCd": "Item Code (custom_item_code)",
+			"itemClsCd": "Item Classification Code (custom_item_classification_code)",
+			"itemTyCd": "Item Type Code (custom_item_type_code)",
+			"itemNm": "Item Name (custom_item_name / item_code)",
+			"orgnNatCd": "Origin Nation Code (set Country of Origin)",
+			"pkgUnitCd": "Packaging Unit Code (set Default Packing Unit)",
+			"qtyUnitCd": "Quantity Unit Code (set Default Quantity Unit)",
+			"taxTyCd": "Taxation Type Code (set tax template)",
+			"regrId": "Registration ID (item.owner)",
+			"regrNm": "Registration Name",
+			"modrId": "Modifier ID (item.modified_by)",
+			"modrNm": "Modifier Name",
+		}
+		missing = [label for key, label in required_labels.items() if not payload.get(key)]
+		if missing:
+			frappe.throw(
+				_("Cannot register item — the following fields are empty:<br>{0}").format(
+					"<br>".join(f"• {m}" for m in missing)
+				)
+			)
 
 		client = KRAClient()
 		result = client.save_item(payload)
@@ -349,6 +392,12 @@ class eTIMS:
 			item.save()
 			return {"Success": "Item registered successfully"}
 
+		# On error, log the payload so the failing code field can be identified
+		import json as _json
+		frappe.log_error(
+			title=f"eTIMS saveItem failed for {doc_name}"[:140],
+			message=f"Error: {result.get('Error')}\n\nPayload sent to KRA:\n{_json.dumps(payload, indent=2, default=str)}",
+		)
 		return result
 
 	@staticmethod

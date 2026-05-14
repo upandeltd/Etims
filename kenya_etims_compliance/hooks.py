@@ -152,7 +152,10 @@ doc_events = {
 		"before_save": "kenya_etims_compliance.custom_methods.sales_invoice.validate",
 		"before_submit": "kenya_etims_compliance.custom_methods.sales_invoice.trnsSalesSaveWrReq",
 		"on_update": "kenya_etims_compliance.custom_methods.sales_invoice.insert_invoice_number",
-		"on_submit": "kenya_etims_compliance.custom_methods.bin.on_submit",
+		"on_submit": [
+			"kenya_etims_compliance.custom_methods.bin.on_submit",
+			"kenya_etims_compliance.custom_methods.sales_invoice.show_etims_queued_message",
+		],
 	},
 	"Stock Entry": {
 		"before_submit": "kenya_etims_compliance.custom_methods.stock.update_stock_to_etims",

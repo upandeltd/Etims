@@ -8,7 +8,7 @@ messages and recommended actions.
 # Result code -> (message, recommended_action)
 KRA_ERROR_CODES = {
 	"000": ("Success", ""),
-	"001": ("Saved successfully", ""),
+	"001": ("No search results", "The query returned no data. Try an earlier date or broader criteria."),
 	"010": ("No data found", "Verify the request parameters are correct."),
 	"020": (
 		"Duplicate data",
@@ -47,6 +47,15 @@ KRA_ERROR_CODES = {
 	"080": ("Timeout", "The KRA server did not respond in time. Retry the request."),
 	"090": ("Data integrity error", "Data validation failed on KRA side. Review all field values."),
 	"099": ("Unknown error", "An unexpected error occurred. Check KRA error logs for details."),
+	# Request parameter errors (Spec 21.6.3 — 9xx range)
+	"910": (
+		"Required field is empty",
+		"One or more required fields in the request are empty. Check the payload in the Error Log for details.",
+	),
+	"913": (
+		"Invalid code value",
+		"A code field (itemTyCd, itemClsCd, pkgUnitCd, qtyUnitCd, orgnNatCd, taxTyCd) has a value KRA doesn't recognise. Check the payload in the Error Log and verify codes against KRA's code list (selectCodeList).",
+	),
 	# Authentication / header errors
 	"900": (
 		"Missing API headers",

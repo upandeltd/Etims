@@ -40,7 +40,6 @@
   }
  ],
  "index_web_pages_for_search": 1,
- "is_table": 1,
  "links": [],
  "modified": "2024-02-24 11:35:15.075488",
  "modified_by": "Administrator",
@@ -50,5 +49,6 @@
  "permissions": [],
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "istable": 1
 }

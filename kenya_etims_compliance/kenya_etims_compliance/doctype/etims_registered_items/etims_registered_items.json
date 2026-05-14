@@ -201,7 +201,6 @@
   }
  ],
  "index_web_pages_for_search": 1,
- "is_table": 1,
  "links": [],
  "modified": "2024-02-17 06:56:57.509926",
  "modified_by": "Administrator",
@@ -211,5 +210,6 @@
  "permissions": [],
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "istable": 1
 }
