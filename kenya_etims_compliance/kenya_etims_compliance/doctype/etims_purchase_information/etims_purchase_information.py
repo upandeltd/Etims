@@ -26,6 +26,9 @@ class eTIMSPurchaseInformation(Document):
 			if result.get("Error"):
 				return {"Error": result.get("Error")}
 
+			if result.get("Empty"):
+				return {"Success": "No purchases found for this date range. Try an earlier date."}
+
 			response_result = {"data": result.get("Success")}
 			process_purchases(response_result)
 
@@ -40,7 +43,7 @@ class eTIMSPurchaseInformation(Document):
 
 
 def process_purchases(response_json):
-	data = response_json.get("data")
+	data = response_json.get("data") or {}
 	invoices = data.get("saleList")
 
 	if invoices:

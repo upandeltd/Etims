@@ -1,8 +1,6 @@
 {
  "actions": [],
- "allow_rename": 1,
  "creation": "2024-02-16 18:32:02.561877",
- "default_view": "List",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -118,5 +116,6 @@
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
- "track_changes": 1
+ "track_changes": 1,
+ "istable": 1
 }

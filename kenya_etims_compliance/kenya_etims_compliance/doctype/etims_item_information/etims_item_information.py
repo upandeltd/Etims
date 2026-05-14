@@ -26,15 +26,14 @@ class eTIMSItemInformation(Document):
 		request_datetime = self.search_datetime
 		date_time_str = eTIMS.strf_datetime_object(request_datetime)
 
-		headers = eTIMS.get_headers()
-
+		client = KRAClient()
 		payload = {
-			"bhfId": headers.get("bhfId"),
+			"bhfId": client.branch_id or "",
 			"lastReqDt": date_time_str,
 		}
 
 		try:
-			result = KRAClient().post("selectItemClsList", payload)
+			result = client.post("selectItemClsList", payload)
 
 			if result.get("Error"):
 				return {"Error": result.get("Error")}

@@ -27,6 +27,9 @@ class eTIMSImportItemInformation(Document):
 			if result.get("Error"):
 				return {"Error": result.get("Error")}
 
+			if result.get("Empty"):
+				return {"Success": "No import items found for this date range. Try an earlier date."}
+
 			response_result = {"data": result.get("Success")}
 			item_list = process_item_information(response_result)
 			self.last_search_date_and_time = request_datetime
@@ -51,7 +54,7 @@ class eTIMSImportItemInformation(Document):
 ######################################### Methods ################################
 def process_item_information(response_result):
 	item_list = []
-	data = response_result.get("data")
+	data = response_result.get("data") or {}
 
 	if data.get("itemList"):
 		for item in data.get("itemList"):

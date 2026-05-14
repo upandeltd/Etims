@@ -10,6 +10,15 @@ class eTIMS:
 	@staticmethod
 	def get_headers():
 		branch_id = eTIMS.get_user_branch_id()
+		if not branch_id:
+			# Fallback for single-branch setups
+			devices = frappe.db.get_all(
+				"TIS Device Initialization", filters={"active": 1}, fields=["branch_id"], limit=2
+			)
+			if len(devices) == 1:
+				branch_id = devices[0].get("branch_id")
+		if not branch_id:
+			return None
 		header_docs = frappe.db.get_all(
 			"TIS Device Initialization",
 			filters={"branch_id": branch_id, "active": 1},
@@ -17,13 +26,11 @@ class eTIMS:
 		)
 
 		if header_docs:
-			headers = {
+			return {
 				"tin": header_docs[0].get("pin"),
 				"bhfId": header_docs[0].get("branch_id"),
 				"cmcKey": header_docs[0].get("communication_key"),
 			}
-
-			return headers
 
 	@staticmethod
 	def get_base_url():

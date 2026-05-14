@@ -8,7 +8,7 @@ messages and recommended actions.
 # Result code -> (message, recommended_action)
 KRA_ERROR_CODES = {
 	"000": ("Success", ""),
-	"001": ("Saved successfully", ""),
+	"001": ("No search results", "The query returned no data. Try an earlier date or broader criteria."),
 	"010": ("No data found", "Verify the request parameters are correct."),
 	"020": (
 		"Duplicate data",
