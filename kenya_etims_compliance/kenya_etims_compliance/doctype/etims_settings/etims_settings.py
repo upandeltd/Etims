@@ -63,33 +63,25 @@ def get_etims_settings():
 		settings = frappe.get_single("eTIMS Settings")
 	except frappe.DoesNotExistError as e:
 		frappe.log_error(title="eTIMS: Settings load failed", message=str(e))
-		# Return defaults if the Single record has not been saved yet
 		return _defaults
 
-	return {
-		"default_sar_type_sales": settings.default_sar_type_sales or "11",
-		"default_sar_type_purchase": settings.default_sar_type_purchase or "02",
-		"default_sar_type_stock_entry": settings.default_sar_type_stock_entry or "06",
-		"api_timeout": settings.api_timeout or 30,
-		"production_api_url": settings.production_api_url or "https://etims-api.kra.go.ke/etims-api/",
-		"sandbox_api_url": settings.sandbox_api_url or "https://etims-api-sbx.kra.go.ke/etims-api/",
-		"enable_retry_logic": settings.enable_retry_logic if settings.enable_retry_logic is not None else 1,
-		"max_retry_attempts": settings.max_retry_attempts or 3,
-		"retry_delay": settings.retry_delay or 2,
-		"default_search_limit": settings.default_search_limit or 100,
-		"max_search_limit": settings.max_search_limit or 1000,
-		"enable_error_logging": settings.enable_error_logging
-		if settings.enable_error_logging is not None
-		else 1,
-		"enable_auto_sync": settings.enable_auto_sync if settings.enable_auto_sync is not None else 1,
-		"enable_queue": settings.enable_queue
-		if hasattr(settings, "enable_queue") and settings.enable_queue is not None
-		else 1,
-		"queue_max_retries": settings.queue_max_retries if hasattr(settings, "queue_max_retries") else 10,
-		"queue_retry_interval": settings.queue_retry_interval
-		if hasattr(settings, "queue_retry_interval")
-		else 5,
-	}
+	# Return ALL fields from the doctype, layered over defaults. This avoids the
+	# whitelist-bug where compliance/RBAC/training settings silently returned None
+	# because they weren't enumerated in this function.
+	doc_dict = settings.as_dict()
+	result = dict(_defaults)
+	for k, v in doc_dict.items():
+		# Skip Frappe meta fields and only apply non-None values so defaults stick
+		if k.startswith("_") or k in ("name", "doctype", "owner", "creation", "modified", "modified_by", "docstatus", "idx"):
+			continue
+		if v is not None:
+			result[k] = v
+	# Ensure URL defaults if blank string
+	if not result.get("production_api_url"):
+		result["production_api_url"] = _defaults["production_api_url"]
+	if not result.get("sandbox_api_url"):
+		result["sandbox_api_url"] = _defaults["sandbox_api_url"]
+	return result
 
 
 def get_api_timeout():
