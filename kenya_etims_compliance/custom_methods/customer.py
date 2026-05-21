@@ -1,7 +1,37 @@
 import frappe
 import requests
+from frappe import _
 
 from kenya_etims_compliance.utils.kra_client import KRAClient
+
+
+@frappe.whitelist()
+def check_pin_with_kra(pin):
+	"""Validate a KRA PIN via the developer.go.ke PIN Checker by PIN API.
+
+	Validates against the full KRA iTax taxpayer registry (not branch-scoped).
+
+	Returns:
+	    {"found": True, "data": {pin, name, type, status}}
+	    {"found": False, "message": "..."}
+	"""
+	from kenya_etims_compliance.utils.pin_checker import check_pin
+
+	result = check_pin(pin)
+
+	if result.get("valid"):
+		d = result["data"]
+		return {
+			"found": True,
+			"data": {
+				"taxpayer_pin": d.get("KRAPIN"),
+				"taxpayer_name": d.get("Name"),
+				"taxpayer_type": d.get("TypeOfTaxpayer"),
+				"status_of_pin": d.get("StatusOfPIN"),
+			},
+		}
+
+	return {"found": False, "message": result.get("message"), "code": result.get("code")}
 
 
 @frappe.whitelist()

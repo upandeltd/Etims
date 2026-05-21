@@ -290,11 +290,28 @@ def validate_branch_access(doc):
 	Throws:
 		PermissionError if user doesn't have access to the branch
 	"""
+	# Admin/System Manager/eTIMS Manager bypass — they can access all branches
+	if (
+		frappe.session.user == "Administrator"
+		or "System Manager" in frappe.get_roles()
+		or is_etims_admin()
+		or is_etims_manager()
+	):
+		return
+
 	user_branch = frappe.db.get_value(
 		"User Permission",
 		{"user": frappe.session.user, "allow": "Tax Branch Office", "is_default": 1},
 		"for_value",
 	)
+
+	# Fallback for single-branch setups: use the only active TIS Device
+	if not user_branch:
+		devices = frappe.db.get_all(
+			"TIS Device Initialization", filters={"active": 1}, fields=["branch_id"], limit=2
+		)
+		if len(devices) == 1:
+			user_branch = devices[0].get("branch_id")
 
 	if not user_branch:
 		frappe.throw(

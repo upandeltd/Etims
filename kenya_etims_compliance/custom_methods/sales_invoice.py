@@ -120,7 +120,7 @@ def insert_invoice_number(doc, method):
 				"custom_total_discount_amount": total_discount_amount,
 				"custom_total_before_discount": total_discount_amount + doc.base_grand_total,
 			},
-			update_modified=True,
+			update_modified=False,
 		)
 
 		# Sync in-memory doc fields to match what was written to DB
@@ -156,7 +156,7 @@ def insert_tax_amounts(doc):
 										"custom_total_taxable_amount": round(value, 2),
 										"custom_code_name": tax_templates[0].get("custom_code_name"),
 									},
-									update_modified=True,
+									update_modified=False,
 								)
 								# Sync in-memory child row to match DB write
 								item.custom_total_taxable_amount = round(value, 2)

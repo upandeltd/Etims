@@ -132,7 +132,7 @@ def insert_invoice_number(doc, method):
 				"custom_total_taxable_amount": total_vat_amount,
 				"custom_total_nontaxable_amount": total_non_vat_amount,
 			},
-			update_modified=True,
+			update_modified=False,
 		)
 
 		# Sync in-memory doc fields to match what was written to DB
@@ -156,7 +156,7 @@ def insert_tax_amounts(doc):
 							item.get("name"),
 							"custom_total_taxable_amount",
 							round(value, 2),
-							update_modified=True,
+							update_modified=False,
 						)
 		except (frappe.DoesNotExistError, frappe.DataError) as e:
 			frappe.throw(_("Error calculating tax amounts: {0}").format(str(e)))
@@ -535,15 +535,14 @@ def get_last_inv_number(doc, branch_id):
 			page_length=1,
 		)
 
-		if last_inv[0]:
-			# print(last_inv)
+		if last_inv and last_inv[0].get("custom_invoice_number"):
 			last_inv_no = last_inv[0].get("custom_invoice_number")
 
-		cur_number = last_inv_no + 1
+		cur_number = (last_inv_no or 0) + 1
 
-	except frappe.DataError as e:
+	except Exception as e:
 		frappe.log_error("eTIMS: Invoice number calculation error", str(e))
-		cur_number = last_inv_no + 1
+		cur_number = (last_inv_no or 0) + 1
 
 	return cur_number
 
@@ -754,16 +753,59 @@ def verify_supplier_invoice(docname):
 
 		# Get invoice details for verification
 		invoice_no = doc.bill_no or doc.name
+		cu_invoice_no = doc.get("custom_supplier_cu_invoice_no") or None
 		invoice_date = doc.bill_date or doc.posting_date
 		total_amount = doc.grand_total
 
-		# Call Invoice Checker API
-		result = eTIMS.invoiceCheckerReq(
-			invoice_no=invoice_no,
-			supplier_pin=supplier_pin,
-			invoice_date=invoice_date,
-			total_amount=total_amount,
-		)
+		if not invoice_no and not cu_invoice_no:
+			return {
+				"verified": False,
+				"warning": "No invoice identifier",
+				"message": "Set either 'Supplier Invoice No' or 'Supplier CU Invoice No' before verifying.",
+			}
+
+		# Fast path: check the locally-pulled Register Entries first (no KRA round-trip)
+		# Tries trader invoice no first, then CU invoice no.
+		local_match = None
+		if frappe.db.exists("DocType", "eTIMS Purchase Register Entry"):
+			if invoice_no:
+				local_match = frappe.db.get_value(
+					"eTIMS Purchase Register Entry",
+					{"supplier_pin": supplier_pin, "kra_invoice_number": invoice_no},
+					["name", "total_amount", "invoice_date", "tax_amount"],
+					as_dict=True,
+				)
+			if not local_match and cu_invoice_no:
+				local_match = frappe.db.get_value(
+					"eTIMS Purchase Register Entry",
+					{"supplier_pin": supplier_pin, "kra_invoice_number": cu_invoice_no},
+					["name", "total_amount", "invoice_date", "tax_amount"],
+					as_dict=True,
+				)
+
+		if local_match:
+			variance = abs((local_match.get("total_amount") or 0) - (total_amount or 0))
+			result = {
+				"Success": {
+					"spplrTin": supplier_pin,
+					"spplrInvcNo": invoice_no,
+					"cuInvcNo": cu_invoice_no,
+					"totAmt": local_match.get("total_amount"),
+					"totTaxAmt": local_match.get("tax_amount"),
+					"salesDt": local_match.get("invoice_date"),
+					"_source": "local_register",
+					"_variance": variance if variance > 0.01 else 0,
+				}
+			}
+		else:
+			# Fall back to live KRA lookup — matches on EITHER trader inv or CU inv
+			result = eTIMS.invoiceCheckerReq(
+				invoice_no=invoice_no,
+				supplier_pin=supplier_pin,
+				invoice_date=invoice_date,
+				total_amount=total_amount,
+				cu_invoice_no=cu_invoice_no,
+			)
 
 		if "Success" in result:
 			# Extract verification details
