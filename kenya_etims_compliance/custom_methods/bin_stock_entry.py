@@ -48,18 +48,15 @@ def on_submit(doc, method):
 
 
 def get_bin_qty(item_code, branch_id):
-	store_warehouse = frappe.db.get_all(
-		"Warehouse",
-		filters={"warehouse_type": "Stores", "is_group": 0, "custom_tax_branch_office": branch_id},
-		fields=["warehouse_name", "name"],
-	)
+	from kenya_etims_compliance.custom_methods.bin import resolve_stores_warehouse
 
-	if not store_warehouse:
+	warehouse_name = resolve_stores_warehouse(branch_id)
+	if not warehouse_name:
 		return 0
 
 	bin_docs = frappe.db.get_all(
 		"Bin",
-		filters={"item_code": item_code, "warehouse": store_warehouse[0].get("name")},
+		filters={"item_code": item_code, "warehouse": warehouse_name},
 		fields=["actual_qty"],
 	)
 
