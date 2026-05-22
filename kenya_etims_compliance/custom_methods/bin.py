@@ -14,28 +14,41 @@ def on_submit(doc, method):
 	mod_user_name = eTIMS.get_name_of_user(doc.modified_by)
 	reg_user_name = eTIMS.get_name_of_user(doc.owner)
 
+	succeeded, failed = 0, []
 	for item in doc.items:
 		if item.get("custom_maintain_stock") == 1:
 			try:
 				stockMasterSaveReq(item, doc, reg_user_name, mod_user_name)
 				# Persist the flag to DB — in-memory child row assignment is not saved by the parent
 				frappe.db.set_value(item.doctype, item.name, "custom_stock_master_updated", 1)
-				frappe.msgprint(_("Master Stock updated successfully"))
+				succeeded += 1
 			except (
 				frappe.DoesNotExistError,
 				requests.ConnectionError,
 				requests.Timeout,
 				requests.HTTPError,
 			) as e:
+				failed.append((item.get("item_code"), str(e)))
 				frappe.log_error(
 					title="eTIMS Stock Master Error",
 					message=f"Failed to update stock master for {item.get('item_code')}: {e!s}",
 				)
-				frappe.msgprint(
-					f"Warning: Could not update eTIMS Stock Master for {item.get('item_code')}: {e!s}",
-					indicator="orange",
-					alert=True,
-				)
+
+	# Single summary message at the end (only if anything was actually processed)
+	if succeeded and not failed:
+		frappe.msgprint(_("eTIMS Master Stock updated for {0} item(s)").format(succeeded), indicator="green")
+	elif succeeded and failed:
+		details = "<br>".join(f"  • {code}: {err[:120]}" for code, err in failed)
+		frappe.msgprint(
+			_("eTIMS Master Stock: {0} succeeded, {1} failed.<br>{2}").format(succeeded, len(failed), details),
+			indicator="orange", title=_("Partial eTIMS update"),
+		)
+	elif failed:
+		details = "<br>".join(f"  • {code}: {err[:120]}" for code, err in failed)
+		frappe.msgprint(
+			_("eTIMS Master Stock update failed for {0} item(s):<br>{1}").format(len(failed), details),
+			indicator="red", title=_("eTIMS update failed"),
+		)
 
 
 def resolve_stores_warehouse(tax_branch=None):

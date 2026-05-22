@@ -15,28 +15,39 @@ def on_submit(doc, method):
 			t_warehouse_id = doc.custom_target_tax_branch_office
 			s_warehouse_id = doc.custom_source_tax_branch_office
 
+			succeeded, api_calls = 0, 0
+
 			if doc.stock_entry_type == "Material Receipt":
-				if t_warehouse_id:
-					for item in doc.items:
-						stockMasterSaveReq(item, doc, reg_user_name, mod_user_name, t_warehouse_id)
-						item.custom_stock_master_updated = 1
-
-						frappe.msgprint(_("Master Stock updated successfully"))
-
-				else:
+				if not t_warehouse_id:
 					frappe.throw(_("Missing Value For Warehouse Id"))
+				for item in doc.items:
+					stockMasterSaveReq(item, doc, reg_user_name, mod_user_name, t_warehouse_id)
+					item.custom_stock_master_updated = 1
+					succeeded += 1
+					api_calls += 1
 
 			elif doc.stock_entry_type == "Material Transfer":
-				if t_warehouse_id and s_warehouse_id:
-					for item in doc.items:
-						stockMasterSaveReq(item, doc, reg_user_name, mod_user_name, s_warehouse_id)
-						stockMasterSaveReq(item, doc, reg_user_name, mod_user_name, t_warehouse_id)
-						item.custom_stock_master_updated = 1
-
-						frappe.msgprint(_("Master Stock updated successfully"))
-
-				else:
+				if not (t_warehouse_id and s_warehouse_id):
 					frappe.throw(_("Missing Value For Warehouse Id"))
+				for item in doc.items:
+					stockMasterSaveReq(item, doc, reg_user_name, mod_user_name, s_warehouse_id)
+					stockMasterSaveReq(item, doc, reg_user_name, mod_user_name, t_warehouse_id)
+					item.custom_stock_master_updated = 1
+					succeeded += 1
+					api_calls += 2
+
+			if succeeded:
+				if api_calls == succeeded:
+					frappe.msgprint(
+						_("eTIMS Master Stock updated for {0} item(s)").format(succeeded), indicator="green",
+					)
+				else:
+					frappe.msgprint(
+						_("eTIMS Master Stock updated for {0} item(s) ({1} warehouse-side updates)").format(
+							succeeded, api_calls,
+						),
+						indicator="green",
+					)
 		except (
 			frappe.DoesNotExistError,
 			requests.ConnectionError,
