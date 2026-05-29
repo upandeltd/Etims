@@ -1,109 +1,175 @@
 {
  "actions": [],
  "allow_rename": 1,
- "creation": "2024-02-17 07:16:18.194621",
+ "autoname": "format:{user_id}",
+ "creation": "2024-02-17 07:15:52.782176",
  "default_view": "List",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "pin",
-  "branch_office_id",
-  "branch_office_name",
-  "branch_status_code",
-  "county_name",
-  "sub_county_name",
-  "column_break_zryf",
-  "tax_locality_name",
-  "location_description",
-  "manager_name",
-  "manager_contact",
-  "manager_email",
-  "head_office_yesno"
+  "user_id",
+  "user_name",
+  "password",
+  "address",
+  "contact",
+  "authority_code",
+  "used_unused",
+  "column_break_ulgj",
+  "remark",
+  "registration_id",
+  "registration_name",
+  "modifier_id",
+  "modifier_name",
+  "saved",
+  "register_user"
  ],
  "fields": [
   {
-   "fieldname": "pin",
+   "fieldname": "user_id",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "User ID",
+   "length": 60,
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "user_id.full_name",
+   "fieldname": "user_name",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "PIN",
-   "length": 11
+   "in_standard_filter": 1,
+   "label": "User Name",
+   "length": 60,
+   "read_only": 1
   },
   {
-   "fieldname": "branch_office_id",
+   "fieldname": "password",
+   "fieldtype": "Small Text",
+   "label": "Password",
+   "length": 255,
+   "reqd": 1
+  },
+  {
+   "fieldname": "address",
+   "fieldtype": "Small Text",
+   "label": "Address",
+   "length": 200
+  },
+  {
+   "fieldname": "contact",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Branch Office ID",
-   "length": 2
+   "in_standard_filter": 1,
+   "label": "Contact",
+   "length": 20
   },
   {
-   "fieldname": "branch_office_name",
+   "fieldname": "authority_code",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Branch Office Name"
+   "in_standard_filter": 1,
+   "label": "Authority Code",
+   "length": 100
   },
   {
-   "fieldname": "branch_status_code",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Branch Status Code"
-  },
-  {
-   "fieldname": "county_name",
-   "fieldtype": "Data",
-   "label": "County Name"
-  },
-  {
-   "fieldname": "sub_county_name",
-   "fieldtype": "Data",
-   "label": "Sub County Name"
-  },
-  {
-   "fieldname": "column_break_zryf",
+   "fieldname": "column_break_ulgj",
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "tax_locality_name",
-   "fieldtype": "Data",
-   "label": "Tax Locality Name"
+   "fieldname": "remark",
+   "fieldtype": "Long Text",
+   "label": "Remark",
+   "length": 2000
   },
   {
-   "fieldname": "location_description",
+   "fieldname": "used_unused",
    "fieldtype": "Data",
-   "label": "Location Description"
+   "in_standard_filter": 1,
+   "label": "Used/UnUsed",
+   "length": 1,
+   "reqd": 1
   },
   {
-   "fieldname": "manager_name",
+   "fieldname": "registration_id",
    "fieldtype": "Data",
-   "label": "Manager Name"
+   "label": "Registration ID",
+   "length": 20,
+   "reqd": 1
   },
   {
-   "fieldname": "manager_contact",
+   "fieldname": "registration_name",
    "fieldtype": "Data",
-   "label": "Manager Contact "
+   "label": "Registration Name",
+   "length": 60,
+   "reqd": 1
   },
   {
-   "fieldname": "manager_email",
+   "fieldname": "modifier_id",
    "fieldtype": "Data",
+   "label": "Modifier ID",
+   "length": 60,
+   "reqd": 1
+  },
+  {
+   "fieldname": "modifier_name",
+   "fieldtype": "Data",
+   "label": "Modifier Name",
+   "length": 20,
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.saved == 1",
+   "fieldname": "saved",
+   "fieldtype": "Check",
    "in_list_view": 1,
-   "label": "Manager Email"
+   "in_standard_filter": 1,
+   "label": "Saved"
   },
   {
-   "fieldname": "head_office_yesno",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Head Office Yes/No"
+   "fieldname": "register_user",
+   "fieldtype": "Button",
+   "label": "Register User"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-02-17 07:16:18.194621",
+ "modified": "2024-12-11 11:35:15.930059",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
- "name": "eTIMS Branch Item",
+ "name": "eTIMS Branch User",
+ "naming_rule": "Expression",
  "owner": "Administrator",
- "permissions": [],
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales User",
+   "share": 1,
+   "write": 1
+  }
+ ],
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
- "istable": 1
+ "track_changes": 1
 }
