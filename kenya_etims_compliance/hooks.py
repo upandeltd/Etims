@@ -30,8 +30,8 @@ doctype_js = {
 	"Item" : "custom_methods/item.js",
     "Customer" : "custom_methods/customer.js",
     "BOM" : "custom_methods/bom.js",
-    "Sales Invoice": "custom_methods/sales_invoice.js"
-    # "Purchase Invoice": "custom_methods/purchase_invoice.js"
+    "Sales Invoice": "custom_methods/sales_invoice.js",
+    "POS Closing Entry": "custom_methods/pos_closing_entry.js"
 }
 
 # include js in doctype views
@@ -121,9 +121,9 @@ doctype_js = {
 # ---------------
 # Override standard doctype classes
 
-# override_doctype_class = {
-#	"ToDo": "custom_app.overrides.CustomToDo"
-# }
+override_doctype_class = {
+	"POS Invoice Merge Log": "kenya_etims_compliance.custom_methods.overrides.pos_invoice_merge_log.POSInvoiceMergeLog"
+}
 
 # Document Events
 # ---------------
