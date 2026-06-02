@@ -7,6 +7,8 @@ frappe.ui.form.on("eTIMS Branch User", {
         frappe.call({
             method: 'bhfUserSaveReq',
             doc: frm.doc,
+            // // disable the button until the request is completed
+            btn: $('.primary-action'),
             // // freeze the screen until the request is completed
             freeze: true,
             callback: function(r)   {
@@ -19,7 +21,7 @@ frappe.ui.form.on("eTIMS Branch User", {
                     message: __(values[0])
                 });
 
-                frm.refresh_field("saved")
+                refresh_field("saved")
             }
         })
     }

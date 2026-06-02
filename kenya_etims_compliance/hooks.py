@@ -163,6 +163,7 @@ doc_events = {
 		"on_submit": "kenya_etims_compliance.custom_methods.bin_stock_entry.on_submit",
 	},
 	"Item": {"before_save": "kenya_etims_compliance.custom_methods.item.autofill_tims_info"},
+	"Supplier": {"validate": "kenya_etims_compliance.custom_methods.supplier.validate"},
 	"Purchase Invoice": {
 		"before_save": "kenya_etims_compliance.custom_methods.purchase_invoice.validate",
 		"before_submit": "kenya_etims_compliance.custom_methods.purchase_invoice.trnsPurchaseSaveReq",
@@ -187,10 +188,11 @@ doc_events = {
 scheduler_events = {
 	"cron": {
 		"*/5 * * * *": ["kenya_etims_compliance.custom_methods.queue_processor.retry_failed_invoices"],
+		# Per TIS spec §21.8: pull pending KRA purchase records every 15 min
+		"*/15 * * * *": ["kenya_etims_compliance.tasks.fetch_purchase_transactions"],
 	},
 	"daily": [
 		"kenya_etims_compliance.tasks.fetch_kra_notices",
-		"kenya_etims_compliance.tasks.fetch_purchase_transactions",
 		"kenya_etims_compliance.tasks.run_reconciliation_task",
 		"kenya_etims_compliance.tasks.fetch_import_items",
 		"kenya_etims_compliance.tasks.send_deadline_reminders",

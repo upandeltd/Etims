@@ -20,8 +20,8 @@ frappe.ui.form.on('Supplier', {
             }
         }
 
-        // Add "Test eTIMS Connection" button if Tax PIN is set
-        if (frm.doc.custom_supplier_pin && frm.doc.custom_supplier_pin.length === 11) {
+        // Add "Test eTIMS Connection" button if Tax PIN is set (KRA spec: 11 chars)
+        if (frm.doc.custom_supplier_pin && /^[AP]\d{9}[A-Z]$/.test(frm.doc.custom_supplier_pin)) {
             frm.add_custom_button(__('Test eTIMS Connection'), function() {
                 test_etims_supplier_connection(frm);
             }, __('eTIMS Actions'));
@@ -46,7 +46,7 @@ frappe.ui.form.on('Supplier', {
         if (frm.doc.custom_supplier_pin && !frm.is_new()) {
             frm.add_custom_button(__('Verify KRA PIN'), function() {
                 frappe.call({
-                    method: 'kenya_etims_compliance.utils.etims_utils.verify_supplier',
+                    method: 'kenya_etims_compliance.custom_methods.supplier.verify_supplier',
                     args: { supplier_name: frm.doc.name },
                     freeze: true,
                     freeze_message: __('Verifying with KRA...'),
@@ -72,15 +72,19 @@ frappe.ui.form.on('Supplier', {
         const tax_pin = frm.doc.custom_supplier_pin;
 
         if (tax_pin && tax_pin.length > 0) {
-            // KRA Tax PIN format: A followed by 9 digits (e.g., A000000000)
-            const pin_pattern = /^A\d{9}$/;
-
+            // KRA Tax PIN format per eTIMS spec: letter (A or P) + 9 digits + letter
+            const pin_pattern = /^[AP]\d{9}[A-Z]$/;
+            // Auto-uppercase
+            if (tax_pin !== tax_pin.toUpperCase()) {
+                frm.set_value('custom_supplier_pin', tax_pin.toUpperCase());
+                return;
+            }
             if (!pin_pattern.test(tax_pin)) {
                 frappe.msgprint({
                     title: __('Invalid Tax PIN Format'),
                     message: __(
-                        'KRA Tax PIN should be in the format A followed by 9 digits. ' +
-                        'Example: A000000000'
+                        'KRA Tax PIN should be 11 characters: letter (A or P) + 9 digits + uppercase letter. ' +
+                        'Examples: P051234567T, A744610021G'
                     ),
                     indicator: 'orange'
                 });

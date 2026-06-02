@@ -105,29 +105,69 @@ def insert_invoice_number(doc, method):
 
 		last_inv_number = get_last_inv_number(doc, branch_id)
 
-		frappe.db.set_value(
-			"Sales Invoice",
-			doc.name,
-			{
-				"custom_invoice_number": last_inv_number,
-				"custom_sales_control_unit": scu,
-				"update_stock": 1,
-				"set_warehouse": sales_warehouse,
-				"custom_tax_branch_office": branch_id,
-				"custom_total_taxable_amount": total_vat_amount,
-				"custom_total_nontaxable_amount": total_non_vat_amount,
-				"custom_item_count": item_count,
-				"custom_total_discount_amount": total_discount_amount,
-				"custom_total_before_discount": total_discount_amount + doc.base_grand_total,
-			},
-			update_modified=True,
-		)
+		# update_stock decision: respect the user's choice, auto-disable when
+		# enabling it would technically fail, warn when leaving it off risks
+		# KRA stock-register reconciliation.
+		user_choice = 1 if doc.get("update_stock") else 0
+
+		has_dn_link = any(it.get("delivery_note") or it.get("dn_detail") for it in (doc.items or []))
+		has_stock_item = False
+		if doc.items:
+			item_codes = [it.item_code for it in doc.items if it.item_code]
+			if item_codes:
+				stocked = frappe.db.get_all(
+					"Item",
+					filters={"item_code": ["in", item_codes], "is_stock_item": 1},
+					fields=["name"],
+					limit=1,
+				)
+				has_stock_item = bool(stocked)
+
+		new_update_stock = user_choice
+		if user_choice == 1 and has_dn_link:
+			new_update_stock = 0
+			frappe.msgprint(
+				_("Auto-disabled 'Update Stock' on this invoice because it links to a Delivery Note. "
+				  "Stock was already booked by the DN — eTIMS will receive the stock movement from there."),
+				title=_("Update Stock disabled"), indicator="orange",
+			)
+		elif user_choice == 1 and not has_stock_item:
+			new_update_stock = 0
+			frappe.msgprint(
+				_("Auto-disabled 'Update Stock' on this invoice because none of the items are stock items "
+				  "(all are services). No stock movement to send."),
+				title=_("Update Stock disabled"), indicator="orange",
+			)
+		elif user_choice == 0 and has_stock_item and not has_dn_link:
+			frappe.msgprint(
+				_("'Update Stock' is OFF on this invoice but items include stock items. "
+				  "KRA's stock register will not receive a stock-out movement, which may cause reconciliation "
+				  "mismatches. Either enable Update Stock or send a separate stock movement."),
+				title=_("KRA stock reconciliation risk"), indicator="yellow",
+			)
+
+		update_dict = {
+			"custom_invoice_number": last_inv_number,
+			"custom_sales_control_unit": scu,
+			"update_stock": new_update_stock,
+			"custom_tax_branch_office": branch_id,
+			"custom_total_taxable_amount": total_vat_amount,
+			"custom_total_nontaxable_amount": total_non_vat_amount,
+			"custom_item_count": item_count,
+			"custom_total_discount_amount": total_discount_amount,
+			"custom_total_before_discount": total_discount_amount + doc.base_grand_total,
+		}
+		if new_update_stock and sales_warehouse:
+			update_dict["set_warehouse"] = sales_warehouse
+
+		frappe.db.set_value("Sales Invoice", doc.name, update_dict, update_modified=False)
 
 		# Sync in-memory doc fields to match what was written to DB
 		doc.custom_invoice_number = last_inv_number
 		doc.custom_sales_control_unit = scu
-		doc.update_stock = 1
-		doc.set_warehouse = sales_warehouse
+		doc.update_stock = new_update_stock
+		if new_update_stock and sales_warehouse:
+			doc.set_warehouse = sales_warehouse
 		doc.custom_tax_branch_office = branch_id
 		doc.custom_total_taxable_amount = total_vat_amount
 		doc.custom_total_nontaxable_amount = total_non_vat_amount
@@ -156,7 +196,7 @@ def insert_tax_amounts(doc):
 										"custom_total_taxable_amount": round(value, 2),
 										"custom_code_name": tax_templates[0].get("custom_code_name"),
 									},
-									update_modified=True,
+									update_modified=False,
 								)
 								# Sync in-memory child row to match DB write
 								item.custom_total_taxable_amount = round(value, 2)

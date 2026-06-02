@@ -180,7 +180,7 @@ function verify_invoice_with_kra(frm) {
                             '2. Invoice number matches supplier\'s records<br>' +
                             '3. Invoice date and amount are accurate<br><br>' +
                             'Contact the supplier if verification continues to fail.',
-                            error_msg
+                            [error_msg]
                         ),
                         indicator: 'red'
                     });

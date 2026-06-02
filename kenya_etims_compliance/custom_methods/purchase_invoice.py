@@ -121,25 +121,66 @@ def insert_invoice_number(doc, method):
 		total_vat_amount = fetch_total_vat(doc)
 		total_non_vat_amount = fetch_total_non_vat(doc)
 
-		frappe.db.set_value(
-			"Purchase Invoice",
-			doc.name,
-			{
-				"custom_invoice_number": last_inv_number,
-				"update_stock": 1,
-				"custom_tax_branch_office": branch_id,
-				"set_warehouse": pur_warehouse,
-				"custom_total_taxable_amount": total_vat_amount,
-				"custom_total_nontaxable_amount": total_non_vat_amount,
-			},
-			update_modified=True,
-		)
+		# update_stock decision: respect the user's choice, but auto-disable when
+		# enabling it would technically fail, and warn when leaving it off risks
+		# KRA stock-register reconciliation.
+		user_choice = 1 if doc.get("update_stock") else 0
+
+		has_pr_link = any(it.get("purchase_receipt") for it in (doc.items or []))
+		has_stock_item = False
+		if doc.items:
+			item_codes = [it.item_code for it in doc.items if it.item_code]
+			if item_codes:
+				stocked = frappe.db.get_all(
+					"Item",
+					filters={"item_code": ["in", item_codes], "is_stock_item": 1},
+					fields=["name"],
+					limit=1,
+				)
+				has_stock_item = bool(stocked)
+
+		new_update_stock = user_choice
+		if user_choice == 1 and has_pr_link:
+			new_update_stock = 0
+			frappe.msgprint(
+				_("Auto-disabled 'Update Stock' on this invoice because it links to a Purchase Receipt. "
+				  "Stock was already booked by the PR — eTIMS will receive the stock movement from there."),
+				title=_("Update Stock disabled"), indicator="orange",
+			)
+		elif user_choice == 1 and not has_stock_item:
+			new_update_stock = 0
+			frappe.msgprint(
+				_("Auto-disabled 'Update Stock' on this invoice because none of the items are stock items "
+				  "(all are services). No stock movement to send."),
+				title=_("Update Stock disabled"), indicator="orange",
+			)
+		elif user_choice == 0 and has_stock_item and not has_pr_link:
+			frappe.msgprint(
+				_("'Update Stock' is OFF on this invoice but items include stock items. "
+				  "KRA's stock register will not receive a stock-in movement, which may cause reconciliation "
+				  "mismatches. Either enable Update Stock or send a separate stock movement."),
+				title=_("KRA stock reconciliation risk"), indicator="yellow",
+			)
+
+		update_dict = {
+			"custom_invoice_number": last_inv_number,
+			"update_stock": new_update_stock,
+			"custom_tax_branch_office": branch_id,
+			"custom_total_taxable_amount": total_vat_amount,
+			"custom_total_nontaxable_amount": total_non_vat_amount,
+		}
+		# Only override set_warehouse when we're actually updating stock
+		if new_update_stock and pur_warehouse:
+			update_dict["set_warehouse"] = pur_warehouse
+
+		frappe.db.set_value("Purchase Invoice", doc.name, update_dict, update_modified=False)
 
 		# Sync in-memory doc fields to match what was written to DB
 		doc.custom_invoice_number = last_inv_number
-		doc.update_stock = 1
+		doc.update_stock = new_update_stock
 		doc.custom_tax_branch_office = branch_id
-		doc.set_warehouse = pur_warehouse
+		if new_update_stock and pur_warehouse:
+			doc.set_warehouse = pur_warehouse
 		doc.custom_total_taxable_amount = total_vat_amount
 		doc.custom_total_nontaxable_amount = total_non_vat_amount
 
@@ -156,7 +197,7 @@ def insert_tax_amounts(doc):
 							item.get("name"),
 							"custom_total_taxable_amount",
 							round(value, 2),
-							update_modified=True,
+							update_modified=False,
 						)
 		except (frappe.DoesNotExistError, frappe.DataError) as e:
 			frappe.throw(_("Error calculating tax amounts: {0}").format(str(e)))
@@ -535,15 +576,14 @@ def get_last_inv_number(doc, branch_id):
 			page_length=1,
 		)
 
-		if last_inv[0]:
-			# print(last_inv)
+		if last_inv and last_inv[0].get("custom_invoice_number"):
 			last_inv_no = last_inv[0].get("custom_invoice_number")
 
-		cur_number = last_inv_no + 1
+		cur_number = (last_inv_no or 0) + 1
 
-	except frappe.DataError as e:
+	except Exception as e:
 		frappe.log_error("eTIMS: Invoice number calculation error", str(e))
-		cur_number = last_inv_no + 1
+		cur_number = (last_inv_no or 0) + 1
 
 	return cur_number
 
@@ -754,16 +794,59 @@ def verify_supplier_invoice(docname):
 
 		# Get invoice details for verification
 		invoice_no = doc.bill_no or doc.name
+		cu_invoice_no = doc.get("custom_supplier_cu_invoice_no") or None
 		invoice_date = doc.bill_date or doc.posting_date
 		total_amount = doc.grand_total
 
-		# Call Invoice Checker API
-		result = eTIMS.invoiceCheckerReq(
-			invoice_no=invoice_no,
-			supplier_pin=supplier_pin,
-			invoice_date=invoice_date,
-			total_amount=total_amount,
-		)
+		if not invoice_no and not cu_invoice_no:
+			return {
+				"verified": False,
+				"warning": "No invoice identifier",
+				"message": "Set either 'Supplier Invoice No' or 'Supplier CU Invoice No' before verifying.",
+			}
+
+		# Fast path: check the locally-pulled Register Entries first (no KRA round-trip)
+		# Tries trader invoice no first, then CU invoice no.
+		local_match = None
+		if frappe.db.exists("DocType", "eTIMS Purchase Register Entry"):
+			if invoice_no:
+				local_match = frappe.db.get_value(
+					"eTIMS Purchase Register Entry",
+					{"supplier_pin": supplier_pin, "kra_invoice_number": invoice_no},
+					["name", "total_amount", "invoice_date", "tax_amount"],
+					as_dict=True,
+				)
+			if not local_match and cu_invoice_no:
+				local_match = frappe.db.get_value(
+					"eTIMS Purchase Register Entry",
+					{"supplier_pin": supplier_pin, "kra_invoice_number": cu_invoice_no},
+					["name", "total_amount", "invoice_date", "tax_amount"],
+					as_dict=True,
+				)
+
+		if local_match:
+			variance = abs((local_match.get("total_amount") or 0) - (total_amount or 0))
+			result = {
+				"Success": {
+					"spplrTin": supplier_pin,
+					"spplrInvcNo": invoice_no,
+					"cuInvcNo": cu_invoice_no,
+					"totAmt": local_match.get("total_amount"),
+					"totTaxAmt": local_match.get("tax_amount"),
+					"salesDt": local_match.get("invoice_date"),
+					"_source": "local_register",
+					"_variance": variance if variance > 0.01 else 0,
+				}
+			}
+		else:
+			# Fall back to live KRA lookup — matches on EITHER trader inv or CU inv
+			result = eTIMS.invoiceCheckerReq(
+				invoice_no=invoice_no,
+				supplier_pin=supplier_pin,
+				invoice_date=invoice_date,
+				total_amount=total_amount,
+				cu_invoice_no=cu_invoice_no,
+			)
 
 		if "Success" in result:
 			# Extract verification details

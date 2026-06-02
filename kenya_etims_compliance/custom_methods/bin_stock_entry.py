@@ -15,28 +15,39 @@ def on_submit(doc, method):
 			t_warehouse_id = doc.custom_target_tax_branch_office
 			s_warehouse_id = doc.custom_source_tax_branch_office
 
+			succeeded, api_calls = 0, 0
+
 			if doc.stock_entry_type == "Material Receipt":
-				if t_warehouse_id:
-					for item in doc.items:
-						stockMasterSaveReq(item, doc, reg_user_name, mod_user_name, t_warehouse_id)
-						item.custom_stock_master_updated = 1
-
-						frappe.msgprint(_("Master Stock updated successfully"))
-
-				else:
+				if not t_warehouse_id:
 					frappe.throw(_("Missing Value For Warehouse Id"))
+				for item in doc.items:
+					stockMasterSaveReq(item, doc, reg_user_name, mod_user_name, t_warehouse_id)
+					item.custom_stock_master_updated = 1
+					succeeded += 1
+					api_calls += 1
 
 			elif doc.stock_entry_type == "Material Transfer":
-				if t_warehouse_id and s_warehouse_id:
-					for item in doc.items:
-						stockMasterSaveReq(item, doc, reg_user_name, mod_user_name, s_warehouse_id)
-						stockMasterSaveReq(item, doc, reg_user_name, mod_user_name, t_warehouse_id)
-						item.custom_stock_master_updated = 1
-
-						frappe.msgprint(_("Master Stock updated successfully"))
-
-				else:
+				if not (t_warehouse_id and s_warehouse_id):
 					frappe.throw(_("Missing Value For Warehouse Id"))
+				for item in doc.items:
+					stockMasterSaveReq(item, doc, reg_user_name, mod_user_name, s_warehouse_id)
+					stockMasterSaveReq(item, doc, reg_user_name, mod_user_name, t_warehouse_id)
+					item.custom_stock_master_updated = 1
+					succeeded += 1
+					api_calls += 2
+
+			if succeeded:
+				if api_calls == succeeded:
+					frappe.msgprint(
+						_("eTIMS Master Stock updated for {0} item(s)").format(succeeded), indicator="green",
+					)
+				else:
+					frappe.msgprint(
+						_("eTIMS Master Stock updated for {0} item(s) ({1} warehouse-side updates)").format(
+							succeeded, api_calls,
+						),
+						indicator="green",
+					)
 		except (
 			frappe.DoesNotExistError,
 			requests.ConnectionError,
@@ -48,18 +59,15 @@ def on_submit(doc, method):
 
 
 def get_bin_qty(item_code, branch_id):
-	store_warehouse = frappe.db.get_all(
-		"Warehouse",
-		filters={"warehouse_type": "Stores", "is_group": 0, "custom_tax_branch_office": branch_id},
-		fields=["warehouse_name", "name"],
-	)
+	from kenya_etims_compliance.custom_methods.bin import resolve_stores_warehouse
 
-	if not store_warehouse:
+	warehouse_name = resolve_stores_warehouse(branch_id)
+	if not warehouse_name:
 		return 0
 
 	bin_docs = frappe.db.get_all(
 		"Bin",
-		filters={"item_code": item_code, "warehouse": store_warehouse[0].get("name")},
+		filters={"item_code": item_code, "warehouse": warehouse_name},
 		fields=["actual_qty"],
 	)
 

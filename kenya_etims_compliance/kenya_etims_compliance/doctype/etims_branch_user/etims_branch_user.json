@@ -7,31 +7,27 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "section_break_lvnp",
+  "system_user",
   "user_id",
   "user_name",
   "password",
-  "address",
-  "contact",
-  "authority_code",
-  "used_unused",
-  "column_break_ulgj",
-  "remark",
-  "registration_id",
   "registration_name",
-  "modifier_id",
   "modifier_name",
+  "used_unused",
+  "authority_code",
+  "contact",
+  "column_break_ulgj",
+  "address",
+  "remark",
   "saved",
   "register_user"
  ],
  "fields": [
   {
    "fieldname": "user_id",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
+   "fieldtype": "Data",
    "label": "User ID",
-   "length": 20,
-   "options": "User",
    "reqd": 1
   },
   {
@@ -41,23 +37,25 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "User Name",
-   "length": 60,
-   "read_only": 1
+   "length": 14,
+   "reqd": 1
   },
   {
    "fieldname": "password",
-   "fieldtype": "Small Text",
+   "fieldtype": "Data",
    "label": "Password",
    "length": 255,
    "reqd": 1
   },
   {
+   "depends_on": "eval:doc.saved==0",
    "fieldname": "address",
    "fieldtype": "Small Text",
    "label": "Address",
    "length": 200
   },
   {
+   "depends_on": "eval:doc.saved==0",
    "fieldname": "contact",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -66,6 +64,7 @@
    "length": 20
   },
   {
+   "depends_on": "eval:doc.saved==0",
    "fieldname": "authority_code",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -78,6 +77,7 @@
    "fieldtype": "Column Break"
   },
   {
+   "depends_on": "eval:doc.saved==0",
    "fieldname": "remark",
    "fieldtype": "Long Text",
    "label": "Remark",
@@ -87,18 +87,12 @@
    "fieldname": "used_unused",
    "fieldtype": "Data",
    "in_standard_filter": 1,
-   "label": "Used/UnUsed",
+   "label": "In Use (Y/N)",
    "length": 1,
    "reqd": 1
   },
   {
-   "fieldname": "registration_id",
-   "fieldtype": "Data",
-   "label": "Registration ID",
-   "length": 20,
-   "reqd": 1
-  },
-  {
+   "default": "admin",
    "fieldname": "registration_name",
    "fieldtype": "Data",
    "label": "Registration Name",
@@ -106,13 +100,7 @@
    "reqd": 1
   },
   {
-   "fieldname": "modifier_id",
-   "fieldtype": "Data",
-   "label": "Modifier ID",
-   "length": 60,
-   "reqd": 1
-  },
-  {
+   "default": "admin",
    "fieldname": "modifier_name",
    "fieldtype": "Data",
    "label": "Modifier Name",
@@ -121,22 +109,35 @@
   },
   {
    "default": "0",
-   "depends_on": "eval:doc.saved == 1",
    "fieldname": "saved",
    "fieldtype": "Check",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Saved"
+   "label": "Saved",
+   "read_only": 1
   },
   {
    "fieldname": "register_user",
    "fieldtype": "Button",
    "label": "Register User"
+  },
+  {
+   "fieldname": "system_user",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "System User",
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_lvnp",
+   "fieldtype": "Section Break"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-12-11 11:35:15.930059",
+ "modified": "2025-07-20 19:29:35.388231",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Branch User",
@@ -170,6 +171,5 @@
  ],
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": [],
- "track_changes": 1
+ "states": []
 }

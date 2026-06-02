@@ -1,10 +1,10 @@
 <div align="center">
-<h1>Coale Tax — Kenya eTIMS Compliance</h1>
+<h1>Kenya eTIMS Compliance</h1>
 <p><strong>ERPNext integration with Kenya Revenue Authority's electronic Tax Invoice Management System</strong></p>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](license.txt)
-[![Frappe Framework](https://img.shields.io/badge/Frappe-v15+-blue)](https://frappeframework.com)
-[![ERPNext](https://img.shields.io/badge/ERPNext-v15+-green)](https://erpnext.com)
+[![Frappe Framework](https://img.shields.io/badge/Frappe-v15%2F16-blue)](https://frappeframework.com)
+[![ERPNext](https://img.shields.io/badge/ERPNext-v15%2F16-green)](https://erpnext.com)
 [![Python](https://img.shields.io/badge/Python-3.10+-yellow)](https://python.org)
 </div>
 
@@ -12,7 +12,7 @@
 
 ## Overview
 
-**Coale Tax** (formerly Kenya eTIMS Compliance) is a Frappe/ERPNext app that integrates with KRA's **eTIMS** (electronic Tax Invoice Management System). It automates tax-compliant invoicing, stock tracking, item registration, and invoice verification — mandatory for all VAT-registered businesses in Kenya.
+**Kenya eTIMS Compliance** is a Frappe/ERPNext app that integrates with KRA's **eTIMS** (electronic Tax Invoice Management System). It automates tax-compliant invoicing, stock tracking, item registration, and invoice verification — mandatory for all VAT-registered businesses in Kenya.
 
 The app hooks into ERPNext's core doctypes (Sales Invoice, Purchase Invoice, Stock Entry, Item, Payment Entry) to automatically sync transactions with the KRA eTIMS servers, generate QR codes, and enforce compliance at every step.
 
@@ -26,10 +26,14 @@ The app hooks into ERPNext's core doctypes (Sales Invoice, Purchase Invoice, Sto
 | **Stock Movement Tracking** | Reports stock entries, transfers, and releases to eTIMS |
 | **Item Registration** | Registers and syncs item master data with eTIMS classification codes |
 | **Payment Validation** | Blocks payments on unverified Purchase Invoices (2026 compliance) |
+| **Invoice Queue** | Retry failed invoices automatically via the background queue processor |
+| **Reverse Invoicing** | Credit note and return invoice support with KRA-compliant reversal flow |
+| **Compliance Scoring** | Real-time compliance health scoring and supplier scoring dashboards |
+| **Reconciliation** | Automated reconciliation logs between ERPNext and KRA records |
 | **Role-Based Access Control** | 7 custom roles with granular permissions and branch isolation |
 | **Dual API Mode** | Supports both Production and Sandbox KRA environments |
 | **Configurable Settings** | Central settings DocType for API URLs, timeouts, retry logic, and feature toggles |
-| **Error Logging** | Comprehensive API error logging and audit trail |
+| **Error Logging & Codes** | Structured error code mapping and comprehensive API error logging |
 
 ---
 
@@ -38,15 +42,15 @@ The app hooks into ERPNext's core doctypes (Sales Invoice, Purchase Invoice, Sto
 ### Prerequisites
 
 - [Frappe Bench](https://frappeframework.com/docs/user/en/bench) (v5.x+)
-- [Frappe Framework](https://frappeframework.com) (v15+)
-- [ERPNext](https://erpnext.com) (v15+)
+- [Frappe Framework](https://frappeframework.com) (v15 or v16)
+- [ERPNext](https://erpnext.com) (v15 or v16)
 - Python 3.10+
 
 ### Install
 
 ```bash
 # Get the app
-bench get-app https://github.com/CoaleTech/Coale-Tax.git
+bench get-app https://github.com/upandeltd/Etims.git
 
 # Install on your site
 bench --site <site-name> install-app kenya_etims_compliance
@@ -112,6 +116,19 @@ The app hooks into ERPNext document events to sync data with eTIMS automatically
 
 Custom JavaScript is injected into: **Item**, **Customer**, **BOM**, **Sales Invoice**, **Purchase Invoice**, **Supplier** — adding eTIMS action buttons and field validations.
 
+### Invoice Queue & Retry
+
+Failed eTIMS submissions are queued in **eTIMS Invoice Queue** for automatic retry. The queue processor handles rate limiting, error classification, and exponential backoff.
+
+### Compliance Dashboard
+
+The built-in compliance dashboard surfaces:
+- Daily transaction sync status
+- Compliance score per branch
+- Supplier reliability scores
+- Failed invoice queue summary
+- Reconciliation gaps
+
 ---
 
 ## DocTypes
@@ -127,7 +144,11 @@ Custom JavaScript is injected into: **Item**, **Customer**, **BOM**, **Sales Inv
 - **eTIMS Purchase Invoice** / **Purchase Item** / **Purchase Information** — Purchase records
 - **eTIMS Purchase Order Tracking** — Purchase order compliance tracking
 - **eTIMS Stock Movement** / **Stock Item** / **Stock Information** — Stock movement records
+- **eTIMS Stock Movement Item** — Line-level stock movement items
 - **eTIMS Stock Release Number** — SAR number management
+- **eTIMS Invoice Queue** — Retry queue for failed submissions
+- **eTIMS Purchase Register Entry** — Purchase register tracking
+- **eTIMS Stock Register Entry** — Stock register tracking
 
 ### Master Data
 - **eTIMS Customer** — Customer registration with KRA
@@ -135,6 +156,7 @@ Custom JavaScript is injected into: **Item**, **Customer**, **BOM**, **Sales Inv
 - **eTIMS Import Item** / **Import Item Information** — Imported goods tracking
 - **eTIMS BOM Item** — Bill of materials composition
 - **eTIMS Insurance** / **Notice** / **Notice Item** — Insurance and notices
+- **eTIMS Credit Note Reason** — Predefined credit note reasons for reversals
 
 ### Reference Data
 - **eTIMS Code Information** / **Code Classification** — KRA code lists
@@ -142,6 +164,10 @@ Custom JavaScript is injected into: **Item**, **Customer**, **BOM**, **Sales Inv
 
 ### Branch Management
 - **eTIMS Branch Information** / **Branch Item** / **Branch User** — Branch-level data
+
+### Compliance & Audit
+- **eTIMS Compliance Score** — Branch and company compliance health metrics
+- **eTIMS Reconciliation Log** — ERPNext vs KRA reconciliation records
 
 ---
 
@@ -197,23 +223,31 @@ The app communicates with KRA via 13+ API endpoints:
 
 ```
 kenya_etims_compliance/
-├── custom_methods/          # Document event handlers
-│   ├── sales_invoice.py     # Sales Invoice eTIMS sync
-│   ├── purchase_invoice.py  # Purchase Invoice eTIMS sync
-│   ├── stock.py             # Stock Entry eTIMS sync
-│   ├── item.py              # Item registration
-│   ├── payment_entry.py     # Payment validation
-│   ├── invoice_checker.py   # KRA invoice verification
-│   ├── stock_release.py     # Stock release numbers
-│   └── *.js                 # Client-side scripts
+├── custom_methods/              # Document event handlers
+│   ├── sales_invoice.py         # Sales Invoice eTIMS sync
+│   ├── purchase_invoice.py      # Purchase Invoice eTIMS sync
+│   ├── stock.py                 # Stock Entry eTIMS sync
+│   ├── item.py                  # Item registration & validation
+│   ├── payment_entry.py         # Payment validation
+│   ├── invoice_checker.py       # KRA invoice verification
+│   ├── stock_release.py         # Stock release numbers
+│   ├── queue_processor.py       # Retry queue for failed submissions
+│   ├── compliance_scoring.py    # Compliance health scoring
+│   ├── reconciliation.py        # Reconciliation engine
+│   ├── bulk_operations.py       # Bulk item & invoice operations
+│   ├── notifications.py         # eTIMS notifications
+│   └── *.js                     # Client-side scripts
 ├── installation/
-│   └── etims_roles.py       # Role creation on install
+│   └── etims_roles.py           # Role creation on install
 ├── kenya_etims_compliance/
-│   └── doctype/             # 35 custom DocTypes
+│   └── doctype/                 # 40+ custom DocTypes
 ├── utils/
-│   ├── etims_utils.py       # Core eTIMS API client
-│   └── permissions.py       # RBAC utilities
-├── hooks.py                 # Frappe hooks configuration
+│   ├── etims_utils.py           # Core eTIMS API client
+│   ├── kra_client.py            # KRA HTTP client with retry logic
+│   ├── error_codes.py           # Structured error code mapping
+│   ├── permissions.py           # RBAC utilities
+│   └── version_utils.py         # Version compatibility helpers
+├── hooks.py                     # Frappe hooks configuration
 └── ...
 ```
 
@@ -266,6 +300,16 @@ kenya_etims_compliance/
 1. Create an **Item** in the Stock workspace.
 2. Check **"Update Item to TIMS"** and save.
 3. Fill in eTIMS classification fields and click **"Register Item"**.
+
+### Reverse Invoicing (Credit Notes)
+1. Create a **Sales Invoice** return / credit note.
+2. Select a **Credit Note Reason** from the eTIMS master list.
+3. **Submit** — the reversal is synced to KRA with the original invoice reference.
+
+### Bulk Operations
+1. Use the **Bulk Operations** tool to register multiple items at once.
+2. Use **Pre-validation** to check items before submitting to KRA.
+3. Bulk sync is available for Sales and Purchase invoices via the queue.
 
 ---
 

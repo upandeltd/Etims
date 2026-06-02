@@ -40,12 +40,6 @@
   "auto_verify_invoices",
   "column_break_bpgc",
   "allow_payment_unverified",
-  "verification_amount_threshold",
-  "sb_po_tracking",
-  "enable_po_tracking",
-  "auto_reconcile_invoices",
-  "column_break_emxl",
-  "po_notification_enabled",
   "sb_queue",
   "enable_queue",
   "queue_max_retries",
@@ -240,39 +234,6 @@
    "label": "Allow Payment Without Verification"
   },
   {
-   "default": "0",
-   "description": "Only verify invoices above this amount. Set to 0 to verify all invoices.",
-   "fieldname": "verification_amount_threshold",
-   "fieldtype": "Currency",
-   "label": "Verification Amount Threshold"
-  },
-  {
-   "fieldname": "sb_po_tracking",
-   "fieldtype": "Section Break",
-   "label": "Purchase Order Tracking"
-  },
-  {
-   "default": "1",
-   "description": "Track Purchase Orders for audit trail and invoice reconciliation",
-   "fieldname": "enable_po_tracking",
-   "fieldtype": "Check",
-   "label": "Enable PO Tracking"
-  },
-  {
-   "default": "1",
-   "description": "Automatically reconcile Purchase Invoices with original Purchase Orders",
-   "fieldname": "auto_reconcile_invoices",
-   "fieldtype": "Check",
-   "label": "Auto-Reconcile Invoices"
-  },
-  {
-   "default": "0",
-   "description": "Send notifications when Purchase Orders are pending invoice for extended periods",
-   "fieldname": "po_notification_enabled",
-   "fieldtype": "Check",
-   "label": "Enable PO Notifications"
-  },
-  {
    "fieldname": "column_break_owpm",
    "fieldtype": "Column Break"
   },
@@ -298,10 +259,6 @@
   },
   {
    "fieldname": "column_break_bpgc",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "column_break_emxl",
    "fieldtype": "Column Break"
   },
   {

@@ -65,16 +65,19 @@ class eTIMS:
 
 	@staticmethod
 	def strf_date_object(date_data):
-		date_str = ""
+		"""Format a date as YYYYMMDD. Accepts date, datetime, or 'YYYY-MM-DD' string."""
+		if date_data is None:
+			return ""
+		# Already a date or datetime object
+		if hasattr(date_data, "strftime"):
+			return date_data.strftime("%Y%m%d")
+		# Otherwise, assume string
 		try:
-			date_object = datetime.strptime(date_data, "%Y-%m-%d")
-			date_str = date_object.strftime("%Y%m%d")
-
+			date_object = datetime.strptime(str(date_data), "%Y-%m-%d")
+			return date_object.strftime("%Y%m%d")
 		except ValueError as e:
 			frappe.log_error(title="eTIMS: Date format error", message=str(e))
-			date_str = date_data.strftime("%Y%m%d")
-
-		return date_str
+			return ""
 
 	@staticmethod
 	def strf_time(time_data):
@@ -301,9 +304,15 @@ class eTIMS:
 		)
 
 		if tax_branch_perms:
-			tax_branch_id_current_user = tax_branch_perms[0].get("for_value")
+			return tax_branch_perms[0].get("for_value")
 
-			return tax_branch_id_current_user
+		# Fallback for single-branch setups: use the only active TIS Device
+		devices = frappe.db.get_all(
+			"TIS Device Initialization", filters={"active": 1}, fields=["branch_id"], limit=2
+		)
+		if len(devices) == 1:
+			return devices[0].get("branch_id")
+		return None
 
 	@staticmethod
 	def itemSaveReq(doc_name):
@@ -447,25 +456,43 @@ class eTIMS:
 
 	@staticmethod
 	def searchTrns(invoice_no=None, last_req_dt=None, trns_type=None):
-		"""Search transactions in eTIMS (Section 7.14/7.20)
+		"""Search transactions in eTIMS (Section 7.14/7.20).
+
+		KRA only provides LIST endpoints (date-range) — there is no per-invoice
+		lookup. We fetch the list and filter for invoice_no client-side.
+
 		trns_type: 'sales' or 'purchase'
 		"""
-
-		payload = {}
-		if invoice_no:
-			payload["invcNo"] = invoice_no
-		if last_req_dt:
-			payload["lastReqDt"] = eTIMS.strf_datetime_format(last_req_dt)
-
 		if trns_type == "sales":
-			endpoint = "searchTrnsSales"
+			endpoint = "selectTrnsSalesList"
 		elif trns_type == "purchase":
-			endpoint = "searchTrnsPurchase"
+			endpoint = "selectTrnsPurchaseList"
 		else:
 			return {"Error": "Invalid transaction type. Use 'sales' or 'purchase'"}
 
+		# KRA requires lastReqDt. Default to last 30 days — querying further back
+		# can return thousands of transactions and time out.
+		from frappe.utils import add_days, now_datetime
+		if last_req_dt:
+			default_dt = eTIMS.strf_datetime_format(last_req_dt)
+		else:
+			default_dt = add_days(now_datetime(), -30).strftime("%Y%m%d%H%M%S")
+		payload = {"lastReqDt": default_dt}
+
 		client = KRAClient()
-		return client.search_trns(endpoint, payload)
+		result = client.search_trns(endpoint, payload)
+
+		# If the user asked for a specific invoice, filter the list down to it
+		if invoice_no and "Success" in result:
+			data = result.get("Success") or {}
+			list_key = "salesList" if trns_type == "sales" else "purchaseList"
+			items = data.get(list_key) or data.get("saleList") or []
+			match = [it for it in items if str(it.get("invcNo")) == str(invoice_no)]
+			if not match:
+				return {"Error": f"No {trns_type} transaction found for invoice {invoice_no}"}
+			return {"Success": match[0] if len(match) == 1 else match}
+
+		return result
 
 	# Stock Release Number Management - Phase 2.1
 
@@ -546,38 +573,116 @@ class eTIMS:
 	# Invoice Verification - Phase 1: Invoice Checker API Integration
 
 	@staticmethod
-	def invoiceCheckerReq(invoice_no, supplier_pin, invoice_date, total_amount):
-		"""Check invoice validity via KRA Invoice Checker API
+	def invoiceCheckerReq(invoice_no, supplier_pin, invoice_date, total_amount, cu_invoice_no=None):
+		"""Check invoice validity via KRA Invoice Checker API.
 
-		Verifies if a supplier invoice is valid in KRA eTIMS system.
-		This is critical for 2026 tax compliance - all purchases must be verified.
+		Matches on EITHER trader invoice no OR CU invoice no (supplier CU ID + sequence)
+		— whichever is provided. If both match, that's a strong verification.
 
 		Args:
-		    invoice_no: Supplier invoice number
+		    invoice_no: Supplier trader invoice number (e.g., 'INV-2026-473')
 		    supplier_pin: Supplier Tax PIN
 		    invoice_date: Invoice date (YYYY-MM-DD or datetime object)
 		    total_amount: Total invoice amount (float/decimal)
+		    cu_invoice_no: Optional 'KRACU.../<seq>' from supplier receipt
 
 		Returns:
-		    {"Success": {...}} or {"Error": "..."}
+		    {"Success": {... + _matched_by: 'trader_inv'|'cu_inv'|'both'}} or {"Error": "..."}
 		"""
-		payload = {
-			"invcNo": invoice_no,
-			"spplrTin": supplier_pin,
-			"invcDt": eTIMS.strf_date_object(invoice_date),
-			"totAmt": str(total_amount),
-		}
+		from frappe.utils import add_days, getdate
+		try:
+			anchor = getdate(invoice_date)
+			lookback_dt = add_days(anchor, -90).strftime("%Y%m%d000000")
+		except Exception:
+			lookback_dt = "20260101000000"
 
 		client = KRAClient()
-		result = client.select_trns_purchase_info(payload)
+		list_result = client.post("selectTrnsPurchaseSalesList", {"lastReqDt": lookback_dt})
 
-		# If successful, verify the invoice details match
-		if "Success" in result:
-			invoice_data = result["Success"]
-			if invoice_data and invoice_data.get("invcNo") != invoice_no:
-				return {"Error": "Invoice number mismatch in KRA system"}
+		if list_result.get("Error"):
+			return list_result
+		if list_result.get("Empty"):
+			return {"Error": f"KRA returned no purchases since {lookback_dt[:8]}. Invoice not found."}
 
-		return result
+		data = list_result.get("Success") or {}
+		records = data.get("saleList") or data.get("purchaseList") or []
+
+		# Parse CU invoice no — two possible formats:
+		#   eTIMS:        '<CU_ID>/<sequence>'  e.g. 'KRACU0400003494/5'  → match spplrSdcId + sdcRcptNo
+		#   TIMS device:  '<long_numeric>'      e.g. '0091665530000157477' → match as-is against receipt no
+		cu_id, cu_seq, cu_raw = None, None, None
+		if cu_invoice_no:
+			cu_raw = str(cu_invoice_no).strip()
+			if "/" in cu_raw:
+				parts = cu_raw.split("/", 1)
+				cu_id = parts[0].strip().upper()
+				cu_seq = parts[1].strip()
+
+		invoice_no_str = str(invoice_no or "").strip()
+		pin_str = str(supplier_pin or "").strip().upper()
+
+		def _trader_match(r):
+			if not invoice_no_str:
+				return False
+			if str(r.get("spplrInvcNo") or "").strip() != invoice_no_str:
+				return False
+			return not pin_str or str(r.get("spplrTin") or "").strip().upper() == pin_str
+
+		def _cu_match(r):
+			# eTIMS format: needs both CU_ID and sequence to match
+			if cu_id and cu_seq:
+				r_cu_id = str(r.get("spplrSdcId") or r.get("bcncSdcId") or "").strip().upper()
+				r_cu_seq = str(r.get("sdcRcptNo") or r.get("totSdcRcptNo") or "").strip()
+				if r_cu_id == cu_id and r_cu_seq == cu_seq:
+					return True
+			# TIMS device format: long numeric — try every receipt-like field
+			if cu_raw and "/" not in cu_raw:
+				candidates = [
+					str(r.get("sdcRcptNo") or "").strip(),
+					str(r.get("totSdcRcptNo") or "").strip(),
+					str(r.get("spplrInvcNo") or "").strip(),
+					str(r.get("rcptNo") or "").strip(),
+					str(r.get("intrlData") or "").strip(),
+				]
+				if cu_raw in candidates:
+					return True
+			return False
+
+		matches = []
+		for r in records:
+			t, c = _trader_match(r), _cu_match(r)
+			if t or c:
+				r["_matched_by"] = "both" if t and c else ("trader_inv" if t else "cu_inv")
+				matches.append(r)
+
+		if not matches:
+			id_parts = []
+			if invoice_no_str:
+				id_parts.append(f"trader invoice {invoice_no_str}")
+			if cu_id:
+				id_parts.append(f"CU invoice {cu_id}/{cu_seq}")
+			id_str = " or ".join(id_parts) if id_parts else "any identifier"
+			return {
+				"Error": f"Invoice not found in KRA's records since {lookback_dt[:8]} "
+				f"(searched by {id_str}, supplier {pin_str or '-'}). "
+				f"The supplier may not have submitted this invoice to eTIMS yet."
+			}
+
+		match = matches[0]
+
+		# Variance check on total amount
+		try:
+			kra_total = float(match.get("totAmt") or 0)
+			our_total = float(total_amount or 0)
+			variance = abs(kra_total - our_total)
+			if variance > 0.01:
+				match["_variance"] = variance
+				match["_our_amount"] = our_total
+				match["_kra_amount"] = kra_total
+		except (TypeError, ValueError):
+			pass
+
+		return {"Success": match}
 
 
 def check_if_item_exits(item_code):
