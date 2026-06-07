@@ -5,12 +5,6 @@ from datetime import datetime
 import frappe
 from kenya_etims_compliance.utils.etims_utils import eTIMS
 
-#This part describes the components of SaveItem API function (url : /saveItem) and data types for each item. 
-# This API function is divided into 'Request: Argument' and 'Response: Return Object'. 
-# The ItemSaveReq is an Argument Object of Request, The ItemSaveRes is a Return Object of Response
-@frappe.whitelist()
-def itemSaveReq1():
-    frappe.msgprint("Hello")
         
 @frappe.whitelist()
 def itemSaveReq(doc_name):
@@ -241,3 +235,45 @@ def get_bin_qty(item_code):
         return bin_docs[0].get("actual_qty")
     else:
         return 0
+    
+
+@frappe.whitelist()
+def bulk_item_save_req(doc_names):
+    if isinstance(doc_names, str):
+        doc_names = frappe.parse_json(doc_names)
+
+    results = {"success": [], "errors": []}
+
+    for doc_name in doc_names:
+        etims_doc_name = frappe.db.get_value("Item", doc_name, "custom_etims_item_code")
+        registered = frappe.db.get_value("Item", doc_name, "custom_registered_in_tims")
+
+        if registered == 1:
+            results["errors"].append({
+                "doc_name": doc_name,
+                "message": f"Item {doc_name} is already registered in eTIMS"
+            })
+            continue
+
+        if not etims_doc_name:
+            frappe.throw(f"Item {doc_name} does not have an eTIMS Item Code")
+
+        try:
+            response = eTIMS.itemSaveReq(etims_doc_name)
+            if response.get("Success"):
+                results["success"].append({
+                    "doc_name": etims_doc_name,
+                    "message": response.get("Success")
+                })
+            elif response.get("Error"):
+                results["errors"].append({
+                    "doc_name": etims_doc_name,
+                    "message": response.get("Error")
+                })
+        except Exception as e:
+            results["errors"].append({
+                "doc_name": etims_doc_name,
+                "message": str(e)
+            })
+
+    return results

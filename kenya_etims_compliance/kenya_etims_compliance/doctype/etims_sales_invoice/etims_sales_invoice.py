@@ -28,9 +28,11 @@ class eTIMSSalesInvoice(Document):
                 self.invoice_number = last_inv_number
                 
             if self.is_return:
+                org_inv_no = get_org_etims_inv_no(self)
                 self.receipt_type_code = "R"
                 self.payment_type_code = "07"
                 self.sales_status_code = "05"
+                self.original_invoice_number = org_inv_no
         
     def validate(self):
         '''
@@ -45,6 +47,11 @@ class eTIMSSalesInvoice(Document):
             
                     if self.invoice_number in invoice_numbers:
                         self.insert_invoice_number()
+
+        if self.is_return:
+            org_inv_no = get_org_etims_inv_no(self)
+           
+            self.original_invoice_number = org_inv_no   
 
     def before_save(self):
         self.validate_taxes()
@@ -130,37 +137,14 @@ class eTIMSSalesInvoice(Document):
     def validate_inv_number(self):
         invoice_numbers = []
         invoice_number_list = frappe.db.get_all("eTIMS Sales Invoice", fields = ["invoice_number", "name"], order_by='invoice_number desc')
-        
+
         if invoice_number_list:
             for invoice_no in invoice_number_list:
                 if not invoice_no.get("name") == self.name:
                     if not invoice_no.get("invoice_number") in invoice_numbers:
                         invoice_numbers.append(invoice_no.get("invoice_number"))
-                    
-        return invoice_numbers
-        
-    # def on_updates(self):
-    #     '''
-    #     Method sets increment for invoice number and orginal invoice number before submitting invoice
-    #     '''
-    #     scu = ""
-    #     if self.update_invoice_in_etims:		
-    #         branch_id = eTIMS.get_user_branch_id()
-   
-    #         etims_details = get_etims_details(self.company, branch_id, self.owner, self.modified_by)
-    #         last_inv_number = self.get_last_inv_number()
-    
 
-    #         if etims_details:
-    #             scu = etims_details.get("scu")
-            
-    #         frappe.db.set_value('eTIMS Sales Invoice', self.name, {
-    #             "sales_control_unit": scu,
-    #             "invoice_number": last_inv_number,
-    #             "branch_id": branch_id
-    #         }, update_modified=True)
-            
-    #         self.reload()
+        return invoice_numbers
         
     def get_last_inv_number(self):
     
@@ -190,32 +174,7 @@ class eTIMSSalesInvoice(Document):
                 cur_number = int(last_inv_no) + 1
         
         return int(cur_number)
-
-
-    def validate_inv_number(self):
-        invoice_numbers = []
-        invoice_number_list = frappe.db.get_all("eTIMS Sales Invoice", fields = ["invoice_number", "name"], order_by='invoice_number desc')
-        
-        if invoice_number_list:
-            for invoice_no in invoice_number_list:
-                if not invoice_no.get("name") == self.name:
-                    if not invoice_no.get("invoice_number") in invoice_numbers:
-                        invoice_numbers.append(invoice_no.get("invoice_number"))
-                    
-        return invoice_numbers
-    
-    # def on_update(self):
-    #     if self.sales_updated_in_etims:
-    #         file_name = self.create_qr_code()
-                
-    #         attachment_url = create_attachment(file_name, self.trader_invoice_number)
-
-    #         self.receipt_qr_code = attachment_url
-            
-    #         # self.save()
-    #         # self.submit()
-    #         frappe.db.commit()
-    #         # create_sales_receipt(data, doc.name)
+   
             
 def create_qr_code(branch_id, receipt_signature): 
         header_docs = frappe.db.get_all("TIS Device Initialization", filters={"branch_id": branch_id, "active":1}, fields=["api_mode", "pin"])
@@ -293,50 +252,6 @@ def get_etims_details(company, branch_id, owner, modified_by):
         results[0]["modifier"] = modifier
 
     return results[0]
-
-
-# def writeInvoiceToeTIMS(doc, method):
-#     if doc.custom_update_invoice_in_tims:
-#         doc_name = doc.name
-#         etims_inv_doc_name = frappe.db.exists("eTIMS Sales Invoice", {"trader_invoice_number": doc_name})
-        
-#         if etims_inv_doc_name and not etims_inv_doc_name in ["None", None]:
-#             data_doc = frappe.get_doc("eTIMS Sales Invoice", etims_inv_doc_name)
-#             # trnsSalesSaveWrReq(data_doc)
-#             frappe.enqueue(
-#                 "kenya_etims_compliance.kenya_etims_compliance.doctype.etims_sales_invoice.etims_sales_invoice.trnsSalesSaveWrReq",
-#                 queue="long",
-#                 doc=data_doc,
-#                 timeout=300
-#             )
-#         else:
-#             frappe.throw("Update Invoice In eTIMS is checked, you can't proceed without creating an eTIMS Sales Invoice!")
-
-# def retry_pending_etims_invoices():
-
-#     pending_docs = frappe.db.get_all(
-#         "eTIMS Sales Invoice",
-#         filters={"sales_updated_in_etims": 0},
-#         fields= ["name", "trader_invoice_number"],
-#         limit=50
-#     )
-
-    
-#     if pending_docs:
-
-#         for d in pending_docs:
-#             try:
-#                 if not frappe.db.exists("Sales Invoice", d.get("trader_invoice_number")):
-#                     frappe.log_error(f'Sales invoice does not exist for eTIMS Sales Invoice {d.get("trader_invoice_number")}', "Retry eTIMS Submission Failed.")
-
-#                 sales_invoice = frappe.get_doc("Sales Invoice", d.get("trader_invoice_number"))
-
-#                 if sales_invoice.get("docstatus") == 1:
-#                     doc = frappe.get_doc("eTIMS Sales Invoice", d.get("name"))
-#                     trnsSalesSaveWrReq(doc)
-
-#             except Exception:
-#                 frappe.log_error(frappe.get_traceback(), "Retry eTIMS Submission Failed.")
 
 
 def retry_pending_etims_invoices():
@@ -660,37 +575,6 @@ def etims_sale_item_list_sales(items):
             sales_item_list.append(item_etims_data)
             
     return sales_item_list
-
-# def etims_sale_item_list_stock2(doc):
-#     stock_item_list = []
-#     for item in doc.items:
-#         if item.custom_maintain_stock:
-#             # item_tax_code = get_tax_template_details(item.get("item_tax_template"))
-#             item_detail = frappe.db.get_all("Item", filters={"disabled": 0, "item_code": item.get("item_code")}, fields = ["*"])
-#             item_etims_data = {
-#                         "itemSeq": item.get("idx"),
-#                         "itemCd": item_detail[0].get("custom_item_code"),
-#                         "itemClsCd": item_detail[0].get("custom_item_classification_code"),
-#                         "itemNm": item_detail[0].get("custom_item_name"),
-#                         "pkgUnitCd": item_detail[0].get("custom_packaging_unit_code"),
-#                         "pkg": item.get("qty"),
-#                         "qtyUnitCd": item_detail[0].get("custom_quantity_unit_code"),
-#                         "qty": abs(item.get("qty")),
-#                         "prc": abs(item.get("base_rate")),
-#                         "splyAmt": abs(item.get("base_amount")),
-#                         "dcRt": abs(item.get("discount_percentage")),
-#                         "dcAmt": abs(round((item.get("custom_discount_amount_kes") * item.get("qty")), 2)),
-#                         "totDcAmt": abs(round((item.get("custom_discount_amount_kes") * item.get("qty")), 2)),
-#                         "taxTyCd": item_tax_code,
-#                         "taxblAmt": abs(round(item.get("base_net_amount"), 2)),
-#                         "taxAmt": abs(round((item.get("base_amount") - item.get("base_net_amount")), 2)),
-#                         "totAmt": abs(item.get("base_amount"))
-#                     }
-
-#             if not item_etims_data in stock_item_list:
-#                 stock_item_list.append(item_etims_data)
-                
-#     return stock_item_list
 
 def etims_sale_item_list_stock(doc):
     stock_item_list = []
