@@ -80,10 +80,11 @@ doctype_list_js = {
 # ----------
 
 # add methods and filters to jinja environment
-# jinja = {
-# "methods": "kenya_etims_compliance.utils.jinja_methods",
-# "filters": "kenya_etims_compliance.utils.jinja_filters"
-# }
+# escpos_qr: emits a byte-safe ESC/POS QR command for the thermal POS receipt
+# print format (falls back to "" when not byte-safe — see utils/escpos.py).
+jinja = {
+	"methods": ["kenya_etims_compliance.utils.escpos.escpos_qr"],
+}
 
 # Installation
 # ------------
