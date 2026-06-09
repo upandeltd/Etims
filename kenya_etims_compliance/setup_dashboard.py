@@ -4,9 +4,14 @@ Wired into `after_migrate` (hooks.py) so the workspace's number_card/chart block
 have backing documents. Idempotent (skips existing) and defensive — a single
 failed insert is logged and skipped so it can never abort `bench migrate`.
 
-Card/chart `name`s MUST match the `number_card_name` / `chart_name` references in
-kenya_etims_compliance/workspace/etims_compliance/etims_compliance.json, or the
-workspace blocks render empty.
+Two hard requirements learned from rendering these on a live v15 bench:
+  1. Card/chart `name`s MUST match the `number_card_name` / `chart_name` refs in
+     kenya_etims_compliance/workspace/etims_compliance/etims_compliance.json, and
+     a Number Card's name derives from its `label` (so label == the ref).
+  2. `filters_json` for Document-type cards and Count charts MUST be a LIST of
+     [doctype, field, operator, value] conditions, NOT a dict. A dict becomes a
+     frappe._dict whose `.append` is None, crashing dashboard_chart.get() with
+     "'NoneType' object is not callable".
 """
 
 import frappe
@@ -19,7 +24,7 @@ def create_number_cards():
 			"label": "Sales Transmitted",
 			"document_type": "Sales Invoice",
 			"function": "Count",
-			"filters_json": '{"docstatus": 1, "custom_update_sales_to_etims": 1}',
+			"filters_json": '[["Sales Invoice","docstatus","=",1],["Sales Invoice","custom_update_sales_to_etims","=",1]]',
 			"color": "#2ecc71",
 			"show_percentage_stats": 1,
 			"stats_time_interval": "Monthly",
@@ -29,7 +34,7 @@ def create_number_cards():
 			"label": "Sales Pending",
 			"document_type": "Sales Invoice",
 			"function": "Count",
-			"filters_json": '{"docstatus": 1, "custom_update_invoice_in_tims": 1, "custom_update_sales_to_etims": 0}',
+			"filters_json": '[["Sales Invoice","docstatus","=",1],["Sales Invoice","custom_update_invoice_in_tims","=",1],["Sales Invoice","custom_update_sales_to_etims","=",0]]',
 			"color": "#f39c12",
 			"show_percentage_stats": 1,
 			"stats_time_interval": "Monthly",
@@ -39,7 +44,7 @@ def create_number_cards():
 			"label": "Purchases Matched",
 			"document_type": "Purchase Invoice",
 			"function": "Count",
-			"filters_json": '{"docstatus": 1, "custom_kra_match_status": "Matched"}',
+			"filters_json": '[["Purchase Invoice","docstatus","=",1],["Purchase Invoice","custom_kra_match_status","=","Matched"]]',
 			"color": "#2ecc71",
 			"show_percentage_stats": 1,
 			"stats_time_interval": "Monthly",
@@ -49,7 +54,7 @@ def create_number_cards():
 			"label": "Queue Pending",
 			"document_type": "eTIMS Invoice Queue",
 			"function": "Count",
-			"filters_json": '{"status": ["in", ["Queued", "Failed"]]}',
+			"filters_json": '[["eTIMS Invoice Queue","status","in",["Queued","Failed"]]]',
 			"color": "#e74c3c",
 		},
 		{
@@ -57,7 +62,7 @@ def create_number_cards():
 			"label": "Suppliers Verified",
 			"document_type": "Supplier",
 			"function": "Count",
-			"filters_json": '{"disabled": 0, "custom_kra_pin_verified": 1}',
+			"filters_json": '[["Supplier","disabled","=",0],["Supplier","custom_kra_pin_verified","=",1]]',
 			"color": "#3498db",
 		},
 		{
@@ -67,7 +72,7 @@ def create_number_cards():
 			"label": "Errors This Month",
 			"document_type": "Error Logging",
 			"function": "Count",
-			"filters_json": "{}",
+			"filters_json": "[]",
 			"color": "#e74c3c",
 			"show_percentage_stats": 1,
 			"stats_time_interval": "Monthly",
@@ -110,29 +115,37 @@ def create_dashboard_charts():
 			"chart_type": "Count",
 			"document_type": "Sales Invoice",
 			"based_on": "posting_date",
-			"filters_json": '{"custom_update_invoice_in_tims": 1, "docstatus": 1}',
+			"filters_json": '[["Sales Invoice","custom_update_invoice_in_tims","=",1],["Sales Invoice","docstatus","=",1]]',
 			"timespan": "Last Year",
 			"time_interval": "Monthly",
 			"type": "Bar",
 			"color": "#2ecc71",
 		},
 		{
-			"name": "eTIMS Reconciliation Status",
-			"chart_name": "eTIMS Reconciliation Status",
-			"chart_type": "Group By",
-			"document_type": "eTIMS Purchase Register Entry",
-			"group_by_based_on": "match_status",
-			"type": "Donut",
+			"name": "eTIMS Purchase Transmission",
+			"chart_name": "eTIMS Purchase Transmission",
+			"chart_type": "Count",
+			"document_type": "Purchase Invoice",
+			"based_on": "posting_date",
+			"filters_json": '[["Purchase Invoice","custom_update_purchase_in_tims","=",1],["Purchase Invoice","docstatus","=",1]]',
+			"timespan": "Last Year",
+			"time_interval": "Monthly",
+			"type": "Bar",
 			"color": "#3498db",
 		},
 		{
-			"name": "eTIMS Queue Status",
-			"chart_name": "eTIMS Queue Status",
-			"chart_type": "Group By",
-			"document_type": "eTIMS Invoice Queue",
-			"group_by_based_on": "status",
-			"type": "Donut",
-			"color": "#f39c12",
+			"name": "eTIMS Errors Trend",
+			"chart_name": "eTIMS Errors Trend",
+			"chart_type": "Count",
+			"document_type": "Error Logging",
+			# Error Logging has no Date/Datetime field, so trend on the standard
+			# `creation` timestamp (always present and valid as a chart based_on).
+			"based_on": "creation",
+			"filters_json": "[]",
+			"timespan": "Last Year",
+			"time_interval": "Monthly",
+			"type": "Line",
+			"color": "#e74c3c",
 		},
 	]
 
@@ -149,7 +162,7 @@ def create_dashboard_charts():
 				"type": c["type"],
 				"color": c.get("color"),
 				"is_public": 1,
-				"filters_json": c.get("filters_json", "{}"),
+				"filters_json": c.get("filters_json", "[]"),
 			}
 			if c["chart_type"] == "Count":
 				doc_data["based_on"] = c["based_on"]
