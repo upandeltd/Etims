@@ -59,3 +59,48 @@ class TestSigningStatus(FrappeTestCase):
         out = etims_status.get_etims_signing_status("NOPE")
         self.assertFalse(out["signing_enabled"])
         self.assertFalse(out["signed"])
+
+
+class TestRealtimeEmit(FrappeTestCase):
+    @patch("kenya_etims_compliance.custom_methods.queue_processor.frappe")
+    def test_emit_after_qr_written(self, frappe_mock):
+        # Arrange a doc whose QR is set; call the private helper directly.
+        from kenya_etims_compliance.custom_methods import queue_processor as qp
+        from kenya_etims_compliance.custom_methods import sales_invoice as si
+
+        doc = MagicMock()
+        doc.name = "SINV-0009"
+        doc.custom_receipt_qr_url = "https://etims.kra.go.ke/...sig"
+        doc.posting_date = "2026-06-09"
+        frappe_mock.get_doc.return_value = doc
+        # Patch the eTIMS date helpers too so the test exercises only the emit, not real
+        # date parsing of the sdcDateTime literal.
+        # NOTE: create_qr_code/create_attachment/create_sales_receipt/stockIOSaveReq are
+        # imported function-locally from custom_methods.sales_invoice (hoisting them to
+        # queue_processor's top would create a circular import via
+        # sales_invoice -> queue_processor), so they are patched at their SOURCE module.
+        with patch.object(qp, "eTIMS") as etims_mock, \
+             patch.object(si, "create_qr_code", return_value=("f.png", "https://etims.kra.go.ke/...sig")), \
+             patch.object(si, "create_attachment", return_value="/private/files/f.png"), \
+             patch.object(si, "create_sales_receipt"), \
+             patch.object(si, "stockIOSaveReq"), \
+             patch.object(qp, "KRAClient"):
+            etims_mock.strp_datetime_object.return_value = None
+            etims_mock.strp_date_object.return_value = None
+            etims_mock.strp_time_object.return_value = None
+            etims_mock.strf_date_object.return_value = "20260609"
+            qp._handle_sales_invoice_success(
+                "SINV-0009",
+                {"sdcDateTime": "20260609120000", "rcptSign": "sig"},
+                MagicMock(branch_id=""),
+            )
+        # Assert a publish_realtime call for our event/invoice happened
+        calls = [
+            c
+            for c in frappe_mock.publish_realtime.call_args_list
+            if c.args and c.args[0] == "etims_invoice_signed"
+        ]
+        self.assertTrue(calls, "expected etims_invoice_signed emit")
+        payload = calls[0].args[1] if len(calls[0].args) > 1 else calls[0].kwargs.get("message")
+        self.assertEqual(payload["invoice"], "SINV-0009")
+        self.assertTrue(calls[0].kwargs.get("after_commit"))

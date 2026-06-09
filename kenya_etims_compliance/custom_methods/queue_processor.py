@@ -6,6 +6,7 @@ import requests
 from frappe import _
 from frappe.utils import add_to_date, now_datetime
 
+from kenya_etims_compliance.utils.etims_utils import eTIMS
 from kenya_etims_compliance.utils.kra_client import KRAClient
 
 
@@ -393,7 +394,6 @@ def _handle_sales_invoice_success(docname, data, queue_entry):
 		create_sales_receipt,
 		stockIOSaveReq,
 	)
-	from kenya_etims_compliance.utils.etims_utils import eTIMS
 
 	doc = frappe.get_doc("Sales Invoice", docname)
 
@@ -424,6 +424,18 @@ def _handle_sales_invoice_success(docname, data, queue_entry):
 	doc.flags.ignore_validate_update_after_submit = True
 	doc.save(ignore_permissions=True)
 	frappe.db.commit()
+
+	# Notify any waiting POS terminal that this invoice is now signed.
+	# Site-wide broadcast (no room/user args) — frontend filters by `invoice`.
+	frappe.publish_realtime(
+		"etims_invoice_signed",
+		{
+			"invoice": doc.name,
+			"status": "Sent",
+			"qr_url": doc.custom_receipt_qr_url,
+		},
+		after_commit=True,
+	)
 
 	create_sales_receipt(data, doc.name)
 
