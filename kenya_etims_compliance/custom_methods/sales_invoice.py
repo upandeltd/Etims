@@ -273,84 +273,10 @@ def trnsSalesSaveWrReq(doc, method):
 	Called during before_submit — assigns invoice number first, then sends to eTIMS.
 	"""
 	if doc.custom_update_invoice_in_tims:
-		request_date_and_time = doc.modified
-
-		conc_datetime_str = eTIMS.strf_datetime_format(request_date_and_time)
-
-		now = datetime.now()
-		date_time_str = now.strftime("%Y%m%d%H%M%S")
-
-		request_date = doc.posting_date
-		date_str = eTIMS.strf_date_object(request_date)
-
-		count = doc.custom_item_count or len(doc.items) or 0
-		if count < 1:
-			frappe.throw(_("Sales Invoice must have at least one item to submit to eTIMS"))
-
-		payload = {
-			"trdInvcNo": doc.name,
-			"invcNo": doc.custom_invoice_number,
-			"orgInvcNo": doc.custom_original_invoice_number,
-			"custTin": doc.tax_id,
-			"custNm": doc.customer,
-			"salesTyCd": doc.custom_sales_type_code,
-			"rcptTyCd": doc.custom_receipt_type_code,
-			"pmtTyCd": doc.custom_payment_type_code,
-			"salesSttsCd": doc.custom_invoice_status_code,
-			"cfmDt": conc_datetime_str,
-			"salesDt": date_str,
-			"stockRlsDt": date_time_str,
-			"totItemCnt": count,
-			"totTaxblAmt": abs(doc.custom_total_taxable_amount),
-			"totTaxAmt": abs(doc.base_total_taxes_and_charges),
-			"totAmt": abs(doc.base_grand_total),
-			"prchrAcptcYn": "N",
-			"remark": doc.remarks,
-			"regrId": (doc.owner or "")[:20],
-			"regrNm": (doc.owner or "")[:20],
-			"modrId": (doc.modified_by or "")[:20],
-			"modrNm": (doc.modified_by or "")[:20],
-			"receipt": {
-				"custTin": doc.tax_id,
-				# "custMblNo":null,
-				"rcptPbctDt": date_time_str,
-				# "trdeNm":null,
-				# "adrs":null,
-				# "topMsg":null,
-				# "btmMsg":null,
-				"prchrAcptcYn": "N",
-			},
-			"itemList": etims_sale_item_list_sales(doc),
-		}
-
-		apply_tax_bands(payload, doc.taxes, get_tax_account_rate)
-
-		if doc.is_return == 1:
-			return_status = sales_return_information(doc)
-
-			if return_status == "partial":
-				payload["rfdDt"] = date_time_str
-				payload["rfdRsnCd"] = doc.custom_credit_note_reason_code
-			elif return_status == "full":
-				payload["cnclReqDt"] = conc_datetime_str
-				payload["cnclDt"] = conc_datetime_str
-				payload["rfdDt"] = date_time_str
-				payload["rfdRsnCd"] = doc.custom_credit_note_reason_code
-			elif return_status == "null":
-				frappe.throw(_("Invalid, return amount is greater than original amount!"))
-
-	if doc.custom_update_invoice_in_tims:
+		# Build the KRA payload via the shared builder (it also applies the tax
+		# bands, return fields, training-mode override and receipt label).
+		payload = build_sales_payload(doc)
 		settings = get_etims_settings()
-
-		# Training mode (Spec 4.1.3): set receipt type to "T"
-		if settings.get("training_mode"):
-			payload["rcptTyCd"] = "T"
-
-		# Set receipt label (Spec 4.3)
-		receipt_label = get_receipt_label(doc)
-		frappe.db.set_value(
-			"Sales Invoice", doc.name, "custom_receipt_label", receipt_label, update_modified=False
-		)
 
 		if settings.get("enable_queue", 1):
 			branch_id = None
@@ -400,7 +326,7 @@ def trnsSalesSaveWrReq(doc, method):
 				doc.custom_receipt_qr_url = qr_url
 
 				create_sales_receipt(data, doc.name)
-				stockIOSaveReq(doc, date_str)
+				stockIOSaveReq(doc, eTIMS.strf_date_object(doc.posting_date))
 				doc.custom_update_sales_to_etims = 1
 
 				frappe.msgprint(_("Sales invoice synced to eTIMS successfully"))
