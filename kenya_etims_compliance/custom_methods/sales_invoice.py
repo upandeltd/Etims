@@ -69,6 +69,9 @@ def validate(doc, method):
 				invoice_numbers = validate_inv_number(doc)
 
 				if doc.custom_invoice_number in invoice_numbers:
+					# Collision safety net: clear the number so the assign-once
+					# guard in insert_invoice_number reallocates a fresh one.
+					doc.custom_invoice_number = None
 					insert_invoice_number(doc, method)
 
 
@@ -103,7 +106,11 @@ def insert_invoice_number(doc, method):
 		total_vat_amount = fetch_total_vat(doc)
 		total_non_vat_amount = fetch_total_non_vat(doc)
 
-		last_inv_number = get_last_inv_number(doc, branch_id)
+		# Assign the eTIMS invoice number ONCE. Re-deriving it on every save lets
+		# the stored invcNo drift after transmission (the post-success doc.save()
+		# re-fires on_update). Keep an already-assigned number; only allocate a
+		# new one when none exists. Tax amounts/totals below still recompute.
+		last_inv_number = doc.custom_invoice_number or get_last_inv_number(doc, branch_id)
 
 		# update_stock decision: respect the user's choice, auto-disable when
 		# enabling it would technically fail, warn when leaving it off risks
@@ -540,12 +547,24 @@ def get_last_inv_number(doc, branch_id):
 	last_inv_no = 0
 
 	if doc.custom_update_invoice_in_tims:
+		# Serialize per-branch number allocation. Lock the branch's device row
+		# with FOR UPDATE so two concurrent submits cannot read the same max and
+		# assign a DUPLICATE eTIMS invoice number (KRA rejects duplicate invcNo).
+		# The lock is held until the allocating transaction commits — and there
+		# is NO intermediate commit between here and the set_value that writes
+		# the number — so the next allocator always sees the committed number.
+		if branch_id:
+			frappe.db.sql(
+				"SELECT name FROM `tabTIS Device Initialization` WHERE branch_id = %s FOR UPDATE",
+				branch_id,
+			)
+
 		settings_docs = frappe.db.get_all(
 			"TIS Device Initialization", filters={"branch_id": branch_id}, fields=["*"]
 		)
 
 		if settings_docs:
-			last_inv_no = settings_docs[0].get("last_sales_invoice_number")
+			last_inv_no = settings_docs[0].get("last_sales_invoice_number") or 0
 
 		try:
 			last_inv = frappe.db.get_all(
@@ -561,7 +580,7 @@ def get_last_inv_number(doc, branch_id):
 			)
 
 			if last_inv and last_inv[0].get("custom_invoice_number"):
-				last_inv_no = last_inv[0].get("custom_invoice_number")
+				last_inv_no = max(last_inv_no or 0, last_inv[0].get("custom_invoice_number"))
 
 			cur_number = (last_inv_no or 0) + 1
 

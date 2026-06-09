@@ -47,6 +47,8 @@ def validate(doc, method):
 		if doc_exists:
 			invoice_numbers = validate_inv_number(doc)
 			if doc.custom_invoice_number in invoice_numbers:
+				# Collision safety net: clear so the assign-once guard reallocates.
+				doc.custom_invoice_number = None
 				insert_invoice_number(doc, method)
 
 
@@ -113,7 +115,9 @@ def insert_invoice_number(doc, method):
 		if init_docs:
 			pur_warehouse = init_docs[0].get("default_stores_warehouse")
 
-		last_inv_number = get_last_inv_number(doc, branch_id)
+		# Assign the eTIMS invoice number ONCE — re-deriving it on every save lets
+		# the stored invcNo drift after transmission. Keep an existing number.
+		last_inv_number = doc.custom_invoice_number or get_last_inv_number(doc, branch_id)
 
 		if doc.items:
 			insert_tax_amounts(doc)
@@ -560,12 +564,22 @@ def get_last_inv_number(doc, branch_id):
 	cur_number = 0
 	last_inv_no = 0
 
+	# Serialize per-branch number allocation. Lock the branch's device row with
+	# FOR UPDATE so two concurrent submits cannot read the same max and assign a
+	# DUPLICATE eTIMS invoice number (KRA rejects duplicate invcNo). No commit
+	# occurs between this lock and the set_value that writes the number.
+	if branch_id:
+		frappe.db.sql(
+			"SELECT name FROM `tabTIS Device Initialization` WHERE branch_id = %s FOR UPDATE",
+			branch_id,
+		)
+
 	settings_docs = frappe.db.get_all(
 		"TIS Device Initialization", filters={"branch_id": branch_id}, fields=["last_purchase_invoice_number"]
 	)
 
 	if settings_docs:
-		last_inv_no = settings_docs[0].get("last_purchase_invoice_number")
+		last_inv_no = settings_docs[0].get("last_purchase_invoice_number") or 0
 
 	try:
 		last_inv = frappe.db.get_all(
@@ -577,7 +591,7 @@ def get_last_inv_number(doc, branch_id):
 		)
 
 		if last_inv and last_inv[0].get("custom_invoice_number"):
-			last_inv_no = last_inv[0].get("custom_invoice_number")
+			last_inv_no = max(last_inv_no or 0, last_inv[0].get("custom_invoice_number"))
 
 		cur_number = (last_inv_no or 0) + 1
 

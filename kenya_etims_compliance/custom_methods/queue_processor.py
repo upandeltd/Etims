@@ -90,6 +90,10 @@ def process_queue_entry(queue_entry_name):
 	# Update source doc status
 	_update_source_status(queue_entry, "Processing")
 
+	# Idempotency barrier: once KRA accepts the submission, the fiscal receipt
+	# exists at KRA — a later failure must NEVER re-transmit (duplicate receipt).
+	kra_accepted = False
+
 	try:
 		payload = json.loads(queue_entry.payload)
 		client = KRAClient(branch_id=queue_entry.branch_id or None)
@@ -131,6 +135,9 @@ def process_queue_entry(queue_entry_name):
 		if "Error" in result:
 			raise ValueError(result["Error"])
 
+		# KRA accepted — past this point a failure must not downgrade to Failed.
+		kra_accepted = True
+
 		# Success
 		queue_entry.status = "Sent"
 		queue_entry.sent_at = now_datetime()
@@ -143,6 +150,25 @@ def process_queue_entry(queue_entry_name):
 
 	except Exception as e:
 		frappe.db.rollback()
+
+		if kra_accepted:
+			# KRA already accepted — only post-success processing (QR/receipt/
+			# source-status) failed. Keep "Sent"; re-transmitting would create a
+			# DUPLICATE fiscal receipt. The invoice may lack QR/signature until
+			# reprocessed manually — this is logged loudly as a known residual.
+			frappe.db.set_value(
+				"eTIMS Invoice Queue",
+				queue_entry_name,
+				{"status": "Sent", "last_error": ("Post-success processing failed: " + str(e))[:2000]},
+				update_modified=False,
+			)
+			frappe.db.commit()
+			frappe.log_error(
+				title=f"eTIMS post-success FAILED — kept Sent, NOT retried: {queue_entry.reference_name}"[:140],
+				message=traceback.format_exc(),
+			)
+			return
+
 		error_msg = str(e)[:2000]
 
 		queue_entry.reload()
@@ -161,24 +187,51 @@ def process_queue_entry(queue_entry_name):
 		)
 
 
-def retry_failed_invoices():
-	"""Scheduled job: retry failed queue entries whose next_retry_at has passed.
+# A fresh enqueue is processed by its enqueue_after_commit job within seconds;
+# only treat a still-"Queued" entry as orphaned once it is older than this.
+ORPHAN_QUEUED_MINUTES = 15
 
-	Runs every 5 minutes via scheduler_events in hooks.py.
-	Only retries entries that haven't exceeded max_retries.
+
+def retry_failed_invoices():
+	"""Scheduled job (every 5 min): re-drive queue entries that are stuck.
+
+	Rescues three classes, deduped:
+	  1. "Failed" entries whose backoff (next_retry_at) has elapsed.
+	  2. "Queued" entries reset by the pre-flight-down path (have next_retry_at).
+	  3. Orphaned fresh enqueues whose enqueue_after_commit job was lost (worker
+	     crash / redis flush): next_retry_at is null but queued_at is old.
+
+	Double-picking a fresh entry is harmless — process_queue_entry's FOR UPDATE
+	lock + status guard ("Queued"/"Failed" only) absorbs the race.
 	"""
-	failed_entries = frappe.get_all(
+	now = now_datetime()
+	cols = ["name", "retry_count", "max_retries"]
+
+	entries = frappe.get_all(
+		"eTIMS Invoice Queue",
+		filters={"status": "Failed", "next_retry_at": ["<=", now]},
+		fields=cols, order_by="queued_at asc", limit=50,
+	)
+	entries += frappe.get_all(
+		"eTIMS Invoice Queue",
+		filters={"status": "Queued", "next_retry_at": ["<=", now]},
+		fields=cols, order_by="queued_at asc", limit=50,
+	)
+	entries += frappe.get_all(
 		"eTIMS Invoice Queue",
 		filters={
-			"status": "Failed",
-			"next_retry_at": ["<=", now_datetime()],
+			"status": "Queued",
+			"next_retry_at": ["is", "not set"],
+			"queued_at": ["<", add_to_date(now, minutes=-ORPHAN_QUEUED_MINUTES)],
 		},
-		fields=["name", "retry_count", "max_retries"],
-		order_by="queued_at asc",
-		limit=50,
+		fields=cols, order_by="queued_at asc", limit=50,
 	)
 
-	for entry in failed_entries:
+	seen = set()
+	for entry in entries:
+		if entry.name in seen:
+			continue
+		seen.add(entry.name)
 		if (entry.retry_count or 0) >= (entry.max_retries or 3):
 			continue
 
