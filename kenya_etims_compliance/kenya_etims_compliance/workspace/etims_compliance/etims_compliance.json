@@ -5,15 +5,15 @@
    "label": "eTIMS Monthly Sales Transmission"
   },
   {
-   "chart_name": "eTIMS Purchase Transmission",
-   "label": "eTIMS Purchase Transmission"
+   "chart_name": "eTIMS Reconciliation Status",
+   "label": "eTIMS Reconciliation Status"
   },
   {
-   "chart_name": "eTIMS Errors Trend",
-   "label": "eTIMS Errors Trend"
+   "chart_name": "eTIMS Queue Status",
+   "label": "eTIMS Queue Status"
   }
  ],
- "content": "[{\"id\": \"etims_hdr_1\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>eTIMS Compliance Overview</b></span>\", \"col\": 12}}, {\"id\": \"etims_nc_1\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Sales Transmitted\", \"col\": 3}}, {\"id\": \"etims_nc_2\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Sales Pending\", \"col\": 3}}, {\"id\": \"etims_nc_3\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Purchases Matched\", \"col\": 3}}, {\"id\": \"etims_nc_4\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Queue Pending\", \"col\": 3}}, {\"id\": \"etims_nc_5\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Suppliers Verified\", \"col\": 3}}, {\"id\": \"etims_nc_6\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Errors This Month\", \"col\": 3}}, {\"id\": \"etims_sp_1\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"etims_hdr_2\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Transmission &amp; Reconciliation</b></span>\", \"col\": 12}}, {\"id\": \"etims_ch_1\", \"type\": \"chart\", \"data\": {\"chart_name\": \"eTIMS Monthly Sales Transmission\", \"col\": 6}}, {\"id\": \"etims_ch_2\", \"type\": \"chart\", \"data\": {\"chart_name\": \"eTIMS Errors Trend\", \"col\": 6}}, {\"id\": \"etims_ch_3\", \"type\": \"chart\", \"data\": {\"chart_name\": \"eTIMS Purchase Transmission\", \"col\": 4}}, {\"id\": \"etims_sp_2\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"etims_card_1\", \"type\": \"card\", \"data\": {\"card_name\": \"Masters\", \"col\": 4}}, {\"id\": \"etims_card_2\", \"type\": \"card\", \"data\": {\"card_name\": \"Transactions\", \"col\": 4}}, {\"id\": \"etims_card_3\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}]",
+ "content": "[{\"id\": \"etims_hdr_1\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>eTIMS Compliance Overview</b></span>\", \"col\": 12}}, {\"id\": \"etims_nc_1\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Sales Transmitted\", \"col\": 3}}, {\"id\": \"etims_nc_2\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Sales Pending\", \"col\": 3}}, {\"id\": \"etims_nc_3\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Purchases Matched\", \"col\": 3}}, {\"id\": \"etims_nc_4\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Queue Pending\", \"col\": 3}}, {\"id\": \"etims_nc_5\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Suppliers Verified\", \"col\": 3}}, {\"id\": \"etims_nc_6\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Errors This Month\", \"col\": 3}}, {\"id\": \"etims_sp_1\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"etims_hdr_2\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Transmission &amp; Reconciliation</b></span>\", \"col\": 12}}, {\"id\": \"etims_ch_1\", \"type\": \"chart\", \"data\": {\"chart_name\": \"eTIMS Monthly Sales Transmission\", \"col\": 6}}, {\"id\": \"etims_ch_2\", \"type\": \"chart\", \"data\": {\"chart_name\": \"eTIMS Queue Status\", \"col\": 6}}, {\"id\": \"etims_ch_3\", \"type\": \"chart\", \"data\": {\"chart_name\": \"eTIMS Reconciliation Status\", \"col\": 4}}, {\"id\": \"etims_sp_2\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"etims_card_1\", \"type\": \"card\", \"data\": {\"card_name\": \"Masters\", \"col\": 4}}, {\"id\": \"etims_card_2\", \"type\": \"card\", \"data\": {\"card_name\": \"Transactions\", \"col\": 4}}, {\"id\": \"etims_card_3\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}]",
  "creation": "2024-02-17 12:49:27.432630",
  "custom_blocks": [],
  "docstatus": 0,
@@ -434,7 +434,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-03-28 12:23:10.095688",
+ "modified": "2026-06-09 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Compliance",

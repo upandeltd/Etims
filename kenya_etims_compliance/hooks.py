@@ -96,6 +96,8 @@ after_install = "kenya_etims_compliance.installation.after_install.after_install
 after_migrate = [
 	"kenya_etims_compliance.installation.after_install.setup_workspace_sidebar",
 	"kenya_etims_compliance.custom_methods.install_queue_fields.install_queue_fields",
+	# Create the Number Cards / Dashboard Charts the eTIMS workspace references
+	"kenya_etims_compliance.setup_dashboard.execute",
 ]
 
 # Uninstallation

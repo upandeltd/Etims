@@ -1,4 +1,13 @@
-"""One-time script to create Number Cards and Dashboard Charts for eTIMS workspace."""
+"""Create Number Cards and Dashboard Charts referenced by the eTIMS workspace.
+
+Wired into `after_migrate` (hooks.py) so the workspace's number_card/chart blocks
+have backing documents. Idempotent (skips existing) and defensive — a single
+failed insert is logged and skipped so it can never abort `bench migrate`.
+
+Card/chart `name`s MUST match the `number_card_name` / `chart_name` references in
+kenya_etims_compliance/workspace/etims_compliance/etims_compliance.json, or the
+workspace blocks render empty.
+"""
 
 import frappe
 
@@ -6,7 +15,7 @@ import frappe
 def create_number_cards():
 	cards = [
 		{
-			"name": "eTIMS Sales Transmitted",
+			"name": "Sales Transmitted",
 			"label": "Sales Transmitted",
 			"document_type": "Sales Invoice",
 			"function": "Count",
@@ -16,7 +25,7 @@ def create_number_cards():
 			"stats_time_interval": "Monthly",
 		},
 		{
-			"name": "eTIMS Sales Pending",
+			"name": "Sales Pending",
 			"label": "Sales Pending",
 			"document_type": "Sales Invoice",
 			"function": "Count",
@@ -26,7 +35,7 @@ def create_number_cards():
 			"stats_time_interval": "Monthly",
 		},
 		{
-			"name": "eTIMS Purchases Matched",
+			"name": "Purchases Matched",
 			"label": "Purchases Matched",
 			"document_type": "Purchase Invoice",
 			"function": "Count",
@@ -36,7 +45,7 @@ def create_number_cards():
 			"stats_time_interval": "Monthly",
 		},
 		{
-			"name": "eTIMS Queue Pending",
+			"name": "Queue Pending",
 			"label": "Queue Pending",
 			"document_type": "eTIMS Invoice Queue",
 			"function": "Count",
@@ -44,7 +53,7 @@ def create_number_cards():
 			"color": "#e74c3c",
 		},
 		{
-			"name": "eTIMS Suppliers Verified",
+			"name": "Suppliers Verified",
 			"label": "Suppliers Verified",
 			"document_type": "Supplier",
 			"function": "Count",
@@ -52,8 +61,10 @@ def create_number_cards():
 			"color": "#3498db",
 		},
 		{
-			"name": "eTIMS Errors This Month",
-			"label": "Errors (This Month)",
+			# Number Card derives its name from `label`, so label MUST equal the
+			# workspace's number_card_name reference ("Errors This Month").
+			"name": "Errors This Month",
+			"label": "Errors This Month",
 			"document_type": "Error Logging",
 			"function": "Count",
 			"filters_json": "{}",
@@ -64,7 +75,9 @@ def create_number_cards():
 	]
 
 	for c in cards:
-		if not frappe.db.exists("Number Card", c["name"]):
+		if frappe.db.exists("Number Card", c["name"]):
+			continue
+		try:
 			frappe.get_doc(
 				{
 					"doctype": "Number Card",
@@ -81,8 +94,12 @@ def create_number_cards():
 				}
 			).insert(ignore_permissions=True)
 			frappe.logger().debug(f"Created number card: {c['name']}")
-		else:
-			pass
+		except Exception:
+			# Never abort migrate on a single bad card (e.g. missing field on a bench)
+			frappe.log_error(
+				title=f"eTIMS: number card create failed: {c['name']}"[:140],
+				message=frappe.get_traceback(),
+			)
 
 
 def create_dashboard_charts():
@@ -120,7 +137,9 @@ def create_dashboard_charts():
 	]
 
 	for c in charts:
-		if not frappe.db.exists("Dashboard Chart", c["name"]):
+		if frappe.db.exists("Dashboard Chart", c["name"]):
+			continue
+		try:
 			doc_data = {
 				"doctype": "Dashboard Chart",
 				"name": c["name"],
@@ -141,11 +160,15 @@ def create_dashboard_charts():
 
 			frappe.get_doc(doc_data).insert(ignore_permissions=True)
 			frappe.logger().debug(f"Created dashboard chart: {c['name']}")
-		else:
-			pass
+		except Exception:
+			frappe.log_error(
+				title=f"eTIMS: dashboard chart create failed: {c['name']}"[:140],
+				message=frappe.get_traceback(),
+			)
 
 
 def execute():
+	"""Entry point wired into after_migrate."""
 	create_number_cards()
 	create_dashboard_charts()
 	frappe.db.commit()
