@@ -104,3 +104,25 @@ class TestRealtimeEmit(FrappeTestCase):
         payload = calls[0].args[1] if len(calls[0].args) > 1 else calls[0].kwargs.get("message")
         self.assertEqual(payload["invoice"], "SINV-0009")
         self.assertTrue(calls[0].kwargs.get("after_commit"))
+
+
+class TestPosProfileEtimsSettings(FrappeTestCase):
+    @patch(
+        "kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings.get_etims_settings"
+    )
+    @patch("coale_pos.api.pos.frappe")
+    def test_profile_details_include_wait_settings(self, frappe_mock, settings_mock):
+        from coale_pos.api import pos
+
+        profile = MagicMock()
+        profile.custom_enable_etims_signing = 1
+        profile.payments = []
+        profile.item_groups = []
+        frappe_mock.get_doc.return_value = profile
+        settings_mock.return_value = {
+            "wait_for_etims_before_print": 1,
+            "etims_print_wait_seconds": 6,
+        }
+        out = pos.get_pos_profile_details("Main POS")
+        self.assertEqual(out["profile"]["etims_wait_before_print"], 1)
+        self.assertEqual(out["profile"]["etims_print_wait_seconds"], 6)
