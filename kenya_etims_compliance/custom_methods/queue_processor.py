@@ -191,6 +191,44 @@ def process_queue_entry(queue_entry_name):
 # only treat a still-"Queued" entry as orphaned once it is older than this.
 ORPHAN_QUEUED_MINUTES = 15
 
+# A real process_queue_entry run finishes in well under a minute (API timeout is
+# ~30s). Anything in "Processing" longer than this means the worker died mid-run.
+PROCESSING_STALE_MINUTES = 30
+
+
+def _reset_stuck_processing(now):
+	"""Reset entries stuck in "Processing" (worker crashed mid-run) back to Queued.
+
+	Safe to re-drive: if the crash happened AFTER KRA accepted, re-sending the same
+	invcNo is rejected by KRA as a duplicate (error_codes "already submitted"), so
+	no duplicate fiscal receipt is created — the entry lands Failed/incomplete and
+	can be recovered via "Search Sales Transaction". The threshold is far beyond the
+	API timeout so only dead workers are affected.
+	"""
+	stuck = frappe.get_all(
+		"eTIMS Invoice Queue",
+		filters={
+			"status": "Processing",
+			"processing_at": ["<", add_to_date(now, minutes=-PROCESSING_STALE_MINUTES)],
+		},
+		pluck="name",
+	)
+	for name in stuck:
+		frappe.db.set_value(
+			"eTIMS Invoice Queue",
+			name,
+			{"status": "Queued", "next_retry_at": now},
+			update_modified=False,
+		)
+		frappe.log_error(
+			title=f"eTIMS: reset stale Processing -> Queued: {name}"[:140],
+			message="Worker likely crashed mid-run; re-queued. KRA rejects duplicate "
+			"invcNo, so no duplicate receipt risk.",
+		)
+	if stuck:
+		frappe.db.commit()
+	return stuck
+
 
 def retry_failed_invoices():
 	"""Scheduled job (every 5 min): re-drive queue entries that are stuck.
@@ -206,6 +244,10 @@ def retry_failed_invoices():
 	"""
 	now = now_datetime()
 	cols = ["name", "retry_count", "max_retries"]
+
+	# Reset dead-worker "Processing" entries to Queued first so they are rescued
+	# by the Queued bucket below in this same run.
+	_reset_stuck_processing(now)
 
 	entries = frappe.get_all(
 		"eTIMS Invoice Queue",

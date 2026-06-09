@@ -7,7 +7,13 @@ import requests
 from frappe import _, scrub
 from frappe.utils import flt
 
-from kenya_etims_compliance.utils.etims_utils import eTIMS, get_next_sar_number, get_org_sar_number, get_tax_template_details
+from kenya_etims_compliance.utils.etims_utils import (
+	apply_tax_bands,
+	eTIMS,
+	get_next_sar_number,
+	get_org_sar_number,
+	get_tax_template_details,
+)
 from kenya_etims_compliance.utils.permissions import can_modify_doctype
 from kenya_etims_compliance.utils.kra_client import KRAClient
 
@@ -291,19 +297,8 @@ def handle_reverse_invoice(doc):
 		"itemList": etims_pur_item_list(doc),
 	}
 
-	# Add tax breakdown
-	for code in ["A", "B", "C", "D", "E"]:
-		payload[f"taxblAmt{code}"] = 0
-		payload[f"taxRt{code}"] = 0
-		payload[f"taxAmt{code}"] = 0
-
-	if doc.taxes:
-		for tax_item in doc.taxes:
-			code = tax_item.get("custom_code")
-			if code and code in ["A", "B", "C", "D", "E"]:
-				payload[f"taxblAmt{code}"] = abs(round(tax_item.get("custom_total_taxable_amount", 0), 2))
-				payload[f"taxRt{code}"] = abs(get_tax_account_rate(tax_item.get("account_head")) or 0)
-				payload[f"taxAmt{code}"] = abs(tax_item.get("base_tax_amount_after_discount_amount", 0))
+	# KRA tax bands A-E (shared, summed-per-band, null-guarded helper)
+	apply_tax_bands(payload, doc.taxes, get_tax_account_rate)
 
 	result = KRAClient().post(
 		"saveTrnsSalesOsdc",
@@ -326,8 +321,6 @@ def trnsPurchaseSaveReq(doc, method):
 		return
 
 	supplier_details = get_supplier_details(doc.supplier)
-
-	tax_code_list = []
 
 	request_date_and_time = doc.modified
 
@@ -370,59 +363,7 @@ def trnsPurchaseSaveReq(doc, method):
 		"itemList": etims_pur_item_list(doc),
 	}
 
-	for tax_item in doc.taxes:
-		if tax_item.get("custom_code") not in tax_code_list:
-			tax_code_list.append(tax_item.get("custom_code"))
-
-		if "A" in tax_code_list:
-			if tax_item.custom_code == "A":
-				payload["taxblAmtA"] = abs(round((tax_item.get("custom_total_taxable_amount")), 2))
-				payload["taxRtA"] = abs(get_tax_account_rate(tax_item.get("account_head")))
-				payload["taxAmtA"] = abs(tax_item.get("tax_amount_after_discount_amount"))
-		else:
-			payload["taxblAmtA"] = 0
-			payload["taxRtA"] = 0
-			payload["taxAmtA"] = 0
-
-		if "B" in tax_code_list:
-			if tax_item.custom_code == "B":
-				payload["taxblAmtB"] = abs(round((tax_item.get("custom_total_taxable_amount")), 2))
-				payload["taxRtB"] = abs(get_tax_account_rate(tax_item.get("account_head")))
-				payload["taxAmtB"] = abs(tax_item.get("tax_amount_after_discount_amount"))
-		else:
-			payload["taxblAmtB"] = 0
-			payload["taxRtB"] = 0
-			payload["taxAmtB"] = 0
-
-		if "C" in tax_code_list:
-			if tax_item.custom_code == "C":
-				payload["taxblAmtC"] = abs(round((tax_item.get("custom_total_taxable_amount")), 2))
-				payload["taxRtC"] = abs(get_tax_account_rate(tax_item.get("account_head")))
-				payload["taxAmtC"] = abs(tax_item.get("tax_amount_after_discount_amount"))
-		else:
-			payload["taxblAmtC"] = 0
-			payload["taxRtC"] = 0
-			payload["taxAmtC"] = 0
-
-		if "D" in tax_code_list:
-			if tax_item.custom_code == "D":
-				payload["taxblAmtD"] = abs(round((tax_item.get("custom_total_taxable_amount")), 2))
-				payload["taxRtD"] = abs(get_tax_account_rate(tax_item.get("account_head")))
-				payload["taxAmtD"] = abs(tax_item.get("tax_amount_after_discount_amount"))
-		else:
-			payload["taxblAmtD"] = 0
-			payload["taxRtD"] = 0
-			payload["taxAmtD"] = 0
-
-		if "E" in tax_code_list:
-			if tax_item.custom_code == "E":
-				payload["taxblAmtE"] = abs(round((tax_item.get("custom_total_taxable_amount")), 2))
-				payload["taxRtE"] = abs(get_tax_account_rate(tax_item.get("account_head")))
-				payload["taxAmtE"] = abs(tax_item.get("tax_amount_after_discount_amount"))
-		else:
-			payload["taxblAmtE"] = 0
-			payload["taxRtE"] = 0
-			payload["taxAmtE"] = 0
+	apply_tax_bands(payload, doc.taxes, get_tax_account_rate)
 
 	if doc.is_return == 1:
 		return_status = purchase_return_information(doc)
