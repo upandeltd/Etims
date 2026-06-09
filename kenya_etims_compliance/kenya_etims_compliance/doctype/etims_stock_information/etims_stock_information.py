@@ -5,16 +5,23 @@ import traceback
 from datetime import datetime
 
 import frappe
-from frappe import enqueue
+from frappe import _, enqueue
 from frappe.model.document import Document
 
 from kenya_etims_compliance.utils.etims_utils import eTIMS
 from kenya_etims_compliance.utils.kra_client import KRAClient
+from kenya_etims_compliance.utils.permissions import can_sync_to_etims
 
 
 class eTIMSStockInformation(Document):
 	@frappe.whitelist()
 	def stockMoveReq(self):
+		if not can_sync_to_etims(self.doctype):
+			frappe.throw(
+				_("Permission Denied: you do not have permission to sync to eTIMS."),
+				frappe.PermissionError,
+			)
+
 		request_datetime = self.from_date_and_time
 		date_time_str = eTIMS.strf_datetime_object(request_datetime)
 
@@ -42,6 +49,12 @@ class eTIMSStockInformation(Document):
 
 	@frappe.whitelist()
 	def stockMasterSaveReq(self):
+		if not can_sync_to_etims(self.doctype):
+			frappe.throw(
+				_("Permission Denied: you do not have permission to sync to eTIMS."),
+				frappe.PermissionError,
+			)
+
 		for item in self.items:
 			if not item.get("saved") == 1:
 				payload = {

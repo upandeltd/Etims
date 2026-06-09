@@ -2,8 +2,11 @@ import traceback
 from datetime import datetime
 
 import frappe
+from frappe import _
+from frappe.utils import cint
 
 from kenya_etims_compliance.utils.etims_utils import eTIMS
+from kenya_etims_compliance.utils.permissions import can_sync_to_etims
 
 
 @frappe.whitelist()
@@ -15,6 +18,28 @@ def sync_stock_release_number(sar_no, org_sar_no=0, sar_type=None):
 	    org_sar_no: Original stock release number (default: 0)
 	    sar_type: SAR type code (optional, will use settings default if not provided)
 	"""
+	if not can_sync_to_etims("eTIMS Stock Release Number"):
+		frappe.throw(
+			_("Permission Denied: you do not have permission to sync to eTIMS."),
+			frappe.PermissionError,
+		)
+
+	# Validate numeric inputs
+	sar_no = cint(sar_no)
+	if sar_no <= 0:
+		frappe.throw(_("Invalid stock release number."), frappe.ValidationError)
+
+	# org_sar_no defaults to 0 ("no original SAR"), so allow 0 but reject negatives
+	org_sar_no = cint(org_sar_no)
+	if org_sar_no < 0:
+		frappe.throw(_("Invalid original stock release number."), frappe.ValidationError)
+
+	# Validate sar_type: must be a short non-empty string when provided
+	if sar_type is not None:
+		sar_type = str(sar_type).strip()
+		if not sar_type or len(sar_type) > 10:
+			frappe.throw(_("Invalid SAR type."), frappe.ValidationError)
+
 	# Use settings to get default SAR type if not provided
 	if sar_type is None:
 		from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import (

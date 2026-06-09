@@ -12,6 +12,7 @@ import frappe
 from frappe import _
 
 from kenya_etims_compliance.utils.etims_utils import eTIMS
+from kenya_etims_compliance.utils.permissions import can_modify_doctype
 
 
 def validate_payment_for_etims_invoice(doc, method):
@@ -153,6 +154,12 @@ def check_payment_eligibility(payment_entry_name):
 	        "message": "..."
 	    }
 	"""
+	if not can_modify_doctype("Purchase Invoice", "read"):
+		frappe.throw(
+			_("Permission Denied: you do not have read permission for {0}.").format("Purchase Invoice"),
+			frappe.PermissionError,
+		)
+
 	try:
 		doc = frappe.get_doc("Payment Entry", payment_entry_name)
 
@@ -226,6 +233,12 @@ def get_payment_verification_summary(from_date=None, to_date=None):
 	        "verification_rate": "xx%"
 	    }
 	"""
+	if not can_modify_doctype("Purchase Invoice", "read"):
+		frappe.throw(
+			_("Permission Denied: you do not have read permission for {0}.").format("Purchase Invoice"),
+			frappe.PermissionError,
+		)
+
 	try:
 		filters = {"docstatus": 1}
 
@@ -307,6 +320,12 @@ def get_unpaid_invoices_summary():
 	        "verified_amount": yyy
 	    }
 	"""
+	if not can_modify_doctype("Purchase Invoice", "read"):
+		frappe.throw(
+			_("Permission Denied: you do not have read permission for {0}.").format("Purchase Invoice"),
+			frappe.PermissionError,
+		)
+
 	try:
 		# Get all unpaid (not fully paid) submitted purchase invoices
 		unpaid_invoices = frappe.db.get_all(

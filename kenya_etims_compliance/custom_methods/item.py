@@ -6,6 +6,7 @@ from frappe import _
 
 from kenya_etims_compliance.utils.etims_utils import eTIMS
 from kenya_etims_compliance.utils.kra_client import KRAClient
+from kenya_etims_compliance.utils.permissions import can_sync_to_etims
 
 
 # This part describes the components of SaveItem API function (url : /saveItem) and data types for each item.
@@ -128,6 +129,12 @@ def validate_item_for_etims(doc_name):
 
 @frappe.whitelist()
 def itemSaveReq(doc_name):
+	if not can_sync_to_etims("Item"):
+		frappe.throw(
+			_("Permission Denied: you do not have permission to sync to eTIMS."),
+			frappe.PermissionError,
+		)
+
 	response = eTIMS.itemSaveReq(doc_name)
 
 	for key, value in response.items():
@@ -166,6 +173,14 @@ def selectItemReq(item_code):
 
 @frappe.whitelist()
 def importItemUpdateReq(doc_name):
+	if not can_sync_to_etims("Item"):
+		frappe.throw(
+			_("Permission Denied: you do not have permission to sync to eTIMS."),
+			frappe.PermissionError,
+		)
+
+	frappe.has_permission("Item", "write", doc=doc_name, throw=True)
+
 	import_item = frappe.get_doc("Item", doc_name)
 
 	if import_item.custom_is_import_item == 1:

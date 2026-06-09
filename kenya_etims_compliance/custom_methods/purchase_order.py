@@ -13,6 +13,7 @@ import frappe
 from frappe import _
 
 from kenya_etims_compliance.utils.etims_utils import eTIMS
+from kenya_etims_compliance.utils.permissions import can_modify_doctype
 
 
 @frappe.whitelist()
@@ -34,6 +35,14 @@ def send_purchase_order_to_etims(purchase_order_name):
 	        "message": "..."
 	    }
 	"""
+	if not can_modify_doctype("eTIMS Purchase Order Tracking", "create"):
+		frappe.throw(
+			_("Permission Denied: you do not have create permission for {0}.").format(
+				"eTIMS Purchase Order Tracking"
+			),
+			frappe.PermissionError,
+		)
+
 	try:
 		po = frappe.get_doc("Purchase Order", purchase_order_name)
 
@@ -82,6 +91,14 @@ def reconcile_purchase_with_invoice(invoice_name):
 	        "message": "..."
 	    }
 	"""
+	if not can_modify_doctype("eTIMS Purchase Order Tracking", "write"):
+		frappe.throw(
+			_("Permission Denied: you do not have write permission for {0}.").format(
+				"eTIMS Purchase Order Tracking"
+			),
+			frappe.PermissionError,
+		)
+
 	try:
 		invoice = frappe.get_doc("Purchase Invoice", invoice_name)
 
@@ -135,6 +152,14 @@ def update_po_payment_status(invoice_name, payment_entry):
 	Returns:
 	    {"success": True/False, "message": "..."}
 	"""
+	if not can_modify_doctype("eTIMS Purchase Order Tracking", "write"):
+		frappe.throw(
+			_("Permission Denied: you do not have write permission for {0}.").format(
+				"eTIMS Purchase Order Tracking"
+			),
+			frappe.PermissionError,
+		)
+
 	try:
 		invoice = frappe.get_doc("Purchase Invoice", invoice_name)
 
@@ -198,6 +223,14 @@ def get_po_tracking_summary(purchase_order):
 	        "paid": True/False
 	    }
 	"""
+	if not can_modify_doctype("eTIMS Purchase Order Tracking", "read"):
+		frappe.throw(
+			_("Permission Denied: you do not have read permission for {0}.").format(
+				"eTIMS Purchase Order Tracking"
+			),
+			frappe.PermissionError,
+		)
+
 	try:
 		tracking = frappe.db.get_value("eTIMS Purchase Order Tracking", {"purchase_order": purchase_order})
 
@@ -235,6 +268,14 @@ def get_all_unreconciled_pos():
 	        "total_amount": xxx
 	    }
 	"""
+	if not can_modify_doctype("eTIMS Purchase Order Tracking", "read"):
+		frappe.throw(
+			_("Permission Denied: you do not have read permission for {0}.").format(
+				"eTIMS Purchase Order Tracking"
+			),
+			frappe.PermissionError,
+		)
+
 	try:
 		tracking_records = frappe.db.get_all(
 			"eTIMS Purchase Order Tracking",
@@ -282,6 +323,14 @@ def get_supplier_po_status(supplier):
 	        "paid": p
 	    }
 	"""
+	if not can_modify_doctype("eTIMS Purchase Order Tracking", "read"):
+		frappe.throw(
+			_("Permission Denied: you do not have read permission for {0}.").format(
+				"eTIMS Purchase Order Tracking"
+			),
+			frappe.PermissionError,
+		)
+
 	try:
 		tracking_records = frappe.db.get_all(
 			"eTIMS Purchase Order Tracking",

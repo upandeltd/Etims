@@ -15,6 +15,7 @@ from kenya_etims_compliance.utils.etims_utils import (
 	get_packing_and_quantity_unit,
 )
 from kenya_etims_compliance.utils.kra_client import KRAClient
+from kenya_etims_compliance.utils.permissions import can_sync_to_etims
 
 
 class eTIMSItemInformation(Document):
@@ -23,6 +24,12 @@ class eTIMSItemInformation(Document):
 	# The ItemClsSearchReq is an Argument Object of Request, The ItemClsSearchRes is a ReturnObject ofResponse.
 	@frappe.whitelist()
 	def itemClsSearchReq(self):
+		if not can_sync_to_etims(self.doctype):
+			frappe.throw(
+				_("Permission Denied: you do not have permission to sync to eTIMS."),
+				frappe.PermissionError,
+			)
+
 		request_datetime = self.search_datetime
 		date_time_str = eTIMS.strf_datetime_object(request_datetime)
 
@@ -54,6 +61,12 @@ class eTIMSItemInformation(Document):
 	# The ItemSearchReq is an Argument Object of Request, The ItemSearchRes is a Return Object of Response
 	@frappe.whitelist()
 	def itemSearchReq(self):
+		if not can_sync_to_etims(self.doctype):
+			frappe.throw(
+				_("Permission Denied: you do not have permission to sync to eTIMS."),
+				frappe.PermissionError,
+			)
+
 		request_datetime = self.item_request_datetime
 		date_time_str = eTIMS.strf_datetime_object(request_datetime)
 
@@ -83,6 +96,12 @@ class eTIMSItemInformation(Document):
 
 	@frappe.whitelist()
 	def itemSaveComposition(self):
+		if not can_sync_to_etims(self.doctype):
+			frappe.throw(
+				_("Permission Denied: you do not have permission to sync to eTIMS."),
+				frappe.PermissionError,
+			)
+
 		if not self.bom_items:
 			frappe.throw(_("No BOM items to register!"))
 
@@ -119,6 +138,12 @@ class eTIMSItemInformation(Document):
 
 	@frappe.whitelist()
 	def consolidate_item_bom(self):
+		if not can_sync_to_etims(self.doctype):
+			frappe.throw(
+				_("Permission Denied: you do not have permission to sync to eTIMS."),
+				frappe.PermissionError,
+			)
+
 		try:
 			if not self.item:
 				frappe.throw(_("No Item Selected!"))
