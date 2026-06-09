@@ -1,3 +1,5 @@
+import frappe
+
 app_name = "kenya_etims_compliance"
 app_title = "Kenya Etims Compliance"
 app_publisher = "Upande Ltd"
@@ -279,7 +281,6 @@ scheduler_events = {
 fixtures = [
 	{"dt": "Custom Field", "filters": [["module", "=", "Kenya Etims Compliance"]]},
 	{"dt": "Workspace", "filters": [["name", "=", "eTIMS Compliance"]]},
-	{"dt": "Workspace Sidebar", "filters": [["module", "=", "Kenya Etims Compliance"]]},
 	{
 		"dt": "Role",
 		"filters": [
@@ -300,3 +301,15 @@ fixtures = [
 	},
 	{"dt": "eTIMS Credit Note Reason", "filters": [["code", "!=", ""]]},
 ]
+
+# "Workspace Sidebar" is a v16+ DocType. Including it unconditionally breaks
+# `bench export-fixtures` on v15 (the DocType/table does not exist). Add it only
+# on v16+, matching the version guard in installation/after_install.py. The
+# import path (sync_fixtures) already skips the v16 sidebar JSON on v15.
+try:
+	if int(frappe.__version__.split(".")[0]) >= 16:
+		fixtures.append(
+			{"dt": "Workspace Sidebar", "filters": [["module", "=", "Kenya Etims Compliance"]]}
+		)
+except Exception:
+	pass
