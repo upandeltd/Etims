@@ -12,6 +12,11 @@ from kenya_etims_compliance.utils.etims_utils import eTIMS
 # KRA caps these identifier fields at 20 characters (saveBhfUser spec).
 KRA_ID_MAX_LEN = 20
 
+# saveBhfUser payload keys KRA limits to 20 chars (identifiers/codes — NOT the
+# free-text name/address/remark fields, which allow more). Used to name the
+# offending field instead of KRA's blank "[ : length must be between 0 and 20]".
+KRA_BHF_USER_SHORT_FIELDS = ("userId", "pwd", "cntc", "authCd", "useYn", "regrId", "modrId")
+
 
 class eTIMSBranchUser(Document):
     def validate(self):
@@ -63,16 +68,43 @@ class eTIMSBranchUser(Document):
                 "modrNm":user.get("modifier_name")
             }
     
+            # Pre-flight: name any 20-char-capped field that is too long, so the
+            # user gets an actionable error instead of KRA's blank-field one.
+            too_long = {
+                k: len(payload[k])
+                for k in KRA_BHF_USER_SHORT_FIELDS
+                if isinstance(payload.get(k), str) and len(payload[k]) > KRA_ID_MAX_LEN
+            }
+            if too_long:
+                frappe.throw(
+                    _("These fields exceed KRA's {0}-character limit: {1}. Shorten them and retry.").format(
+                        KRA_ID_MAX_LEN,
+                        ", ".join("{0} ({1} chars)".format(k, v) for k, v in too_long.items()),
+                    ),
+                    title=_("Field too long for KRA"),
+                )
+
             try:
                 response = requests.request(
-                    "POST", 
-                    eTIMS.tims_base_url() + 'saveBhfUser', 
-                    json=payload, 
+                    "POST",
+                    eTIMS.tims_base_url() + 'saveBhfUser',
+                    json=payload,
                     headers=headers
                 )
                 response_json = response.json()
 
                 if not response_json.get("resultCd") == '000':
+                    # KRA hides the offending field; log every field length so it
+                    # can be identified from the Error Log.
+                    field_lengths = {
+                        k: (len(v) if isinstance(v, str) else v) for k, v in payload.items()
+                    }
+                    frappe.log_error(
+                        message="saveBhfUser rejected: {0}\nField lengths: {1}".format(
+                            response_json.get("resultMsg"), field_lengths
+                        ),
+                        title="eTIMS Branch User register failed",
+                    )
                     return {"Error":response_json.get("resultMsg")}
 
                 user.saved = 1
