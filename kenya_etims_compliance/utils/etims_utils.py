@@ -364,9 +364,9 @@ class eTIMS:
 			"sftyQty": item.get("custom_safety_quantity") or 0,
 			"isrcAplcbYn": item.get("custom_insurance_appicableyn") or "N",
 			"useYn": item.get("custom_used__unused") or "Y",
-			"regrId": regr_id,
+			"regrId": (regr_id or "")[:20],  # KRA caps the id at 20 chars; names allow more
 			"regrNm": regr_nm,
-			"modrId": modr_id,
+			"modrId": (modr_id or "")[:20],
 			"modrNm": modr_nm,
 		}
 
@@ -854,6 +854,11 @@ def get_org_sar_number(doc):
 	return prev[0].sr_number if prev else 0
 
 
+# KRA taxation type bands and the Non-VAT code, shared across the band helpers.
+KRA_TAX_BANDS = ("A", "B", "C", "D", "E")
+NON_VAT_CODE = "D"
+
+
 def apply_tax_bands(payload, taxes, rate_func):
 	"""Aggregate KRA tax bands A-E into ``payload`` from a document's tax rows.
 
@@ -868,14 +873,14 @@ def apply_tax_bands(payload, taxes, rate_func):
 
 	``rate_func(account_head)`` returns the account's tax rate.
 	"""
-	for code in ("A", "B", "C", "D", "E"):
+	for code in KRA_TAX_BANDS:
 		payload[f"taxblAmt{code}"] = 0
 		payload[f"taxRt{code}"] = 0
 		payload[f"taxAmt{code}"] = 0
 
 	for tax in (taxes or []):
 		code = tax.get("custom_code")
-		if code in ("A", "B", "C", "D", "E"):
+		if code in KRA_TAX_BANDS:
 			payload[f"taxblAmt{code}"] += abs(round(tax.get("custom_total_taxable_amount") or 0, 2))
 			payload[f"taxAmt{code}"] += abs(tax.get("base_tax_amount_after_discount_amount") or 0)
 			payload[f"taxRt{code}"] = abs(rate_func(tax.get("account_head")) or 0)

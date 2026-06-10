@@ -13,19 +13,25 @@ from kenya_etims_compliance.utils.permissions import can_sync_to_etims
 # This API function is divided into 'Request: Argument' and 'Response: Return Object'.
 # The ItemSaveReq is an Argument Object of Request, The ItemSaveRes is a Return Object of Response
 def _get_branch_user_name(system_user):
-	"""Resolve system user to registered eTIMS Branch User name.
+	"""Resolve a Frappe login to its registered eTIMS Branch User name.
 
-	Returns the `user_name` if the user is registered and saved,
-	otherwise returns None.
+	The Frappe login (an item's owner/modifier) is linked via the branch user's
+	``system_user`` field — the KRA ``user_id`` is a separate, ≤20-char identifier
+	that need not equal the email. Falls back to matching ``user_id`` directly for
+	older records that stored the login there. Returns ``user_name`` of a saved
+	branch user, else None.
 	"""
 	if not system_user:
 		return None
 	try:
-		return frappe.db.get_value(
+		rows = frappe.get_all(
 			"eTIMS Branch User",
-			{"user_id": system_user, "saved": 1},
-			"user_name",
+			filters={"saved": 1},
+			or_filters={"system_user": system_user, "user_id": system_user},
+			fields=["user_name"],
+			limit=1,
 		)
+		return rows[0].user_name if rows else None
 	except Exception:
 		return None
 

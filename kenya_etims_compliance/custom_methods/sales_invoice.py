@@ -5,6 +5,7 @@ import frappe
 import requests
 import segno
 from frappe import _
+from frappe.utils import flt
 
 from kenya_etims_compliance.custom_methods.queue_processor import enqueue_invoice
 from kenya_etims_compliance.custom_methods.receipt_labels import get_receipt_label
@@ -12,6 +13,8 @@ from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_
 	get_etims_settings,
 )
 from kenya_etims_compliance.utils.etims_utils import (
+	KRA_TAX_BANDS,
+	NON_VAT_CODE,
 	apply_tax_bands,
 	eTIMS,
 	get_next_sar_number,
@@ -701,6 +704,80 @@ def sales_return_information(doc):
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# VAT obligation enforcement
+# ---------------------------------------------------------------------------
+# A company with no VAT obligation (eTIMS Settings -> VAT Obligation =
+# "Not Registered") must never report VAT it is not registered to collect.
+# Two layers keep the booked invoice and the KRA payload consistent:
+#   1. enforce_vat_obligation (before_validate) removes the VAT-bearing Sales
+#      Taxes and Charges rows *before* ERPNext computes taxes, so no VAT is
+#      charged on the actual invoice. VAT lives in the tax rows (re-mapping the
+#      item tax template does NOT remove it — set_missing_values regenerates the
+#      per-item map), so the rows are the reliable lever. With VAT-inclusive
+#      pricing the gross total is preserved; with exclusive pricing the add-on
+#      VAT is dropped.
+#   2. _normalize_payload_non_vat (inside build_sales_payload) forces the KRA
+#      payload into a clean band-D structure, so a stray VAT band/line can
+#      never be transmitted.
+# ---------------------------------------------------------------------------
+
+
+def enforce_vat_obligation(doc, method):
+	"""before_validate: strip VAT from eTIMS-bound invoices for non-VAT companies.
+
+	Removes every VAT-bearing tax row (rate > 0) before tax calculation, so
+	ERPNext recomputes the invoice with no VAT charged. Idempotent: an invoice
+	that already carries no rated tax row is left untouched.
+	"""
+	# Cheap in-memory checks first; only read settings for eTIMS-bound invoices.
+	if not doc.get("custom_update_invoice_in_tims") or not doc.get("taxes"):
+		return
+	if get_etims_settings().get("vat_obligation") != "Not Registered":
+		return
+
+	vat_rows = [t for t in doc.taxes if flt(t.get("rate")) > 0]
+	if not vat_rows:
+		return
+
+	doc.set("taxes", [t for t in doc.taxes if flt(t.get("rate")) <= 0])
+
+	frappe.msgprint(
+		_(
+			"VAT Obligation is 'Not Registered': removed {0} VAT charge row(s) so no VAT "
+			"is charged or transmitted to KRA. With VAT-inclusive pricing the total is "
+			"unchanged; with VAT-exclusive pricing the VAT is dropped.<br>Accounts: {1}"
+		).format(len(vat_rows), ", ".join(t.account_head for t in vat_rows)),
+		title=_("VAT removed (Non-VAT company)"),
+		indicator="orange",
+	)
+
+
+def _normalize_payload_non_vat(payload):
+	"""Force a clean Non-VAT (D) structure on a KRA sales payload.
+
+	Folds the whole supply into band D at 0% and forces every line's taxTyCd to D
+	with zero tax — the transmission-boundary guarantee that complements the
+	before_validate conversion, so no stray VAT band/line can reach KRA.
+	"""
+	items = payload.get("itemList") or []
+	band_total = abs(round(sum(flt(li.get("taxblAmt")) for li in items), 2))
+
+	for code in KRA_TAX_BANDS:
+		payload[f"taxblAmt{code}"] = 0
+		payload[f"taxAmt{code}"] = 0
+		payload[f"taxRt{code}"] = 0
+	payload[f"taxblAmt{NON_VAT_CODE}"] = band_total
+	payload["totTaxblAmt"] = band_total
+	payload["totTaxAmt"] = 0
+
+	for li in items:
+		li["taxTyCd"] = NON_VAT_CODE
+		li["taxAmt"] = 0
+
+	return payload
+
+
 def build_sales_payload(doc):
 	"""Build the KRA save_sales payload for a Sales Invoice.
 
@@ -749,6 +826,10 @@ def build_sales_payload(doc):
 
 	# KRA tax bands A-E (shared, summed-per-band, null-guarded helper)
 	apply_tax_bands(payload, doc.taxes, get_tax_account_rate)
+
+	# Non-VAT company: force a clean band-D payload and assert no VAT survives.
+	if get_etims_settings().get("vat_obligation") == "Not Registered":
+		_normalize_payload_non_vat(payload)
 
 	if doc.is_return == 1:
 		return_status = sales_return_information(doc)

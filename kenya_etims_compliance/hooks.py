@@ -154,6 +154,7 @@ after_migrate = [
 
 doc_events = {
 	"Sales Invoice": {
+		"before_validate": "kenya_etims_compliance.custom_methods.sales_invoice.enforce_vat_obligation",
 		"before_save": "kenya_etims_compliance.custom_methods.sales_invoice.validate",
 		"before_submit": "kenya_etims_compliance.custom_methods.sales_invoice.trnsSalesSaveWrReq",
 		"on_update": "kenya_etims_compliance.custom_methods.sales_invoice.insert_invoice_number",

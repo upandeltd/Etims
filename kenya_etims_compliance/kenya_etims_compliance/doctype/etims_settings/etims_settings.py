@@ -59,6 +59,7 @@ def get_etims_settings():
 		"queue_retry_interval": 5,
 		"wait_for_etims_before_print": 1,
 		"etims_print_wait_seconds": 6,
+		"vat_obligation": "Registered",
 	}
 
 	try:
