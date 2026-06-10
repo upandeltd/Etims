@@ -25,6 +25,27 @@ frappe.listview_settings["Item"].onload = function (listview) {
 		__("Actions")
 	);
 
+	// One-click: enable "Update Item To TIMS" (autofills eTIMS fields) AND
+	// register each valid item to KRA. Invalid items are skipped and reported.
+	listview.page.add_inner_button(
+		__("Update Item To TIMS"),
+		function () {
+			const items = listview.get_checked_items();
+			if (!items.length) {
+				frappe.msgprint(__("Please select items first"));
+				return;
+			}
+			const item_names = items.map(i => i.name);
+			frappe.confirm(
+				__("Enable 'Update Item To TIMS' and register {0} selected item(s) to eTIMS? Invalid items are skipped and reported.", [item_names.length]),
+				function () {
+					_bulkUpdateAndRegister(item_names, listview);
+				}
+			);
+		},
+		__("Actions")
+	);
+
 	// Refresh button state on selection change
 	listview.page.body.on("change", ".list-row-checkbox", function () {
 		const checked = listview.get_checked_items().length;
@@ -102,5 +123,37 @@ function _validateAndBulkRegister(item_names, listview) {
 				}
 			});
 		}
+	});
+}
+
+function _bulkUpdateAndRegister(item_names, listview) {
+	frappe.call({
+		method: "kenya_etims_compliance.custom_methods.bulk_operations.bulk_update_and_register_items",
+		args: { items: JSON.stringify(item_names) },
+		freeze: true,
+		freeze_message: __("Updating & registering {0} item(s) in eTIMS...", [item_names.length]),
+		callback: function (r) {
+			const res = r.message || {};
+			const invalid = res.invalid || [];
+
+			let body = `<p>${__("{0} of {1} item(s) registered. {2} skipped/failed.", [res.success || 0, res.total || 0, res.failed || 0])}</p>`;
+			if (invalid.length) {
+				const rows = invalid.map(function (i) {
+					return `<tr><td><strong>${frappe.utils.escape_html(i.item)}</strong></td>
+						<td><ul style="margin:0;padding-left:16px">${(i.errors || []).map(e => `<li>${frappe.utils.escape_html(e)}</li>`).join("")}</ul></td></tr>`;
+				}).join("");
+				body += `<table class="table table-bordered" style="font-size:12px;margin-top:8px">
+					<thead><tr><th>${__("Item")}</th><th>${__("Why skipped")}</th></tr></thead>
+					<tbody>${rows}</tbody></table>`;
+			}
+
+			frappe.msgprint({
+				title: __("Update Item To TIMS — Complete"),
+				indicator: (res.failed || 0) > 0 ? "orange" : "green",
+				message: body,
+			});
+			listview.clear_checked_items && listview.clear_checked_items();
+			listview.refresh();
+		},
 	});
 }
