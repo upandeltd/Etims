@@ -12,10 +12,16 @@ from kenya_etims_compliance.utils.etims_utils import eTIMS
 # KRA caps these identifier fields at 20 characters (saveBhfUser spec).
 KRA_ID_MAX_LEN = 20
 
+# Allowed length for the branch user id. NOTE: KRA's saveBhfUser spec caps userId
+# at 20 chars and may reject 21-30 at its end — this guard is intentionally set
+# higher (per request) so the user id field itself is not blocked below 30.
+KRA_USER_ID_MAX_LEN = 30
+
 # saveBhfUser payload keys KRA limits to 20 chars (identifiers/codes — NOT the
-# free-text name/address/remark fields, which allow more). Used to name the
-# offending field instead of KRA's blank "[ : length must be between 0 and 20]".
-KRA_BHF_USER_SHORT_FIELDS = ("userId", "pwd", "cntc", "authCd", "useYn", "regrId", "modrId")
+# free-text name/address/remark fields, nor userId which is guarded separately).
+# Used to name the offending field instead of KRA's blank
+# "[ : length must be between 0 and 20]".
+KRA_BHF_USER_SHORT_FIELDS = ("pwd", "cntc", "authCd", "useYn", "regrId", "modrId")
 
 
 class eTIMSBranchUser(Document):
@@ -28,13 +34,13 @@ class eTIMSBranchUser(Document):
         the Frappe login is held in ``system_user`` (used to match an item's
         creator/modifier), so auto-link it when ``user_id`` is itself a login.
         """
-        if self.user_id and len(self.user_id) > KRA_ID_MAX_LEN:
+        if self.user_id and len(self.user_id) > KRA_USER_ID_MAX_LEN:
             frappe.throw(
                 _(
-                    "User ID '{0}' is {1} characters. KRA limits the user ID to {2}. "
+                    "User ID '{0}' is {1} characters. The maximum is {2}. "
                     "Use a short identifier here (e.g. a username) and set 'System User' "
-                    "to the full Frappe login."
-                ).format(self.user_id, len(self.user_id), KRA_ID_MAX_LEN)
+                    "to the full Frappe login. (Note: KRA itself caps userId at 20.)"
+                ).format(self.user_id, len(self.user_id), KRA_USER_ID_MAX_LEN)
             )
         if not self.system_user and self.user_id and frappe.db.exists("User", self.user_id):
             self.system_user = self.user_id

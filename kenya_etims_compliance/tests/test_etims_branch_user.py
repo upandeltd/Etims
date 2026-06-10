@@ -17,20 +17,20 @@ class TestBranchUserGuards(FrappeTestCase):
     def _login(self):
         return frappe.db.get_value("User", {"enabled": 1}, "name")
 
-    def test_long_user_id_is_blocked_with_clear_message(self):
+    def test_over_30_user_id_is_blocked_with_clear_message(self):
         bu = frappe.new_doc("eTIMS Branch User")
-        bu.user_id = "mustafa@sajmustafa.com"  # 22 chars > 20
+        bu.user_id = "x" * 31  # > 30 guard
         bu.user_name = "Mustafa"
         with self.assertRaises(frappe.ValidationError):
             bu.validate()
 
-    def test_short_user_id_passes(self):
+    def test_user_id_up_to_30_passes(self):
         bu = frappe.new_doc("eTIMS Branch User")
-        bu.user_id = "mustafa"  # <= 20
+        bu.user_id = "mustafa@sajmustafa.com"  # 22 chars — allowed under the 30 guard
         bu.user_name = "Mustafa"
         bu.system_user = self._login()
         bu.validate()  # must not raise
-        self.assertEqual(bu.user_id, "mustafa")
+        self.assertEqual(bu.user_id, "mustafa@sajmustafa.com")
 
     def test_creator_resolved_via_system_user_link(self):
         login = self._login()
