@@ -612,52 +612,53 @@ def create_sales_receipt(data, doc_name):
 
 
 def create_qr_code(pin, branch_id, rcpt_signature):
+	"""Build the KRA receipt-verification URL and a QR PNG for it.
+
+	Always returns a ``(file_name, url)`` tuple so callers can unpack safely:
+	  * ``(file_name, url)`` — URL built and PNG saved.
+	  * ``(None, url)``       — URL built but the PNG could not be saved (the
+	                            thermal receipt still renders the QR from the URL
+	                            via ``escpos_qr``; only the A4 image attachment
+	                            is skipped).
+	  * ``(None, None)``      — no receipt signature or no active device, so no
+	                            verifiable URL can be built.
+
+	This function MUST NOT raise: it runs inside the eTIMS post-success handler
+	*after* the queue status is committed "Sent". A raised exception there would
+	abort the document save and silently drop the receipt signature and control
+	unit data — a compliance defect, not just a missing QR.
+	"""
+	if not rcpt_signature:
+		return None, None
+
 	header_docs = frappe.db.get_all(
 		"TIS Device Initialization", filters={"branch_id": branch_id, "active": 1}, fields=["api_mode"]
 	)
+	if not header_docs:
+		return None, None
 
-	if rcpt_signature:
-		if header_docs:
-			settings_doc = header_docs[0]
+	host = (
+		"https://etims.kra.go.ke"
+		if header_docs[0].get("api_mode") == "Production"
+		else "https://etims-sbx.kra.go.ke"
+	)
+	url = f"{host}/common/link/etims/receipt/indexEtimsReceiptData?Data={pin}{branch_id}{rcpt_signature}"
 
-			url = (
-				"https://etims-sbx.kra.go.ke/common/link/etims/receipt/indexEtimsReceiptData?Data="
-				+ pin
-				+ branch_id
-				+ rcpt_signature
-			)
-			file_name = rcpt_signature + ".png"
+	file_name = rcpt_signature + ".png"
+	file_path = frappe.get_site_path("private", "files", file_name)
+	try:
+		segno.make_qr(url).save(file_path, scale=5)
+	except Exception:
+		# Keep the URL (thermal QR still works); only the PNG attachment is lost.
+		frappe.log_error("eTIMS: QR code PNG generation failed", frappe.get_traceback())
+		return None, url
 
-			file_path = frappe.get_site_path("private", "files", file_name)
-
-			if settings_doc.get("api_mode") == "Production":
-				url = (
-					"https://etims.kra.go.ke/common/link/etims/receipt/indexEtimsReceiptData?Data="
-					+ pin
-					+ branch_id
-					+ rcpt_signature
-				)
-			else:
-				url = (
-					"https://etims-sbx.kra.go.ke/common/link/etims/receipt/indexEtimsReceiptData?Data="
-					+ pin
-					+ branch_id
-					+ rcpt_signature
-				)
-
-			# print(qrcode)
-			try:
-				qrcode = segno.make_qr(url)
-				qrcode.save(file_path, scale=5)
-
-				return file_name, url
-
-			except Exception as e:
-				frappe.log_error("eTIMS: QR code generation failed", str(e))
-				frappe.throw(_("QR Code Not Generated: {0}").format(e))
+	return file_name, url
 
 
 def create_attachment(file_name, inv_name):
+	if not file_name:
+		return None
 	new_attachment = frappe.new_doc("File")
 	new_attachment.file_name = file_name
 	new_attachment.file_url = "/private/files/" + file_name
