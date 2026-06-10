@@ -24,10 +24,15 @@ def _get_branch_user_name(system_user):
 	if not system_user:
 		return None
 	try:
+		# Match the login via system_user (preferred) or user_id (legacy records).
+		# Guard the system_user filter for sites where the field isn't migrated yet.
+		or_filters = {"user_id": system_user}
+		if frappe.get_meta("eTIMS Branch User").has_field("system_user"):
+			or_filters["system_user"] = system_user
 		rows = frappe.get_all(
 			"eTIMS Branch User",
 			filters={"saved": 1},
-			or_filters={"system_user": system_user, "user_id": system_user},
+			or_filters=or_filters,
 			fields=["user_name"],
 			limit=1,
 		)

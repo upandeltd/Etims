@@ -42,9 +42,13 @@ class eTIMSBranchUser(Document):
                     "to the full Frappe login. (Note: KRA itself caps userId at 20.)"
                 ).format(self.user_id, len(self.user_id), KRA_USER_ID_MAX_LEN)
             )
-        if not self.system_user and self.user_id and frappe.db.exists("User", self.user_id):
+        # `system_user` is a newer field; tolerate sites where it has not been
+        # migrated yet (accessing a missing field raises AttributeError).
+        if not self.meta.has_field("system_user"):
+            return
+        if not self.get("system_user") and self.user_id and frappe.db.exists("User", self.user_id):
             self.system_user = self.user_id
-        if not self.system_user:
+        if not self.get("system_user"):
             frappe.msgprint(
                 _(
                     "Set 'System User' to the Frappe login of this branch user — it is "

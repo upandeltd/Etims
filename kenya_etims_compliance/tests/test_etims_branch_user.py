@@ -7,6 +7,8 @@ Covers the two failures users hit when their Frappe login exceeds KRA's 20-char
     registration recognises a branch user whose KRA ``user_id`` is a short id.
 """
 
+from unittest.mock import MagicMock
+
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
@@ -23,6 +25,16 @@ class TestBranchUserGuards(FrappeTestCase):
         bu.user_name = "Mustafa"
         with self.assertRaises(frappe.ValidationError):
             bu.validate()
+
+    def test_validate_tolerates_unmigrated_system_user_field(self):
+        # Reproduces the AttributeError crash on sites where `system_user` was
+        # not migrated: validate must not touch the field when meta lacks it.
+        bu = frappe.new_doc("eTIMS Branch User")
+        bu.user_id = "mustafa@sajmustafa.com"
+        bu.user_name = "Mustafa"
+        bu._meta = MagicMock()
+        bu._meta.has_field.return_value = False
+        bu.validate()  # must not raise AttributeError
 
     def test_user_id_up_to_30_passes(self):
         bu = frappe.new_doc("eTIMS Branch User")
