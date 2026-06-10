@@ -38,9 +38,9 @@ class eTIMSBranchUser(Document):
             frappe.throw(
                 _(
                     "User ID '{0}' is {1} characters. The maximum is {2}. "
-                    "Use a short identifier here (e.g. a username) and set 'System User' "
-                    "to the full Frappe login. (Note: KRA itself caps userId at 20.)"
-                ).format(self.user_id, len(self.user_id), KRA_USER_ID_MAX_LEN)
+                    "Only the first {3} characters are sent to KRA (its userId limit), "
+                    "so keep the meaningful part within {3}."
+                ).format(self.user_id, len(self.user_id), KRA_USER_ID_MAX_LEN, KRA_ID_MAX_LEN)
             )
         # `system_user` is a newer field; tolerate sites where it has not been
         # migrated yet (accessing a missing field raises AttributeError).
@@ -64,7 +64,9 @@ class eTIMSBranchUser(Document):
         user = self
         if not user.get("saved") == 1:
             payload = {
-                "userId":user.get("user_id"),
+                # KRA caps userId at 20; the full value stays on the record (used
+                # to match an item's creator), only the transmitted id is trimmed.
+                "userId":(user.get("user_id") or "")[:KRA_ID_MAX_LEN],
                 "userNm":user.get("user_name"),
                 "pwd":user.get("password"),
                 "adrs":user.get("address"),

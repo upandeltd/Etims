@@ -7,12 +7,15 @@ Covers the two failures users hit when their Frappe login exceeds KRA's 20-char
     registration recognises a branch user whose KRA ``user_id`` is a short id.
 """
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
 from kenya_etims_compliance.custom_methods.item import _get_branch_user_name
+from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_branch_user import (
+    etims_branch_user as bu_mod,
+)
 
 
 class TestBranchUserGuards(FrappeTestCase):
@@ -42,6 +45,37 @@ class TestBranchUserGuards(FrappeTestCase):
         bu.user_name = "Mustafa"
         bu.system_user = self._login()
         bu.validate()  # must not raise
+        self.assertEqual(bu.user_id, "mustafa@sajmustafa.com")
+
+    def test_userid_truncated_to_20_in_kra_payload(self):
+        bu = frappe.new_doc("eTIMS Branch User")
+        bu.user_id = "mustafa@sajmustafa.com"  # 22 chars stored on the record
+        bu.user_name = "Mustafa"
+        bu.password = "x"
+        bu.registration_id = "reg01"
+        bu.registration_name = "Reg"
+        bu.modifier_id = "mod01"
+        bu.modifier_name = "Mod"
+        bu.system_user = self._login()
+        bu.used_unused = "Y"
+
+        captured = {}
+        resp = MagicMock()
+        resp.json.return_value = {"resultCd": "000", "resultMsg": "ok"}
+
+        def fake_request(method, url, json=None, headers=None):
+            captured["payload"] = json
+            return resp
+
+        with patch.object(bu_mod, "requests") as req, patch.object(bu_mod, "eTIMS") as et:
+            req.request.side_effect = fake_request
+            et.get_headers.return_value = {}
+            et.tims_base_url.return_value = "http://kra.test/"
+            bu.bhfUserSaveReq()
+
+        self.assertEqual(captured["payload"]["userId"], "mustafa@sajmustafa.c")  # 20 chars
+        self.assertEqual(len(captured["payload"]["userId"]), 20)
+        # The record itself keeps the full value for creator matching.
         self.assertEqual(bu.user_id, "mustafa@sajmustafa.com")
 
     def test_creator_resolved_via_system_user_link(self):
