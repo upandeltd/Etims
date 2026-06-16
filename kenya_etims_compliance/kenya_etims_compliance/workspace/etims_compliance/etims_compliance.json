@@ -1,4 +1,5 @@
 {
+ "app": "kenya_etims_compliance",
  "charts": [
   {
    "chart_name": "eTIMS Monthly Sales Transmission",
@@ -25,6 +26,7 @@
  "indicator_color": "green",
  "is_hidden": 0,
  "label": "eTIMS Compliance",
+ "link_type": "DocType",
  "links": [
   {
    "hidden": 0,
@@ -497,5 +499,6 @@
  ],
  "sequence_id": 10.0,
  "shortcuts": [],
- "title": "eTIMS Compliance"
+ "title": "eTIMS Compliance",
+ "type": "Workspace"
 }
