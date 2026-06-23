@@ -15,18 +15,18 @@ class eTIMSBranchUser(Document):
         user = self
         if not user.get("saved") == 1:
             payload = {
-                "userId":user.get("user_id"),
-                "userNm":user.get("user_name"),
-                "pwd":user.get("password"),
-                "adrs":user.get("address"),
-                "cntc":user.get("contact"),
-                "authCd":user.get("authority_code"),
-                "remark":user.get("remark"),
-                "useYn":user.get("used_unused"),
-                "regrId":user.get("registration_name"), 
-                "regrNm":user.get("registration_name"), 
-                "modrId":user.get("modifier_name"),
-                "modrNm":user.get("modifier_name")
+                "userId": user.get("kra_user_id"),
+                "userNm": user.get("user_name"),
+                "pwd": user.get("password"),
+                "adrs": user.get("address"),
+                "cntc": user.get("contact"),
+                "authCd": user.get("authority_code"),
+                "remark": user.get("remark"),
+                "useYn": user.get("used_unused"),
+                "regrId": user.get("registration_name"),
+                "regrNm": user.get("registration_name"),
+                "modrId": user.get("modifier_name"),
+                "modrNm": user.get("modifier_name")
             }
     
             try:
@@ -39,11 +39,11 @@ class eTIMSBranchUser(Document):
                 response_json = response.json()
 
                 if not response_json.get("resultCd") == '000':
-                    return {"Error":response_json.get("resultMsg")}
+                    return {"Error": response_json.get("resultMsg")}
 
                 user.saved = 1
                 user.save()
-                return {"Success":response_json.get("resultMsg")}
+                return {"Success": response_json.get("resultMsg")}
 
             except Exception as e:
                 frappe.log_error(frappe.get_traceback(), "User Register")
