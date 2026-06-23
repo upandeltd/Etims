@@ -10,6 +10,7 @@
   "section_break_lvnp",
   "system_user",
   "user_id",
+  "kra_user_id",
   "user_name",
   "password",
   "registration_name",
@@ -29,6 +30,14 @@
    "fieldtype": "Data",
    "label": "User ID",
    "reqd": 1
+  },
+  {
+   "fieldname": "kra_user_id",
+   "fieldtype": "Data",
+   "label": "KRA User ID",
+   "length": 20,
+   "reqd": 1,
+   "description": "Short ID sent to KRA (max 20 characters). Use initials or short username e.g. edwin, ken"
   },
   {
    "fetch_from": "user_id.full_name",
