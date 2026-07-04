@@ -12,35 +12,38 @@ from kenya_etims_compliance.utils.etims_utils import eTIMS
 # KRA caps these identifier fields at 20 characters (saveBhfUser spec).
 KRA_ID_MAX_LEN = 20
 
-# Allowed length for the branch user id. NOTE: KRA's saveBhfUser spec caps userId
-# at 20 chars and may reject 21-30 at its end — this guard is intentionally set
-# higher (per request) so the user id field itself is not blocked below 30.
-KRA_USER_ID_MAX_LEN = 30
-
 # saveBhfUser payload keys KRA limits to 20 chars (identifiers/codes — NOT the
-# free-text name/address/remark fields, nor userId which is guarded separately).
-# Used to name the offending field instead of KRA's blank
-# "[ : length must be between 0 and 20]".
+# free-text name/address/remark fields). Used to name the offending field
+# instead of KRA's blank "[ : length must be between 0 and 20]".
 KRA_BHF_USER_SHORT_FIELDS = ("pwd", "cntc", "authCd", "useYn", "regrId", "modrId")
+
+
+def _kra_user_id(user):
+    """Identifier transmitted to KRA as ``userId``.
+
+    Prefer the dedicated ``kra_user_id`` field; fall back to ``user_id`` for
+    records created before that field existed. KRA caps this at 20 characters.
+    """
+    return user.get("kra_user_id") or user.get("user_id") or ""
 
 
 class eTIMSBranchUser(Document):
     def validate(self):
         """Guard KRA field limits and keep the Frappe-login link in sync.
 
-        KRA rejects a ``userId`` longer than 20 chars (e.g. most email addresses),
-        so catch it here with a clear message instead of KRA's cryptic
-        "length must be between 0 and 20". The ``user_id`` is the KRA identifier;
-        the Frappe login is held in ``system_user`` (used to match an item's
-        creator/modifier), so auto-link it when ``user_id`` is itself a login.
+        KRA rejects a ``userId`` longer than 20 chars. The KRA identifier is the
+        ``kra_user_id`` field (falling back to ``user_id`` for older records),
+        while ``user_id`` itself may be a longer Frappe login/email. The Frappe
+        login is held in ``system_user`` (used to match an item's creator/
+        modifier), so auto-link it when ``user_id`` is itself a login.
         """
-        if self.user_id and len(self.user_id) > KRA_USER_ID_MAX_LEN:
+        kra_id = _kra_user_id(self)
+        if kra_id and len(kra_id) > KRA_ID_MAX_LEN:
             frappe.throw(
                 _(
-                    "User ID '{0}' is {1} characters. The maximum is {2}. "
-                    "Only the first {3} characters are sent to KRA (its userId limit), "
-                    "so keep the meaningful part within {3}."
-                ).format(self.user_id, len(self.user_id), KRA_USER_ID_MAX_LEN, KRA_ID_MAX_LEN)
+                    "KRA User ID '{0}' is {1} characters. The maximum KRA accepts is {2}. "
+                    "Shorten 'KRA User ID' (or 'User ID' when that field is empty)."
+                ).format(kra_id, len(kra_id), KRA_ID_MAX_LEN)
             )
         # `system_user` is a newer field; tolerate sites where it has not been
         # migrated yet (accessing a missing field raises AttributeError).
@@ -64,22 +67,22 @@ class eTIMSBranchUser(Document):
         user = self
         if not user.get("saved") == 1:
             payload = {
-                # KRA caps userId at 20; the full value stays on the record (used
-                # to match an item's creator), only the transmitted id is trimmed.
-                "userId":(user.get("user_id") or "")[:KRA_ID_MAX_LEN],
-                "userNm":user.get("user_name"),
-                "pwd":user.get("password"),
-                "adrs":user.get("address"),
-                "cntc":user.get("contact"),
-                "authCd":user.get("authority_code"),
-                "remark":user.get("remark"),
-                "useYn":user.get("used_unused"),
-                "regrId":(user.get("registration_name") or "")[:KRA_ID_MAX_LEN],
-                "regrNm":user.get("registration_name"),
-                "modrId":(user.get("modifier_name") or "")[:KRA_ID_MAX_LEN],
-                "modrNm":user.get("modifier_name")
+                # KRA caps userId at 20; prefer the dedicated kra_user_id field,
+                # fall back to user_id for older records, and trim to be safe.
+                "userId": _kra_user_id(user)[:KRA_ID_MAX_LEN],
+                "userNm": user.get("user_name"),
+                "pwd": user.get("password"),
+                "adrs": user.get("address"),
+                "cntc": user.get("contact"),
+                "authCd": user.get("authority_code"),
+                "remark": user.get("remark"),
+                "useYn": user.get("used_unused"),
+                "regrId": (user.get("registration_name") or "")[:KRA_ID_MAX_LEN],
+                "regrNm": user.get("registration_name"),
+                "modrId": (user.get("modifier_name") or "")[:KRA_ID_MAX_LEN],
+                "modrNm": user.get("modifier_name")
             }
-    
+
             # Pre-flight: name any 20-char-capped field that is too long, so the
             # user gets an actionable error instead of KRA's blank-field one.
             too_long = {
@@ -117,12 +120,11 @@ class eTIMSBranchUser(Document):
                         ),
                         title="eTIMS Branch User register failed",
                     )
-                    return {"Error":response_json.get("resultMsg")}
+                    return {"Error": response_json.get("resultMsg")}
 
                 user.saved = 1
                 user.save()
-                return {"Success":response_json.get("resultMsg")}
-
+                return {"Success": response_json.get("resultMsg")}
             except Exception as e:
                 frappe.log_error(frappe.get_traceback(), "User Register")
                 raise e
