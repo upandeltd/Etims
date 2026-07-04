@@ -26,7 +26,7 @@ add_to_apps_screen = [
 # ------------------
 
 # include js, css files in header of desk.html
-# app_include_css = "/assets/kenya_etims_compliance/css/kenya_etims_compliance.css"
+app_include_css = "/assets/kenya_etims_compliance/css/etims_dashboard.css"
 # app_include_js = "/assets/kenya_etims_compliance/js/kenya_etims_compliance.js"
 
 # include js, css files in header of web template

@@ -77,27 +77,80 @@ def create_number_cards():
 			"show_percentage_stats": 1,
 			"stats_time_interval": "Monthly",
 		},
+		# --- Enhanced dashboard cards ---
+		{
+			"name": "Queue Failed",
+			"label": "Queue Failed",
+			"document_type": "eTIMS Invoice Queue",
+			"function": "Count",
+			"filters_json": '[["eTIMS Invoice Queue","status","=","Failed"]]',
+			"color": "#dc3545",
+		},
+		{
+			"name": "Purchases Unmatched",
+			"label": "Purchases Unmatched",
+			"document_type": "Purchase Invoice",
+			"function": "Count",
+			"filters_json": '[["Purchase Invoice","docstatus","=",1],["Purchase Invoice","custom_kra_match_status","not in",["Matched",""]]]',
+			"color": "#e67e22",
+		},
+		{
+			"name": "Sales Success Rate",
+			"label": "Sales Success Rate (%)",
+			"type": "Custom",
+			"document_type": "Sales Invoice",
+			"function": "kenya_etims_compliance.custom_methods.dashboard.get_sales_success_rate",
+			"color": "#16a34a",
+		},
+		{
+			"name": "Input VAT at Risk",
+			"label": "Input VAT at Risk",
+			"type": "Custom",
+			"document_type": "Purchase Invoice",
+			"function": "kenya_etims_compliance.custom_methods.dashboard.get_input_vat_at_risk",
+			"color": "#dc2626",
+		},
+		{
+			"name": "Compliance Score",
+			"label": "Compliance Score",
+			"type": "Custom",
+			"document_type": "eTIMS Compliance Score",
+			"function": "kenya_etims_compliance.custom_methods.dashboard.get_compliance_score",
+			"color": "#2563eb",
+		},
+		{
+			"name": "Days to Filing Deadline",
+			"label": "Days to Filing Deadline",
+			"type": "Custom",
+			"document_type": "eTIMS Settings",
+			"function": "kenya_etims_compliance.custom_methods.dashboard.get_days_to_filing_deadline",
+			"color": "#7c3aed",
+		},
 	]
 
 	for c in cards:
 		if frappe.db.exists("Number Card", c["name"]):
 			continue
 		try:
-			frappe.get_doc(
-				{
-					"doctype": "Number Card",
-					"name": c["name"],
-					"label": c["label"],
-					"document_type": c["document_type"],
-					"function": c["function"],
-					"filters_json": c["filters_json"],
-					"color": c.get("color"),
-					"show_percentage_stats": c.get("show_percentage_stats", 0),
-					"stats_time_interval": c.get("stats_time_interval", "Daily"),
-					"is_public": 1,
-					"type": "Document Type",
-				}
-			).insert(ignore_permissions=True)
+			doc_data = {
+				"doctype": "Number Card",
+				"name": c["name"],
+				"label": c["label"],
+				"type": c.get("type", "Document Type"),
+				"filters_json": c.get("filters_json", "[]"),
+				"color": c.get("color"),
+				"show_percentage_stats": c.get("show_percentage_stats", 0),
+				"stats_time_interval": c.get("stats_time_interval", "Daily"),
+				"is_public": 1,
+			}
+			if c.get("type", "Document Type") == "Document Type":
+				doc_data["document_type"] = c["document_type"]
+				doc_data["function"] = c["function"]
+			elif c.get("type") == "Custom":
+				doc_data["method"] = c["function"]
+				if c.get("document_type"):
+					doc_data["document_type"] = c["document_type"]
+			frappe.get_doc(doc_data).insert(ignore_permissions=True)
 			frappe.logger().debug(f"Created number card: {c['name']}")
 		except Exception:
 			# Never abort migrate on a single bad card (e.g. missing field on a bench)
@@ -146,6 +199,37 @@ def create_dashboard_charts():
 			"time_interval": "Monthly",
 			"type": "Line",
 			"color": "#e74c3c",
+		},
+		# --- Enhanced dashboard charts ---
+		{
+			"name": "eTIMS Queue Status",
+			"chart_name": "eTIMS Queue Status",
+			"chart_type": "Group By",
+			"document_type": "eTIMS Invoice Queue",
+			"group_by_based_on": "status",
+			"filters_json": "[]",
+			"type": "Donut",
+			"color": "#2490ef",
+		},
+		{
+			"name": "eTIMS Purchase Match Status",
+			"chart_name": "eTIMS Purchase Match Status",
+			"chart_type": "Group By",
+			"document_type": "Purchase Invoice",
+			"group_by_based_on": "custom_kra_match_status",
+			"filters_json": '[["Purchase Invoice","docstatus","=",1],["Purchase Invoice","custom_update_purchase_in_tims","=",1]]',
+			"type": "Donut",
+			"color": "#f39c12",
+		},
+		{
+			"name": "eTIMS Sales Transmission Status",
+			"chart_name": "eTIMS Sales Transmission Status",
+			"chart_type": "Group By",
+			"document_type": "Sales Invoice",
+			"group_by_based_on": "custom_update_sales_to_etims",
+			"filters_json": '[["Sales Invoice","docstatus","=",1],["Sales Invoice","custom_update_invoice_in_tims","=",1]]',
+			"type": "Donut",
+			"color": "#2ecc71",
 		},
 	]
 

@@ -1,0 +1,133 @@
+/* eTIMS dashboard enhancements — loaded on all desk pages via hooks.py */
+
+.etims-dashboard-modal {
+	padding: 4px;
+}
+
+.etims-dashboard-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 12px;
+	margin-bottom: 16px;
+}
+
+@media (max-width: 768px) {
+	.etims-dashboard-grid {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+.etims-dashboard-card {
+	display: block;
+	padding: 14px 16px;
+	background: var(--card-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+	text-decoration: none;
+	transition: box-shadow 0.15s ease, transform 0.15s ease;
+	border-left: 4px solid var(--border-color);
+}
+
+.etims-dashboard-card:hover {
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+	transform: translateY(-1px);
+	text-decoration: none;
+}
+
+.etims-dashboard-card--blue { border-left-color: #2490ef; }
+.etims-dashboard-card--green { border-left-color: #28a745; }
+.etims-dashboard-card--orange { border-left-color: #f39c12; }
+.etims-dashboard-card--red { border-left-color: #dc3545; }
+
+.etims-dashboard-card__label {
+	font-size: 12px;
+	color: var(--text-muted);
+	margin-bottom: 6px;
+	font-weight: 500;
+}
+
+.etims-dashboard-card__value {
+	font-size: 22px;
+	font-weight: 700;
+	color: var(--text-color);
+	line-height: 1.2;
+}
+
+.etims-dashboard-progress {
+	padding: 14px 16px;
+	background: var(--card-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+}
+
+.etims-dashboard-progress h6 {
+	margin: 0 0 10px 0;
+	font-weight: 600;
+}
+
+.etims-dashboard-progress .text-xs {
+	font-size: 12px;
+}
+
+/* Queue dashboard on eTIMS Settings form */
+.etims-queue-dashboard {
+	margin: 16px 0;
+	padding: 16px;
+	background: var(--card-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+	border-left: 4px solid #2490ef;
+}
+
+.etims-queue-dashboard__header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 12px;
+}
+
+.etims-queue-dashboard__header h6 {
+	margin: 0;
+	font-weight: 600;
+}
+
+.etims-queue-dashboard__link {
+	font-size: 12px;
+	color: #2490ef;
+	text-decoration: none;
+}
+
+.etims-queue-dashboard__link:hover {
+	text-decoration: underline;
+}
+
+.etims-queue-dashboard__grid {
+	display: flex;
+	gap: 16px;
+	flex-wrap: wrap;
+}
+
+.etims-queue-item {
+	text-align: center;
+	min-width: 70px;
+}
+
+.etims-queue-item__count {
+	font-size: 22px;
+	font-weight: 700;
+	line-height: 1.2;
+}
+
+.etims-queue-item__label {
+	font-size: 11px;
+	color: var(--text-muted);
+	margin-top: 2px;
+}
+
+.etims-queue-dashboard__footer {
+	margin-top: 12px;
+	font-size: 12px;
+	color: var(--text-muted);
+	border-top: 1px solid var(--border-color);
+	padding-top: 10px;
+}
