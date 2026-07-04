@@ -1,0 +1,102 @@
+.etims-setup-wizard .etims-steps-bar {
+	display: flex;
+	gap: var(--margin-sm);
+	padding: var(--padding-md) 0;
+	border-bottom: 1px solid var(--border-color);
+	margin-bottom: var(--margin-lg);
+	flex-wrap: wrap;
+}
+
+.etims-setup-wizard .etims-step-indicator {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--margin-xs);
+	padding: var(--padding-sm) var(--padding-md);
+	border-radius: var(--border-radius-md);
+	cursor: pointer;
+	background-color: var(--bg-color);
+	border: 1px solid var(--border-color);
+	font-size: var(--text-sm);
+}
+
+.etims-setup-wizard .etims-step-indicator.active {
+	border-color: var(--primary);
+}
+
+.etims-setup-wizard .etims-step-indicator.completed {
+	border-color: var(--green-500);
+}
+
+.etims-setup-wizard .etims-step-indicator .step-num {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	background-color: var(--border-color);
+	color: var(--text-muted);
+	font-size: var(--text-xs);
+	font-weight: var(--weight-semibold);
+}
+
+.etims-setup-wizard .etims-step-indicator.active .step-num {
+	background-color: var(--primary);
+	color: var(--neutral-white);
+}
+
+.etims-setup-wizard .etims-step-indicator.completed .step-num {
+	background-color: var(--green-500);
+	color: var(--neutral-white);
+}
+
+.etims-setup-wizard .etims-wizard-content {
+	max-width: 600px;
+}
+
+.etims-setup-wizard .wizard-nav {
+	display: flex;
+	gap: var(--margin-sm);
+	margin-top: var(--margin-lg);
+}
+
+.etims-setup-wizard .wizard-field {
+	margin: var(--margin-md) 0;
+}
+
+.etims-setup-wizard .wizard-checks-list {
+	margin: var(--margin-md) 0;
+}
+
+.etims-setup-wizard .wizard-checks-list .wizard-check {
+	display: flex;
+	gap: var(--margin-sm);
+	align-items: center;
+	padding: var(--padding-sm) 0;
+	border-bottom: 1px solid var(--border-color);
+}
+
+.etims-setup-wizard .wizard-checks-list .wizard-check-icon {
+	font-size: var(--text-lg);
+	font-weight: var(--weight-bold);
+}
+
+.etims-setup-wizard .wizard-checks-list .wizard-check-icon.passed {
+	color: var(--green-500);
+}
+
+.etims-setup-wizard .wizard-checks-list .wizard-check-icon.failed {
+	color: var(--red-500);
+}
+
+.etims-setup-wizard .wizard-actions {
+	margin-top: var(--margin-md);
+}
+
+.etims-setup-wizard .skip-link-wrapper {
+	margin-top: var(--margin-sm);
+}
+
+.etims-setup-wizard .step-alert {
+	margin-top: var(--margin-md);
+}

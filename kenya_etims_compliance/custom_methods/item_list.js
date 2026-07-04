@@ -80,17 +80,17 @@ function _validateAndBulkRegister(item_names, listview) {
 					</tr>`;
 				}).join('');
 
-				frappe.msgprint({
-					title: __("{0} of {1} items failed validation", [invalid.length, item_names.length]),
-					indicator: 'orange',
-					message: `
-						<p>${__("Only valid items will be registered.")}</p>
-						<table class="table table-bordered table-hover" style="font-size:12px">
-							<thead><tr><th>Item</th><th>Errors</th></tr></thead>
-							<tbody>${error_html}</tbody>
-						</table>
-					`
-				});
+                frappe.msgprint({
+                    title: __("{0} of {1} items failed validation", [invalid.length, item_names.length]),
+                    indicator: 'orange',
+                    message: `
+                        <p>${__("Only valid items will be registered.")}</p>
+                        <table class="table table-bordered table-hover text-xs">
+                            <thead><tr><th>Item</th><th>Errors</th></tr></thead>
+                            <tbody>${error_html}</tbody>
+                        </table>
+                    `
+                });
 			}
 
 			if (valid.length === 0) {
@@ -138,13 +138,13 @@ function _bulkUpdateAndRegister(item_names, listview) {
 
 			let body = `<p>${__("{0} of {1} item(s) registered. {2} skipped/failed.", [res.success || 0, res.total || 0, res.failed || 0])}</p>`;
 			if (invalid.length) {
-				const rows = invalid.map(function (i) {
-					return `<tr><td><strong>${frappe.utils.escape_html(i.item)}</strong></td>
-						<td><ul style="margin:0;padding-left:16px">${(i.errors || []).map(e => `<li>${frappe.utils.escape_html(e)}</li>`).join("")}</ul></td></tr>`;
-				}).join("");
-				body += `<table class="table table-bordered" style="font-size:12px;margin-top:8px">
-					<thead><tr><th>${__("Item")}</th><th>${__("Why skipped")}</th></tr></thead>
-					<tbody>${rows}</tbody></table>`;
+            const rows = invalid.map(function (i) {
+                return `<tr><td><strong>${frappe.utils.escape_html(i.item)}</strong></td>
+                    <td><ul class="etims-error-list">${(i.errors || []).map(e => `<li>${frappe.utils.escape_html(e)}</li>`).join("")}</ul></td></tr>`;
+            }).join("");
+            body += `<table class="table table-bordered text-xs mt-2">
+                <thead><tr><th>${__("Item")}</th><th>${__("Why skipped")}</th></tr></thead>
+                <tbody>${rows}</tbody></table>`;
 			}
 
 			frappe.msgprint({

@@ -163,7 +163,7 @@ function view_supplier_invoice_stats(frm) {
             if (r.message) {
                 const stats = r.message;
                 const html = `
-                    <div style="padding: 15px;">
+                    <div class="p-3">
                         <h5>Invoice Verification Statistics</h5>
                         <table class="table table-bordered">
                             <tr>
@@ -172,11 +172,11 @@ function view_supplier_invoice_stats(frm) {
                             </tr>
                             <tr>
                                 <th>Verified Invoices</th>
-                                <td style="color: green;">${stats.verified_invoices || 0}</td>
+                                <td class="text-success">${stats.verified_invoices || 0}</td>
                             </tr>
                             <tr>
                                 <th>Unverified Invoices</th>
-                                <td style="color: red;">${stats.unverified_invoices || 0}</td>
+                                <td class="text-danger">${stats.unverified_invoices || 0}</td>
                             </tr>
                             <tr>
                                 <th>Verification Rate</th>

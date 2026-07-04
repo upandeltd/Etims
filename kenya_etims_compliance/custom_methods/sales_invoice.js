@@ -216,12 +216,12 @@ function show_sales_qr_code(frm) {
                 fieldtype: 'HTML',
                 fieldname: 'qr_code_display',
                 options: `
-                    <div style="text-align:center;padding:20px;">
+                    <div class="card card-body text-center">
                         <p>This invoice has been submitted to KRA eTIMS.</p>
-                        <div style="background:#fff;padding:20px;display:inline-block;border:1px solid #ddd;border-radius:8px;">
-                            <code style="font-size:11px;word-break:break-all;">${qr_code}</code>
+                        <div class="border rounded p-4 d-inline-block">
+                            <code class="etims-qr-code">${qr_code}</code>
                         </div>
-                        <p style="margin-top:15px;color:#666;font-size:12px;">
+                        <p class="text-muted text-xs mt-3">
                             Control Unit Date: ${frm.doc.custom_control_unit_date || 'N/A'}<br>
                             eTIMS Invoice #: ${frm.doc.custom_invoice_number || 'N/A'}
                         </p>

@@ -212,12 +212,12 @@ function show_qr_code(frm) {
                 fieldtype: 'HTML',
                 fieldname: 'qr_code_display',
                 options: `
-                    <div style="text-align: center; padding: 20px;">
-                        <p style="margin-bottom: 15px;">This invoice has been verified with KRA eTIMS.</p>
-                        <div style="background: white; padding: 20px; display: inline-block; border: 1px solid #ddd; border-radius: 8px;">
-                            <code style="font-size: 11px; word-break: break-all;">${qr_code}</code>
+                    <div class="card card-body text-center">
+                        <p class="mb-3">This invoice has been verified with KRA eTIMS.</p>
+                        <div class="border rounded p-4 d-inline-block">
+                            <code class="etims-qr-code">${qr_code}</code>
                         </div>
-                        <p style="margin-top: 15px; color: #666; font-size: 12px;">
+                        <p class="text-muted text-xs mt-3">
                             Verification Date: ${frm.doc.custom_verification_date || 'N/A'}<br>
                             KRA Invoice Number: ${frm.doc.custom_kra_invoice_number || 'N/A'}
                         </p>
