@@ -12,9 +12,21 @@
   {
    "chart_name": "eTIMS Errors Trend",
    "label": "eTIMS Errors Trend"
+  },
+  {
+   "chart_name": "eTIMS Queue Status",
+   "label": "eTIMS Queue Status"
+  },
+  {
+   "chart_name": "eTIMS Purchase Match Status",
+   "label": "eTIMS Purchase Match Status"
+  },
+  {
+   "chart_name": "eTIMS Sales Transmission Status",
+   "label": "eTIMS Sales Transmission Status"
   }
  ],
- "content": "[{\"id\": \"etims_hdr_1\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>eTIMS Compliance Overview</b></span>\", \"col\": 12}}, {\"id\": \"etims_nc_1\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Sales Transmitted\", \"col\": 3}}, {\"id\": \"etims_nc_2\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Sales Pending\", \"col\": 3}}, {\"id\": \"etims_nc_3\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Purchases Matched\", \"col\": 3}}, {\"id\": \"etims_nc_4\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Queue Pending\", \"col\": 3}}, {\"id\": \"etims_nc_5\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Suppliers Verified\", \"col\": 3}}, {\"id\": \"etims_nc_6\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Errors This Month\", \"col\": 3}}, {\"id\": \"etims_sp_1\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"etims_hdr_2\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Transmission &amp; Reconciliation</b></span>\", \"col\": 12}}, {\"id\": \"etims_ch_1\", \"type\": \"chart\", \"data\": {\"chart_name\": \"eTIMS Monthly Sales Transmission\", \"col\": 6}}, {\"id\": \"etims_ch_2\", \"type\": \"chart\", \"data\": {\"chart_name\": \"eTIMS Errors Trend\", \"col\": 6}}, {\"id\": \"etims_ch_3\", \"type\": \"chart\", \"data\": {\"chart_name\": \"eTIMS Purchase Transmission\", \"col\": 4}}, {\"id\": \"etims_sp_2\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"etims_card_1\", \"type\": \"card\", \"data\": {\"card_name\": \"Masters\", \"col\": 4}}, {\"id\": \"etims_card_2\", \"type\": \"card\", \"data\": {\"card_name\": \"Transactions\", \"col\": 4}}, {\"id\": \"etims_card_3\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}]",
+ "content": "[{\"id\":\"etims_hdr_1\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>eTIMS Compliance Overview</b></span>\",\"col\":12}},{\"id\":\"etims_nc_1\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Sales Transmitted\",\"col\":2}},{\"id\":\"etims_nc_2\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Sales Pending\",\"col\":2}},{\"id\":\"etims_nc_3\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Sales Success Rate (%)\",\"col\":2}},{\"id\":\"etims_nc_4\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Queue Failed\",\"col\":2}},{\"id\":\"etims_nc_5\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Purchases Matched\",\"col\":2}},{\"id\":\"etims_nc_6\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Purchases Unmatched\",\"col\":2}},{\"id\":\"etims_nc_7\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Input VAT at Risk\",\"col\":2}},{\"id\":\"etims_nc_8\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Suppliers Verified\",\"col\":2}},{\"id\":\"etims_nc_9\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Errors This Month\",\"col\":2}},{\"id\":\"etims_nc_10\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Queue Pending\",\"col\":2}},{\"id\":\"etims_nc_11\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Compliance Score\",\"col\":2}},{\"id\":\"etims_nc_12\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Days to Filing Deadline\",\"col\":2}},{\"id\":\"etims_sp_1\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"etims_hdr_2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Transmission & Reconciliation Trends</b></span>\",\"col\":12}},{\"id\":\"etims_ch_1\",\"type\":\"chart\",\"data\":{\"chart_name\":\"eTIMS Monthly Sales Transmission\",\"col\":6}},{\"id\":\"etims_ch_2\",\"type\":\"chart\",\"data\":{\"chart_name\":\"eTIMS Purchase Transmission\",\"col\":6}},{\"id\":\"etims_ch_3\",\"type\":\"chart\",\"data\":{\"chart_name\":\"eTIMS Queue Status\",\"col\":4}},{\"id\":\"etims_ch_4\",\"type\":\"chart\",\"data\":{\"chart_name\":\"eTIMS Purchase Match Status\",\"col\":4}},{\"id\":\"etims_ch_5\",\"type\":\"chart\",\"data\":{\"chart_name\":\"eTIMS Sales Transmission Status\",\"col\":4}},{\"id\":\"etims_sp_2\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"etims_hdr_3\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Quick Actions</b></span>\",\"col\":12}},{\"id\":\"etims_sc_1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"eTIMS Settings\",\"col\":3}},{\"id\":\"etims_sc_2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Invoice Queue\",\"col\":3}},{\"id\":\"etims_sc_3\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Purchase Reconciliation\",\"col\":3}},{\"id\":\"etims_sc_4\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Setup Wizard\",\"col\":3}},{\"id\":\"etims_sp_3\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"etims_hdr_4\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Navigation</b></span>\",\"col\":12}},{\"id\":\"etims_card_1\",\"type\":\"card\",\"data\":{\"card_name\":\"Masters\",\"col\":4}},{\"id\":\"etims_card_2\",\"type\":\"card\",\"data\":{\"card_name\":\"Transactions\",\"col\":4}},{\"id\":\"etims_card_3\",\"type\":\"card\",\"data\":{\"card_name\":\"Reports\",\"col\":4}}]",
  "creation": "2024-02-17 12:49:27.432630",
  "custom_blocks": [],
  "docstatus": 0,
@@ -436,7 +448,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-06-09 13:00:00.000000",
+ "modified": "2026-07-04 08:00:00.000000",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Compliance",
@@ -450,12 +462,24 @@
    "number_card_name": "Sales Pending"
   },
   {
+   "label": "Sales Success Rate (%)",
+   "number_card_name": "Sales Success Rate (%)"
+  },
+  {
+   "label": "Queue Failed",
+   "number_card_name": "Queue Failed"
+  },
+  {
    "label": "Purchases Matched",
    "number_card_name": "Purchases Matched"
   },
   {
-   "label": "Queue Pending",
-   "number_card_name": "Queue Pending"
+   "label": "Purchases Unmatched",
+   "number_card_name": "Purchases Unmatched"
+  },
+  {
+   "label": "Input VAT at Risk",
+   "number_card_name": "Input VAT at Risk"
   },
   {
    "label": "Suppliers Verified",
@@ -464,6 +488,18 @@
   {
    "label": "Errors This Month",
    "number_card_name": "Errors This Month"
+  },
+  {
+   "label": "Queue Pending",
+   "number_card_name": "Queue Pending"
+  },
+  {
+   "label": "Compliance Score",
+   "number_card_name": "Compliance Score"
+  },
+  {
+   "label": "Days to Filing Deadline",
+   "number_card_name": "Days to Filing Deadline"
   }
  ],
  "owner": "Administrator",
@@ -498,7 +534,35 @@
   }
  ],
  "sequence_id": 10.0,
- "shortcuts": [],
+ "shortcuts": [
+  {
+   "label": "eTIMS Settings",
+   "link_to": "eTIMS Settings",
+   "type": "DocType",
+   "doc_view": "",
+   "color": "#2490ef"
+  },
+  {
+   "label": "Invoice Queue",
+   "link_to": "eTIMS Invoice Queue",
+   "type": "DocType",
+   "doc_view": "",
+   "color": "#e74c3c"
+  },
+  {
+   "label": "Purchase Reconciliation",
+   "link_to": "eTIMS Purchase Reconciliation",
+   "type": "Report",
+   "is_query_report": 1,
+   "color": "#f39c12"
+  },
+  {
+   "label": "Setup Wizard",
+   "link_to": "etims-setup-wizard",
+   "type": "Page",
+   "color": "#2ecc71"
+  }
+ ],
  "title": "eTIMS",
  "type": "Workspace"
 }
