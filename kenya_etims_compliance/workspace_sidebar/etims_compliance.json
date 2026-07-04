@@ -3,7 +3,7 @@
  "creation": "2026-03-28 14:48:48.521053",
  "docstatus": 0,
  "doctype": "Workspace Sidebar",
- "header_icon": "etims_compliance",
+ "header_icon": "etims",
  "idx": 0,
  "items": [
   {
@@ -531,8 +531,8 @@
  "modified": "2026-03-28 15:05:57.475157",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
- "name": "eTIMS Compliance",
+ "name": "eTIMS",
  "owner": "Administrator",
  "standard": 1,
- "title": "eTIMS Compliance"
+ "title": "eTIMS"
 }

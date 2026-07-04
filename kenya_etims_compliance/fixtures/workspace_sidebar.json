@@ -4,7 +4,7 @@
   "docstatus": 0,
   "doctype": "Workspace Sidebar",
   "for_user": null,
-  "header_icon": "file-text",
+  "header_icon": "etims",
   "items": [
    {
     "child": 0,
@@ -826,8 +826,8 @@
   "modified": "2026-03-28 08:30:00",
   "module": "Kenya Etims Compliance",
   "module_onboarding": null,
-  "name": "eTIMS Compliance",
+  "name": "eTIMS",
   "standard": 1,
-  "title": "eTIMS Compliance"
+  "title": "eTIMS"
  }
 ]

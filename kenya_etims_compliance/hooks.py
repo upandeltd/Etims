@@ -1,7 +1,7 @@
 import frappe
 
 app_name = "kenya_etims_compliance"
-app_title = "Kenya Etims Compliance"
+app_title = "eTIMS"
 app_publisher = "Upande Ltd"
 app_description = "Frappe Etims Compliance App"
 app_email = "dev@upande.com"
@@ -15,8 +15,8 @@ setup_wizard_not_required = 1
 add_to_apps_screen = [
 	{
 		"name": "kenya_etims_compliance",
-		"logo": "/assets/kenya_etims_compliance/images/etims-logo.svg",
-		"title": "eTIMS Compliance",
+		"logo": "/assets/kenya_etims_compliance/images/etims-icon.jpg",
+		"title": "eTIMS",
 		"route": "/app/etims-compliance",
 		"has_permission": "kenya_etims_compliance.check_app_permission",
 	}
@@ -27,7 +27,7 @@ add_to_apps_screen = [
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/kenya_etims_compliance/css/kenya_etims_compliance.css"
-app_include_js = "/assets/kenya_etims_compliance/js/etims_icons.js"
+# app_include_js = "/assets/kenya_etims_compliance/js/kenya_etims_compliance.js"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/kenya_etims_compliance/css/kenya_etims_compliance.css"
@@ -58,8 +58,8 @@ doctype_list_js = {
 
 # Svg Icons
 # ------------------
-# include app icons in desk (loaded via app_include_js instead for compatibility)
-# app_include_icons = "kenya_etims_compliance/icons.svg"
+# include app icons (svg symbol sprite) in desk.html — provides icon-etims
+app_include_icons = ["/assets/kenya_etims_compliance/icons.svg"]
 
 # Home Pages
 # ----------
