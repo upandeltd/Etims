@@ -10,6 +10,7 @@ from frappe.model.document import Document
 
 from kenya_etims_compliance.utils.etims_utils import eTIMS
 from kenya_etims_compliance.utils.kra_client import KRAClient
+from kenya_etims_compliance.utils.permissions import can_sync_to_etims
 
 
 class eTIMSCodeInformation(Document):
@@ -17,6 +18,12 @@ class eTIMSCodeInformation(Document):
 	# item classification code for managing item, location code, and package, weight code, PIN list and notice from KRA to update codes in ERP
 	@frappe.whitelist()
 	def codeSearchReq(self):
+		if not can_sync_to_etims(self.doctype):
+			frappe.throw(
+				_("Permission Denied: you do not have permission to sync to eTIMS."),
+				frappe.PermissionError,
+			)
+
 		request_datetime = self.code_request_datetime
 		date_time_str = eTIMS.strf_datetime_object(request_datetime)
 
@@ -51,6 +58,12 @@ class eTIMSCodeInformation(Document):
 	# Based on the 'custmTin ', the server provides customer information registered to the provided PIN
 	@frappe.whitelist()
 	def custSearchReq(self):
+		if not can_sync_to_etims(self.doctype):
+			frappe.throw(
+				_("Permission Denied: you do not have permission to sync to eTIMS."),
+				frappe.PermissionError,
+			)
+
 		# empty customer details records first
 		self.set("customer_details", [])
 		self.save()
@@ -84,6 +97,12 @@ class eTIMSCodeInformation(Document):
 	# The NoticeSearchReq is an Argument Object of Request, The NoticeSearchRes is a Return ObjectofResponse
 	@frappe.whitelist()
 	def noticeSearchReq(self):
+		if not can_sync_to_etims(self.doctype):
+			frappe.throw(
+				_("Permission Denied: you do not have permission to sync to eTIMS."),
+				frappe.PermissionError,
+			)
+
 		# empty notice records first
 		self.set("notices", [])
 		self.save()
@@ -121,6 +140,12 @@ class eTIMSCodeInformation(Document):
 	@frappe.whitelist()
 	def noticeInfoReq(self, notice_no):
 		"""Get detailed information for a specific notice from eTIMS (Section 7.23)"""
+		if not can_sync_to_etims(self.doctype):
+			frappe.throw(
+				_("Permission Denied: you do not have permission to sync to eTIMS."),
+				frappe.PermissionError,
+			)
+
 		response = eTIMS.selectNoticeInfo(notice_no)
 
 		for key, value in response.items():

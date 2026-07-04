@@ -5,6 +5,76 @@ from frappe import _
 
 
 @frappe.whitelist()
+def bulk_update_and_register_items(items=None):
+	"""Bulk "Update Item To TIMS" + register to KRA in one pass.
+
+	For each selected item: pre-validate, then enable ``custom_update_item_to_tims``
+	and save (which autofills the eTIMS fields via the before_save hook), then
+	register the item to KRA. Invalid items are skipped and returned with their
+	specific errors so the caller can show a summary.
+
+	Args:
+		items: JSON list of item names.
+
+	Returns:
+		{"total", "success", "failed", "invalid": [{"item", "errors": [...]}]}
+	"""
+	frappe.has_permission("Item", "write", throw=True)
+	import json
+
+	from kenya_etims_compliance.custom_methods.item import validate_item_for_etims
+	from kenya_etims_compliance.utils.etims_utils import eTIMS
+
+	if isinstance(items, str):
+		items = json.loads(items)
+	if not items:
+		return {"total": 0, "success": 0, "failed": 0, "invalid": []}
+
+	total = len(items)
+	success = 0
+	invalid = []
+
+	for i, name in enumerate(items):
+		frappe.publish_realtime(
+			"etims_bulk_progress", {"current": i + 1, "total": total, "item": name}
+		)
+
+		# Skip & report: pre-validate with structured errors before mutating.
+		check = validate_item_for_etims(name)
+		if not check.get("valid"):
+			invalid.append({"item": name, "errors": check.get("errors", [])})
+			continue
+
+		# Per-item savepoint so a failure rolls back ONLY this item, not the batch.
+		frappe.db.savepoint("etims_bulk_item")
+		try:
+			doc = frappe.get_doc("Item", name)
+			if not doc.custom_update_item_to_tims:
+				# Triggers autofill_tims_info (before_save): validates + fills eTIMS fields.
+				doc.custom_update_item_to_tims = 1
+				doc.save()
+
+			result = eTIMS.itemSaveReq(name)
+			if result and "Success" in result:
+				success += 1
+			else:
+				frappe.db.rollback(save_point="etims_bulk_item")
+				err = (result or {}).get("Error") or _("KRA registration failed")
+				invalid.append({"item": name, "errors": [err]})
+		except Exception as e:
+			frappe.db.rollback(save_point="etims_bulk_item")
+			invalid.append({"item": name, "errors": [str(e)]})
+
+	frappe.db.commit()
+	return {
+		"total": total,
+		"success": success,
+		"failed": total - success,
+		"invalid": invalid,
+	}
+
+
+@frappe.whitelist()
 def bulk_register_items(items=None):
 	"""Register multiple items to eTIMS in batch.
 

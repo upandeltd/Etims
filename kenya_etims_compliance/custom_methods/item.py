@@ -6,24 +6,37 @@ from frappe import _
 
 from kenya_etims_compliance.utils.etims_utils import eTIMS
 from kenya_etims_compliance.utils.kra_client import KRAClient
+from kenya_etims_compliance.utils.permissions import can_sync_to_etims
 
 
+# This part describes the components of SaveItem API function (url : /saveItem) and data types for each item.
+# This API function is divided into 'Request: Argument' and 'Response: Return Object'.
+# The ItemSaveReq is an Argument Object of Request, The ItemSaveRes is a Return Object of Response
 def _get_branch_user(system_user):
-	"""Resolve system user to registered eTIMS Branch User.
+	"""Resolve a Frappe login to its registered eTIMS Branch User.
 
-	Returns a dict with user_name and kra_user_id if the user is registered
-	and saved, otherwise returns None.
+	The Frappe login (an item's owner/modifier) is linked via the branch user's
+	``system_user`` field; the KRA identifier lives in the separate
+	``kra_user_id`` field. Falls back to matching ``user_id`` directly for older
+	records that stored the login there. Returns a dict with ``user_name`` and
+	``kra_user_id`` for a saved branch user, else None.
 	"""
 	if not system_user:
 		return None
 	try:
-		result = frappe.db.get_value(
+		# Match the login via system_user (preferred) or user_id (legacy records).
+		# Guard the system_user filter for sites where the field isn't migrated yet.
+		or_filters = {"user_id": system_user}
+		if frappe.get_meta("eTIMS Branch User").has_field("system_user"):
+			or_filters["system_user"] = system_user
+		rows = frappe.get_all(
 			"eTIMS Branch User",
-			{"user_id": system_user, "saved": 1},
-			["user_name", "kra_user_id"],
-			as_dict=True,
+			filters={"saved": 1},
+			or_filters=or_filters,
+			fields=["user_name", "kra_user_id"],
+			limit=1,
 		)
-		return result
+		return rows[0] if rows else None
 	except Exception:
 		return None
 
@@ -113,6 +126,12 @@ def validate_item_for_etims(doc_name):
 
 @frappe.whitelist()
 def itemSaveReq(doc_name):
+	if not can_sync_to_etims("Item"):
+		frappe.throw(
+			_("Permission Denied: you do not have permission to sync to eTIMS."),
+			frappe.PermissionError,
+		)
+
 	response = eTIMS.itemSaveReq(doc_name)
 
 	for key, value in response.items():
@@ -149,6 +168,14 @@ def selectItemReq(item_code):
 
 @frappe.whitelist()
 def importItemUpdateReq(doc_name):
+	if not can_sync_to_etims("Item"):
+		frappe.throw(
+			_("Permission Denied: you do not have permission to sync to eTIMS."),
+			frappe.PermissionError,
+		)
+
+	frappe.has_permission("Item", "write", doc=doc_name, throw=True)
+
 	import_item = frappe.get_doc("Item", doc_name)
 
 	if import_item.custom_is_import_item == 1:

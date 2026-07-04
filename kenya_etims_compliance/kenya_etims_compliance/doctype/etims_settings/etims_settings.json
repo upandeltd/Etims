@@ -45,7 +45,11 @@
   "queue_max_retries",
   "queue_retry_interval",
   "sb_training",
-  "training_mode"
+  "training_mode",
+  "wait_for_etims_before_print",
+  "etims_print_wait_seconds",
+  "sb_vat_obligation",
+  "vat_obligation"
  ],
  "fields": [
   {
@@ -298,6 +302,33 @@
    "fieldname": "training_mode",
    "fieldtype": "Check",
    "label": "Training Mode"
+  },
+  {
+   "default": "1",
+   "description": "POS waits briefly for KRA signing so the first receipt carries the QR. Turn off to print immediately.",
+   "fieldname": "wait_for_etims_before_print",
+   "fieldtype": "Check",
+   "label": "Wait for eTIMS before printing receipt"
+  },
+  {
+   "default": "6",
+   "depends_on": "wait_for_etims_before_print",
+   "fieldname": "etims_print_wait_seconds",
+   "fieldtype": "Int",
+   "label": "eTIMS print wait (seconds)"
+  },
+  {
+   "fieldname": "sb_vat_obligation",
+   "fieldtype": "Section Break",
+   "label": "VAT Obligation"
+  },
+  {
+   "default": "Registered",
+   "description": "Company's VAT registration status with KRA. When set to 'Not Registered', the app auto-converts any vatable (rated) line on eTIMS-bound sales invoices to Non-VAT (D) before transmission, so a non-VAT trader never reports VAT it is not obligated to collect.",
+   "fieldname": "vat_obligation",
+   "fieldtype": "Select",
+   "label": "VAT Obligation",
+   "options": "Registered\nNot Registered"
   }
  ],
  "index_web_pages_for_search": 1,

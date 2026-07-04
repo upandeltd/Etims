@@ -364,9 +364,9 @@ class eTIMS:
 			"sftyQty": item.get("custom_safety_quantity") or 0,
 			"isrcAplcbYn": item.get("custom_insurance_appicableyn") or "N",
 			"useYn": item.get("custom_used__unused") or "Y",
-			"regrId": regr_id,
+			"regrId": (regr_id or "")[:20],  # KRA caps the id at 20 chars; names allow more
 			"regrNm": regr_nm,
-			"modrId": modr_id,
+			"modrId": (modr_id or "")[:20],
 			"modrNm": modr_nm,
 		}
 
@@ -852,3 +852,37 @@ def get_org_sar_number(doc):
 		page_length=1,
 	)
 	return prev[0].sr_number if prev else 0
+
+
+# KRA taxation type bands and the Non-VAT code, shared across the band helpers.
+KRA_TAX_BANDS = ("A", "B", "C", "D", "E")
+NON_VAT_CODE = "D"
+
+
+def apply_tax_bands(payload, taxes, rate_func):
+	"""Aggregate KRA tax bands A-E into ``payload`` from a document's tax rows.
+
+	Single source of truth for the band breakdown (previously duplicated across
+	the sales/purchase submit paths). Key correctness rules:
+	  * taxblAmt/taxAmt are SUMMED per band (a document may legitimately have
+	    more than one tax row mapping to the same KRA code) — never overwritten.
+	  * Every value is null-guarded so a missing field cannot raise.
+	  * taxAmt uses ``base_tax_amount_after_discount_amount`` (company/KES amount,
+	    which is what KRA expects).
+	  * taxRt is the band's % rate (same for every row of a band) so it is set.
+
+	``rate_func(account_head)`` returns the account's tax rate.
+	"""
+	for code in KRA_TAX_BANDS:
+		payload[f"taxblAmt{code}"] = 0
+		payload[f"taxRt{code}"] = 0
+		payload[f"taxAmt{code}"] = 0
+
+	for tax in (taxes or []):
+		code = tax.get("custom_code")
+		if code in KRA_TAX_BANDS:
+			payload[f"taxblAmt{code}"] += abs(round(tax.get("custom_total_taxable_amount") or 0, 2))
+			payload[f"taxAmt{code}"] += abs(tax.get("base_tax_amount_after_discount_amount") or 0)
+			payload[f"taxRt{code}"] = abs(rate_func(tax.get("account_head")) or 0)
+
+	return payload

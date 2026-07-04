@@ -6,6 +6,7 @@ import requests
 from frappe import _
 from frappe.utils import add_to_date, now_datetime
 
+from kenya_etims_compliance.utils.etims_utils import eTIMS
 from kenya_etims_compliance.utils.kra_client import KRAClient
 
 
@@ -90,6 +91,10 @@ def process_queue_entry(queue_entry_name):
 	# Update source doc status
 	_update_source_status(queue_entry, "Processing")
 
+	# Idempotency barrier: once KRA accepts the submission, the fiscal receipt
+	# exists at KRA — a later failure must NEVER re-transmit (duplicate receipt).
+	kra_accepted = False
+
 	try:
 		payload = json.loads(queue_entry.payload)
 		client = KRAClient(branch_id=queue_entry.branch_id or None)
@@ -131,6 +136,9 @@ def process_queue_entry(queue_entry_name):
 		if "Error" in result:
 			raise ValueError(result["Error"])
 
+		# KRA accepted — past this point a failure must not downgrade to Failed.
+		kra_accepted = True
+
 		# Success
 		queue_entry.status = "Sent"
 		queue_entry.sent_at = now_datetime()
@@ -143,6 +151,25 @@ def process_queue_entry(queue_entry_name):
 
 	except Exception as e:
 		frappe.db.rollback()
+
+		if kra_accepted:
+			# KRA already accepted — only post-success processing (QR/receipt/
+			# source-status) failed. Keep "Sent"; re-transmitting would create a
+			# DUPLICATE fiscal receipt. The invoice may lack QR/signature until
+			# reprocessed manually — this is logged loudly as a known residual.
+			frappe.db.set_value(
+				"eTIMS Invoice Queue",
+				queue_entry_name,
+				{"status": "Sent", "last_error": ("Post-success processing failed: " + str(e))[:2000]},
+				update_modified=False,
+			)
+			frappe.db.commit()
+			frappe.log_error(
+				title=f"eTIMS post-success FAILED — kept Sent, NOT retried: {queue_entry.reference_name}"[:140],
+				message=traceback.format_exc(),
+			)
+			return
+
 		error_msg = str(e)[:2000]
 
 		queue_entry.reload()
@@ -161,24 +188,93 @@ def process_queue_entry(queue_entry_name):
 		)
 
 
-def retry_failed_invoices():
-	"""Scheduled job: retry failed queue entries whose next_retry_at has passed.
+# A fresh enqueue is processed by its enqueue_after_commit job within seconds;
+# only treat a still-"Queued" entry as orphaned once it is older than this.
+ORPHAN_QUEUED_MINUTES = 15
 
-	Runs every 5 minutes via scheduler_events in hooks.py.
-	Only retries entries that haven't exceeded max_retries.
+# A real process_queue_entry run finishes in well under a minute (API timeout is
+# ~30s). Anything in "Processing" longer than this means the worker died mid-run.
+PROCESSING_STALE_MINUTES = 30
+
+
+def _reset_stuck_processing(now):
+	"""Reset entries stuck in "Processing" (worker crashed mid-run) back to Queued.
+
+	Safe to re-drive: if the crash happened AFTER KRA accepted, re-sending the same
+	invcNo is rejected by KRA as a duplicate (error_codes "already submitted"), so
+	no duplicate fiscal receipt is created — the entry lands Failed/incomplete and
+	can be recovered via "Search Sales Transaction". The threshold is far beyond the
+	API timeout so only dead workers are affected.
 	"""
-	failed_entries = frappe.get_all(
+	stuck = frappe.get_all(
 		"eTIMS Invoice Queue",
 		filters={
-			"status": "Failed",
-			"next_retry_at": ["<=", now_datetime()],
+			"status": "Processing",
+			"processing_at": ["<", add_to_date(now, minutes=-PROCESSING_STALE_MINUTES)],
 		},
-		fields=["name", "retry_count", "max_retries"],
-		order_by="queued_at asc",
-		limit=50,
+		pluck="name",
+	)
+	for name in stuck:
+		frappe.db.set_value(
+			"eTIMS Invoice Queue",
+			name,
+			{"status": "Queued", "next_retry_at": now},
+			update_modified=False,
+		)
+		frappe.log_error(
+			title=f"eTIMS: reset stale Processing -> Queued: {name}"[:140],
+			message="Worker likely crashed mid-run; re-queued. KRA rejects duplicate "
+			"invcNo, so no duplicate receipt risk.",
+		)
+	if stuck:
+		frappe.db.commit()
+	return stuck
+
+
+def retry_failed_invoices():
+	"""Scheduled job (every 5 min): re-drive queue entries that are stuck.
+
+	Rescues three classes, deduped:
+	  1. "Failed" entries whose backoff (next_retry_at) has elapsed.
+	  2. "Queued" entries reset by the pre-flight-down path (have next_retry_at).
+	  3. Orphaned fresh enqueues whose enqueue_after_commit job was lost (worker
+	     crash / redis flush): next_retry_at is null but queued_at is old.
+
+	Double-picking a fresh entry is harmless — process_queue_entry's FOR UPDATE
+	lock + status guard ("Queued"/"Failed" only) absorbs the race.
+	"""
+	now = now_datetime()
+	cols = ["name", "retry_count", "max_retries"]
+
+	# Reset dead-worker "Processing" entries to Queued first so they are rescued
+	# by the Queued bucket below in this same run.
+	_reset_stuck_processing(now)
+
+	entries = frappe.get_all(
+		"eTIMS Invoice Queue",
+		filters={"status": "Failed", "next_retry_at": ["<=", now]},
+		fields=cols, order_by="queued_at asc", limit=50,
+	)
+	entries += frappe.get_all(
+		"eTIMS Invoice Queue",
+		filters={"status": "Queued", "next_retry_at": ["<=", now]},
+		fields=cols, order_by="queued_at asc", limit=50,
+	)
+	entries += frappe.get_all(
+		"eTIMS Invoice Queue",
+		filters={
+			"status": "Queued",
+			"next_retry_at": ["is", "not set"],
+			"queued_at": ["<", add_to_date(now, minutes=-ORPHAN_QUEUED_MINUTES)],
+		},
+		fields=cols, order_by="queued_at asc", limit=50,
 	)
 
-	for entry in failed_entries:
+	seen = set()
+	for entry in entries:
+		if entry.name in seen:
+			continue
+		seen.add(entry.name)
 		if (entry.retry_count or 0) >= (entry.max_retries or 3):
 			continue
 
@@ -298,7 +394,6 @@ def _handle_sales_invoice_success(docname, data, queue_entry):
 		create_sales_receipt,
 		stockIOSaveReq,
 	)
-	from kenya_etims_compliance.utils.etims_utils import eTIMS
 
 	doc = frappe.get_doc("Sales Invoice", docname)
 
@@ -329,6 +424,18 @@ def _handle_sales_invoice_success(docname, data, queue_entry):
 	doc.flags.ignore_validate_update_after_submit = True
 	doc.save(ignore_permissions=True)
 	frappe.db.commit()
+
+	# Notify any waiting POS terminal that this invoice is now signed.
+	# Site-wide broadcast (no room/user args) — frontend filters by `invoice`.
+	frappe.publish_realtime(
+		"etims_invoice_signed",
+		{
+			"invoice": doc.name,
+			"status": "Sent",
+			"qr_url": doc.custom_receipt_qr_url,
+		},
+		after_commit=True,
+	)
 
 	create_sales_receipt(data, doc.name)
 

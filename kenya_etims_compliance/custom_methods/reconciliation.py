@@ -33,8 +33,11 @@ def run_reconciliation(period=None, branch=None):
 	last_day = calendar.monthrange(int(year), int(month))[1]
 	to_date = f"{year}-{month}-{last_day}"
 
-	# Step 0: Pre-match auto-created PIs
-	auto_matched = _prematch_auto_created(from_date, to_date, branch)
+	# Step 0: Mark auto-created (from-eTIMS) PIs as Matched. Their corresponding
+	# KRA register entries are still counted once by the main loop below, so the
+	# count must NOT be added again — doing so double-counted them and pushed
+	# match_rate above 100%.
+	_prematch_auto_created(from_date, to_date, branch)
 
 	# Step 1: Get KRA entries
 	kra_entries = _get_kra_entries(from_date, to_date, branch)
@@ -78,7 +81,7 @@ def run_reconciliation(period=None, branch=None):
 			not_in_kra += 1
 
 	# Step 5: Log
-	total_matched_all = matched + auto_matched
+	total_matched_all = matched
 	total_entries = len(kra_entries)
 	match_rate = round((total_matched_all / total_entries) * 100, 1) if total_entries > 0 else 0
 

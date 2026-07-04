@@ -436,7 +436,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-03-28 12:23:10.095688",
+ "modified": "2026-06-09 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Compliance",
@@ -499,6 +499,6 @@
  ],
  "sequence_id": 10.0,
  "shortcuts": [],
- "title": "eTIMS Compliance",
+ "title": "eTIMS",
  "type": "Workspace"
 }

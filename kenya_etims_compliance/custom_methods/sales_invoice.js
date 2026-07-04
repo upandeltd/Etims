@@ -118,6 +118,36 @@ frappe.ui.form.on("Sales Invoice",{
                 }, __('eTIMS Actions'));
             }
 
+            // Sign Now — submitted invoice that was never sent to eTIMS
+            // (signing was off at submit, so no queue entry exists). Distinct
+            // from "Retry eTIMS", which only fires on a Failed queue entry.
+            if (frm.doc.docstatus === 1
+                && !frm.doc.custom_update_sales_to_etims
+                && !frm.doc.custom_etims_queue_status) {
+                frm.add_custom_button(__('Send to eTIMS'), function() {
+                    frappe.confirm(
+                        __('Sign this submitted invoice to eTIMS now? It will be assigned a new eTIMS invoice number and recorded in the current eTIMS window. If this period\'s VAT return is already filed, use a credit note instead.'),
+                        function() {
+                            frappe.call({
+                                method: 'kenya_etims_compliance.custom_methods.sales_invoice.sign_submitted_invoice',
+                                args: { invoice_name: frm.doc.name },
+                                freeze: true,
+                                freeze_message: __('Queuing for eTIMS...'),
+                                callback: function(r) {
+                                    if (r.message) {
+                                        frappe.show_alert({
+                                            message: __('Queued for eTIMS (Invoice No: {0})', [r.message.invoice_number]),
+                                            indicator: 'green'
+                                        });
+                                        frm.reload_doc();
+                                    }
+                                }
+                            });
+                        }
+                    );
+                }, __('eTIMS Actions'));
+            }
+
             // Dashboard indicator when invoice has been submitted to eTIMS
             if (frm.doc.custom_invoice_number && frm.dashboard) {
                 frm.dashboard.add_indicator(

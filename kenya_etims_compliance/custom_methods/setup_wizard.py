@@ -159,6 +159,9 @@ def step3_initialize_device(company, branch_id, serial_number, api_mode="Sandbox
 
 	# Initialize with KRA
 	result = doc.deviceVerificationReq()
+	# Intentional checkpoint: persist the (expensive) KRA device initialization
+	# before assigning the branch, so a later failure does not force re-running
+	# the device verification.
 	frappe.db.commit()
 
 	if "Success" in result:
@@ -208,7 +211,8 @@ def step5_fetch_classifications():
 				).insert(ignore_permissions=True)
 				created += 1
 
-		frappe.db.commit()
+		# No explicit commit: the whitelisted request auto-commits on success and
+		# rolls back the whole step on failure (atomic — no partial classifications).
 		return {
 			"status": "success",
 			"created": created,
@@ -272,7 +276,8 @@ def step6_create_tax_templates(company):
 		template.insert(ignore_permissions=True)
 		created += 1
 
-	frappe.db.commit()
+	# No explicit commit: the request auto-commits on success and rolls back the
+	# whole step on failure (atomic — no partial tax templates).
 	return {"status": "success", "created": created}
 
 
@@ -373,4 +378,4 @@ def _assign_branch_to_user(branch_id):
 				"is_default": 1,
 			}
 		).insert(ignore_permissions=True)
-		frappe.db.commit()
+		# No explicit commit — the caller's request commits on success.

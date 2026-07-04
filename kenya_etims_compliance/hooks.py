@@ -1,5 +1,7 @@
+import frappe
+
 app_name = "kenya_etims_compliance"
-app_title = "Kenya Etims Compliance"
+app_title = "eTIMS"
 app_publisher = "Upande Ltd"
 app_description = "Frappe Etims Compliance App"
 app_email = "dev@upande.com"
@@ -13,8 +15,8 @@ setup_wizard_not_required = 1
 add_to_apps_screen = [
 	{
 		"name": "kenya_etims_compliance",
-		"logo": "/assets/kenya_etims_compliance/images/etims-logo.svg",
-		"title": "eTIMS Compliance",
+		"logo": "/assets/kenya_etims_compliance/images/etims-icon.jpg",
+		"title": "eTIMS",
 		"route": "/app/etims-compliance",
 		"has_permission": "kenya_etims_compliance.check_app_permission",
 	}
@@ -25,7 +27,7 @@ add_to_apps_screen = [
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/kenya_etims_compliance/css/kenya_etims_compliance.css"
-app_include_js = "/assets/kenya_etims_compliance/js/etims_icons.js"
+# app_include_js = "/assets/kenya_etims_compliance/js/kenya_etims_compliance.js"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/kenya_etims_compliance/css/kenya_etims_compliance.css"
@@ -56,8 +58,8 @@ doctype_list_js = {
 
 # Svg Icons
 # ------------------
-# include app icons in desk (loaded via app_include_js instead for compatibility)
-# app_include_icons = "kenya_etims_compliance/icons.svg"
+# include app icons (svg symbol sprite) in desk.html — provides icon-etims
+app_include_icons = ["/assets/kenya_etims_compliance/icons.svg"]
 
 # Home Pages
 # ----------
@@ -80,10 +82,11 @@ doctype_list_js = {
 # ----------
 
 # add methods and filters to jinja environment
-# jinja = {
-# "methods": "kenya_etims_compliance.utils.jinja_methods",
-# "filters": "kenya_etims_compliance.utils.jinja_filters"
-# }
+# escpos_qr: emits a byte-safe ESC/POS QR command for the thermal POS receipt
+# print format (falls back to "" when not byte-safe — see utils/escpos.py).
+jinja = {
+	"methods": ["kenya_etims_compliance.utils.escpos.escpos_qr"],
+}
 
 # Installation
 # ------------
@@ -93,6 +96,8 @@ after_install = "kenya_etims_compliance.installation.after_install.after_install
 after_migrate = [
 	"kenya_etims_compliance.installation.after_install.setup_workspace_sidebar",
 	"kenya_etims_compliance.custom_methods.install_queue_fields.install_queue_fields",
+	# Create the Number Cards / Dashboard Charts the eTIMS workspace references
+	"kenya_etims_compliance.setup_dashboard.execute",
 ]
 
 # Uninstallation
@@ -149,6 +154,7 @@ after_migrate = [
 
 doc_events = {
 	"Sales Invoice": {
+		"before_validate": "kenya_etims_compliance.custom_methods.sales_invoice.enforce_vat_obligation",
 		"before_save": "kenya_etims_compliance.custom_methods.sales_invoice.validate",
 		"before_submit": "kenya_etims_compliance.custom_methods.sales_invoice.trnsSalesSaveWrReq",
 		"on_update": "kenya_etims_compliance.custom_methods.sales_invoice.insert_invoice_number",
@@ -278,7 +284,6 @@ scheduler_events = {
 fixtures = [
 	{"dt": "Custom Field", "filters": [["module", "=", "Kenya Etims Compliance"]]},
 	{"dt": "Workspace", "filters": [["name", "=", "eTIMS Compliance"]]},
-	{"dt": "Workspace Sidebar", "filters": [["module", "=", "Kenya Etims Compliance"]]},
 	{
 		"dt": "Role",
 		"filters": [
@@ -299,3 +304,15 @@ fixtures = [
 	},
 	{"dt": "eTIMS Credit Note Reason", "filters": [["code", "!=", ""]]},
 ]
+
+# "Workspace Sidebar" is a v16+ DocType. Including it unconditionally breaks
+# `bench export-fixtures` on v15 (the DocType/table does not exist). Add it only
+# on v16+, matching the version guard in installation/after_install.py. The
+# import path (sync_fixtures) already skips the v16 sidebar JSON on v15.
+try:
+	if int(frappe.__version__.split(".")[0]) >= 16:
+		fixtures.append(
+			{"dt": "Workspace Sidebar", "filters": [["module", "=", "Kenya Etims Compliance"]]}
+		)
+except Exception:
+	pass
