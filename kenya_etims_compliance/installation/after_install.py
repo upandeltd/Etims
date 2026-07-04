@@ -38,7 +38,6 @@ def setup_workspace_sidebar():
 				"..",
 				"kenya_etims_compliance",
 				"workspace_sidebar",
-				"etims_compliance",
 				"etims_compliance.json",
 			)
 			if os.path.exists(sidebar_path):

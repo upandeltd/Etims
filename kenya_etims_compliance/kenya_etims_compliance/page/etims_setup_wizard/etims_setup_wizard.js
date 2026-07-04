@@ -5,6 +5,8 @@ frappe.pages["etims-setup-wizard"].on_page_load = function (wrapper) {
 		single_column: true,
 	});
 
+	page.body.addClass("etims-setup-wizard");
+
 	const steps = [
 		{ number: 1, title: __("Company"), icon: "building" },
 		{ number: 2, title: __("Environment"), icon: "globe" },
@@ -20,40 +22,33 @@ frappe.pages["etims-setup-wizard"].on_page_load = function (wrapper) {
 	let state = {};
 
 	// Render step indicators
-	const $steps_bar = $(`<div class="etims-steps-bar" style="display:flex;gap:8px;padding:16px 0;border-bottom:1px solid var(--border-color);margin-bottom:24px;flex-wrap:wrap;"></div>`);
+	const $steps_bar = $(`<div class="etims-steps-bar"></div>`);
 	steps.forEach((s) => {
 		$steps_bar.append(
-			`<div class="etims-step-indicator" data-step="${s.number}"
-				style="padding:8px 16px;border-radius:8px;cursor:pointer;
-				background:var(--bg-color);border:1px solid var(--border-color);
-				font-size:13px;display:flex;align-items:center;gap:6px;">
-				<span class="step-num" style="font-weight:bold;width:20px;height:20px;
-					border-radius:50%;background:var(--border-color);color:var(--text-muted);
-					display:flex;align-items:center;justify-content:center;font-size:11px;">
-					${s.number}
-				</span>
+			`<div class="etims-step-indicator" data-step="${s.number}">
+				<span class="step-num">${s.number}</span>
 				<span>${s.title}</span>
 			</div>`
 		);
 	});
 	$(page.body).append($steps_bar);
 
-	const $content = $(`<div class="etims-wizard-content" style="max-width:600px;"></div>`);
+	const $content = $(`<div class="etims-wizard-content"></div>`);
 	$(page.body).append($content);
 
 	function update_step_bar() {
 		$steps_bar.find(".etims-step-indicator").each(function () {
 			const step = parseInt($(this).data("step"));
 			const $num = $(this).find(".step-num");
+			$(this).removeClass("active completed");
 			if (step < current_step) {
-				$(this).css("border-color", "var(--green-500)");
-				$num.css({ background: "var(--green-500)", color: "white" }).html("&#10003;");
+				$(this).addClass("completed");
+				$num.html("&#10003;");
 			} else if (step === current_step) {
-				$(this).css("border-color", "var(--primary)");
-				$num.css({ background: "var(--primary)", color: "white" }).text(step);
+				$(this).addClass("active");
+				$num.text(step);
 			} else {
-				$(this).css("border-color", "var(--border-color)");
-				$num.css({ background: "var(--border-color)", color: "var(--text-muted)" }).text(step);
+				$num.text(step);
 			}
 		});
 	}
@@ -70,7 +65,7 @@ frappe.pages["etims-setup-wizard"].on_page_load = function (wrapper) {
 	}
 
 	function add_nav_buttons(can_back, can_next, next_label) {
-		const $nav = $(`<div style="display:flex;gap:12px;margin-top:24px;"></div>`);
+		const $nav = $(`<div class="wizard-nav"></div>`);
 		if (can_back) {
 			$nav.append(`<button class="btn btn-default btn-sm">${__("Back")}</button>`);
 			$nav.find(".btn-default").on("click", () => { current_step--; render_step(); });
@@ -87,8 +82,8 @@ frappe.pages["etims-setup-wizard"].on_page_load = function (wrapper) {
 		$content.append(`
 			<h4>${__("Select Company")}</h4>
 			<p class="text-muted">${__("Choose the company registered with KRA for eTIMS compliance.")}</p>
-			<div class="company-field" style="margin:16px 0;"></div>
-			<div class="step-result"></div>
+			<div class="wizard-field company-field"></div>
+			<div class="step-result step-alert"></div>
 		`);
 		const field = frappe.ui.form.make_control({
 			df: { fieldtype: "Link", options: "Company", label: __("Company"), reqd: 1 },
@@ -125,8 +120,8 @@ frappe.pages["etims-setup-wizard"].on_page_load = function (wrapper) {
 		$content.append(`
 			<h4>${__("Choose Environment")}</h4>
 			<p class="text-muted">${__("Select Sandbox for testing or Production for live KRA integration.")}</p>
-			<div class="env-field" style="margin:16px 0;"></div>
-			<div class="step-result"></div>
+			<div class="wizard-field env-field"></div>
+			<div class="step-result step-alert"></div>
 		`);
 		const field = frappe.ui.form.make_control({
 			df: { fieldtype: "Select", options: "Sandbox\nProduction", label: __("API Mode"),
@@ -163,9 +158,9 @@ frappe.pages["etims-setup-wizard"].on_page_load = function (wrapper) {
 		$content.append(`
 			<h4>${__("Initialize Device")}</h4>
 			<p class="text-muted">${__("Register your eTIMS device with KRA.")}</p>
-			<div class="branch-field" style="margin:16px 0;"></div>
-			<div class="serial-field" style="margin:16px 0;"></div>
-			<div class="step-result"></div>
+			<div class="wizard-field branch-field"></div>
+			<div class="wizard-field serial-field"></div>
+			<div class="step-result step-alert"></div>
 		`);
 		const branch_field = frappe.ui.form.make_control({
 			df: { fieldtype: "Data", label: __("Branch ID (e.g. 00 for head office)"), reqd: 1 },
@@ -220,7 +215,7 @@ frappe.pages["etims-setup-wizard"].on_page_load = function (wrapper) {
 		$content.append(`
 			<h4>${__("Fetch Item Classifications")}</h4>
 			<p class="text-muted">${__("Download item classification codes from KRA. This may take a moment.")}</p>
-			<div class="step-result"></div>
+			<div class="step-result step-alert"></div>
 		`);
 		const $next = add_nav_buttons(true, true, __("Fetch Classifications"));
 		$next.on("click", () => {
@@ -250,7 +245,7 @@ frappe.pages["etims-setup-wizard"].on_page_load = function (wrapper) {
 		$content.append(`
 			<h4>${__("Create Tax Templates")}</h4>
 			<p class="text-muted">${__("Auto-create Item Tax Templates for KRA tax codes A through E.")}</p>
-			<div class="step-result"></div>
+			<div class="step-result step-alert"></div>
 		`);
 		const $next = add_nav_buttons(true, true, __("Create Templates"));
 		$next.on("click", () => {
@@ -274,7 +269,7 @@ frappe.pages["etims-setup-wizard"].on_page_load = function (wrapper) {
 		$content.append(`
 			<h4>${__("Register Items")}</h4>
 			<p class="text-muted">${__("Register unregistered items with eTIMS. Items need a classification code first.")}</p>
-			<div class="step-result"></div>
+			<div class="step-result step-alert"></div>
 		`);
 		const $next = add_nav_buttons(true, true, __("Register Items"));
 		$next.on("click", () => {
@@ -298,7 +293,7 @@ frappe.pages["etims-setup-wizard"].on_page_load = function (wrapper) {
 
 		// Skip button
 		$content.append(
-			`<p style="margin-top:8px;"><a href="#" class="skip-link text-muted">${__("Skip — I'll register items later")}</a></p>`
+			`<p class="skip-link-wrapper"><a href="#" class="skip-link text-muted">${__("Skip — I'll register items later")}</a></p>`
 		);
 		$content.find(".skip-link").on("click", (e) => {
 			e.preventDefault();
@@ -312,8 +307,8 @@ frappe.pages["etims-setup-wizard"].on_page_load = function (wrapper) {
 		$content.append(`
 			<h4>${__("Verification")}</h4>
 			<p class="text-muted">${__("Checking your eTIMS configuration...")}</p>
-			<div class="checks-list" style="margin:16px 0;"></div>
-			<div class="step-result"></div>
+			<div class="wizard-checks-list"></div>
+			<div class="step-result step-alert"></div>
 		`);
 
 		frappe.call({
@@ -321,13 +316,13 @@ frappe.pages["etims-setup-wizard"].on_page_load = function (wrapper) {
 			freeze: true,
 			callback: (r) => {
 				if (r.message) {
-					const $list = $content.find(".checks-list");
+					const $list = $content.find(".wizard-checks-list");
 					r.message.checks.forEach((c) => {
 						const icon = c.passed ? "&#10003;" : "&#10007;";
-						const color = c.passed ? "var(--green-500)" : "var(--red-500)";
+						const icon_class = c.passed ? "passed" : "failed";
 						$list.append(
-							`<div style="padding:8px 0;display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--border-color);">
-								<span style="color:${color};font-size:16px;font-weight:bold;">${icon}</span>
+							`<div class="wizard-check">
+								<span class="wizard-check-icon ${icon_class}">${icon}</span>
 								<span>${c.check}</span>
 							</div>`
 						);
@@ -335,13 +330,13 @@ frappe.pages["etims-setup-wizard"].on_page_load = function (wrapper) {
 
 					if (r.message.all_passed) {
 						$content.find(".step-result").html(
-							`<div class="alert alert-success" style="margin-top:16px;">
+							`<div class="alert alert-success">
 								<b>${__("Setup Complete!")}</b> ${__("Your eTIMS integration is ready.")}
 							</div>`
 						);
 					} else {
 						$content.find(".step-result").html(
-							`<div class="alert alert-warning" style="margin-top:16px;">
+							`<div class="alert alert-warning">
 								${__("Some checks failed. Review and fix the issues above.")}
 							</div>`
 						);
@@ -349,7 +344,7 @@ frappe.pages["etims-setup-wizard"].on_page_load = function (wrapper) {
 
 					// Done button
 					$content.append(
-						`<div style="margin-top:16px;">
+						`<div class="wizard-actions">
 							<button class="btn btn-primary btn-sm done-btn">${__("Go to eTIMS Compliance")}</button>
 						</div>`
 					);

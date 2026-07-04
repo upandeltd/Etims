@@ -1,10 +1,22 @@
-/* eTIMS dashboard enhancements — loaded on all desk pages via hooks.py */
+/* eTIMS dashboard shared styles — loaded globally via hooks.py */
+/* Keep .etims-error-list and .etims-qr-code generic so dialogs in Item/Supplier/Invoice forms still render them. */
 
+.etims-error-list {
+	margin: 0;
+	padding-left: 16px;
+}
+
+.etims-qr-code {
+	word-break: break-all;
+	font-size: var(--text-2xs);
+}
+
+/* eTIMS Dashboard modal — rendered by etims_settings.js */
 .etims-dashboard-modal {
 	padding: 4px;
 }
 
-.etims-dashboard-grid {
+.etims-dashboard-modal .etims-dashboard-grid {
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);
 	gap: 12px;
@@ -12,71 +24,83 @@
 }
 
 @media (max-width: 768px) {
-	.etims-dashboard-grid {
+	.etims-dashboard-modal .etims-dashboard-grid {
 		grid-template-columns: repeat(2, 1fr);
 	}
 }
 
-.etims-dashboard-card {
+.etims-dashboard-modal .etims-dashboard-card {
 	display: block;
 	padding: 14px 16px;
 	background: var(--card-bg);
 	border: 1px solid var(--border-color);
-	border-radius: 8px;
+	border-radius: var(--border-radius-md);
 	text-decoration: none;
-	transition: box-shadow 0.15s ease, transform 0.15s ease;
-	border-left: 4px solid var(--border-color);
+	transition: box-shadow 0.15s ease;
 }
 
-.etims-dashboard-card:hover {
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-	transform: translateY(-1px);
+.etims-dashboard-modal .etims-dashboard-card:hover {
+	box-shadow: var(--card-shadow);
 	text-decoration: none;
 }
 
-.etims-dashboard-card--blue { border-left-color: #2490ef; }
-.etims-dashboard-card--green { border-left-color: #28a745; }
-.etims-dashboard-card--orange { border-left-color: #f39c12; }
-.etims-dashboard-card--red { border-left-color: #dc3545; }
+.etims-dashboard-modal .etims-dashboard-card--blue {
+	border-color: var(--primary);
+	background-color: var(--surface-blue-1);
+}
 
-.etims-dashboard-card__label {
-	font-size: 12px;
+.etims-dashboard-modal .etims-dashboard-card--green {
+	border-color: var(--green-500);
+	background-color: var(--surface-green-1);
+}
+
+.etims-dashboard-modal .etims-dashboard-card--orange {
+	border-color: var(--orange-500);
+	background-color: var(--surface-orange-1);
+}
+
+.etims-dashboard-modal .etims-dashboard-card--red {
+	border-color: var(--red-500);
+	background-color: var(--surface-red-1);
+}
+
+.etims-dashboard-modal .etims-dashboard-card__label {
+	font-size: var(--text-xs);
 	color: var(--text-muted);
 	margin-bottom: 6px;
 	font-weight: 500;
 }
 
-.etims-dashboard-card__value {
-	font-size: 22px;
+.etims-dashboard-modal .etims-dashboard-card__value {
+	font-size: var(--text-3xl);
 	font-weight: 700;
 	color: var(--text-color);
 	line-height: 1.2;
 }
 
-.etims-dashboard-progress {
+.etims-dashboard-modal .etims-dashboard-progress {
 	padding: 14px 16px;
 	background: var(--card-bg);
 	border: 1px solid var(--border-color);
-	border-radius: 8px;
+	border-radius: var(--border-radius-md);
 }
 
-.etims-dashboard-progress h6 {
+.etims-dashboard-modal .etims-dashboard-progress h6 {
 	margin: 0 0 10px 0;
 	font-weight: 600;
 }
 
-.etims-dashboard-progress .text-xs {
-	font-size: 12px;
+.etims-dashboard-modal .etims-dashboard-progress .text-xs {
+	font-size: var(--text-xs);
 }
 
-/* Queue dashboard on eTIMS Settings form */
+/* Queue dashboard on eTIMS Settings form — rendered by etims_settings.js */
 .etims-queue-dashboard {
 	margin: 16px 0;
 	padding: 16px;
-	background: var(--card-bg);
-	border: 1px solid var(--border-color);
-	border-radius: 8px;
-	border-left: 4px solid #2490ef;
+	background: var(--surface-blue-1);
+	border: 1px solid var(--primary);
+	border-radius: var(--border-radius-md);
 }
 
 .etims-queue-dashboard__header {
@@ -92,8 +116,8 @@
 }
 
 .etims-queue-dashboard__link {
-	font-size: 12px;
-	color: #2490ef;
+	font-size: var(--text-xs);
+	color: var(--primary);
 	text-decoration: none;
 }
 
@@ -113,21 +137,79 @@
 }
 
 .etims-queue-item__count {
-	font-size: 22px;
+	font-size: var(--text-3xl);
 	font-weight: 700;
 	line-height: 1.2;
 }
 
+.etims-queue-item__count.etims-text-blue {
+	color: var(--primary);
+}
+
+.etims-queue-item__count.etims-text-green {
+	color: var(--green-500);
+}
+
+.etims-queue-item__count.etims-text-orange {
+	color: var(--orange-500);
+}
+
+.etims-queue-item__count.etims-text-red {
+	color: var(--red-500);
+}
+
+.etims-queue-item__count.etims-text-gray {
+	color: var(--gray-500);
+}
+
 .etims-queue-item__label {
-	font-size: 11px;
+	font-size: var(--text-2xs);
 	color: var(--text-muted);
 	margin-top: 2px;
 }
 
 .etims-queue-dashboard__footer {
 	margin-top: 12px;
-	font-size: 12px;
+	font-size: var(--text-xs);
 	color: var(--text-muted);
 	border-top: 1px solid var(--border-color);
 	padding-top: 10px;
 }
+
+/* eTIMS progress width utilities — generated widths for the Supplier Verification bar */
+.etims-progress-width-0 { width: 0%; }
+.etims-progress-width-5 { width: 5%; }
+.etims-progress-width-10 { width: 10%; }
+.etims-progress-width-15 { width: 15%; }
+.etims-progress-width-20 { width: 20%; }
+.etims-progress-width-25 { width: 25%; }
+.etims-progress-width-30 { width: 30%; }
+.etims-progress-width-35 { width: 35%; }
+.etims-progress-width-40 { width: 40%; }
+.etims-progress-width-45 { width: 45%; }
+.etims-progress-width-50 { width: 50%; }
+.etims-progress-width-55 { width: 55%; }
+.etims-progress-width-60 { width: 60%; }
+.etims-progress-width-65 { width: 65%; }
+.etims-progress-width-70 { width: 70%; }
+.etims-progress-width-75 { width: 75%; }
+.etims-progress-width-80 { width: 80%; }
+.etims-progress-width-85 { width: 85%; }
+.etims-progress-width-90 { width: 90%; }
+.etims-progress-width-95 { width: 95%; }
+.etims-progress-width-100 { width: 100%; }
+
+/* Frappe/Espresso-aligned utility overrides for eTIMS custom dialogs.
+   Frappe desk still loads Bootstrap 4, so these classes exist but use Bootstrap
+   hardcoded values. We override them with Frappe CSS variables so they follow
+   the Espresso theme and dark mode. */
+.text-xs { font-size: var(--text-xs) !important; }
+.text-muted { color: var(--text-muted) !important; }
+.p-3 { padding: var(--padding-md) !important; }
+.p-4 { padding: var(--padding-lg) !important; }
+.mt-2 { margin-top: var(--margin-sm) !important; }
+.mt-3 { margin-top: var(--margin-md) !important; }
+.mb-3 { margin-bottom: var(--margin-md) !important; }
+.rounded { border-radius: var(--border-radius-md) !important; }
+.d-inline-block { display: inline-block; }
+.text-center { text-align: center; }

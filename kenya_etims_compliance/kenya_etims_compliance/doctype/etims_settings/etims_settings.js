@@ -101,9 +101,9 @@ function render_dashboard_modal(d) {
 					${dashboard_card("Errors This Month", d.errors_this_month || "—", "red", "/app/error-log")}
 				</div>
 				<div class="etims-dashboard-progress">
-					<h6>Supplier Verification</h6>
+					<h6>${__("Supplier Verification")}</h6>
 					<div class="progress">
-						<div class="progress-bar bg-${supplier_rate >= 80 ? "success" : supplier_rate >= 50 ? "warning" : "danger"}" role="progressbar" style="width: ${supplier_rate}%" aria-valuenow="${supplier_rate}" aria-valuemin="0" aria-valuemax="100">${supplier_rate}%</div>
+						<div class="progress-bar bg-${supplier_rate >= 80 ? "success" : supplier_rate >= 50 ? "warning" : "danger"} etims-progress-width-${Math.round(supplier_rate / 5) * 5}" role="progressbar" aria-valuenow="${supplier_rate}" aria-valuemin="0" aria-valuemax="100">${supplier_rate}%</div>
 					</div>
 					<p class="text-muted text-xs mt-2">${d.verified_suppliers} of ${d.total_suppliers} suppliers with PIN are verified</p>
 				</div>
@@ -133,21 +133,21 @@ function render_queue_dashboard(frm) {
 			// Remove existing dashboard if any
 			wrapper.parent().find(".etims-queue-dashboard").remove();
 
-			let colors = {
-				Queued: "#2490ef",
-				Processing: "#f39c12",
-				Sent: "#28a745",
-				Failed: "#dc3545",
-				Cancelled: "#6c757d",
+			let color_class = {
+				Queued: "etims-text-blue",
+				Processing: "etims-text-orange",
+				Sent: "etims-text-green",
+				Failed: "etims-text-red",
+				Cancelled: "etims-text-gray",
 			};
 
 			let status_items = [];
 			for (let [status, count] of Object.entries(stats)) {
 				if (status === "total") continue;
-				let color = colors[status] || "#6c757d";
+				let cls = color_class[status] || "etims-text-gray";
 				status_items.push(`
 					<div class="etims-queue-item">
-						<div class="etims-queue-item__count" style="color: ${color};">${count}</div>
+						<div class="etims-queue-item__count ${cls}">${count}</div>
 						<div class="etims-queue-item__label">${status}</div>
 					</div>
 				`);
@@ -156,14 +156,14 @@ function render_queue_dashboard(frm) {
 			let html = `
 				<div class="etims-queue-dashboard">
 					<div class="etims-queue-dashboard__header">
-						<h6>Invoice Queue Status</h6>
-						<a href="/app/etims-invoice-queue" class="etims-queue-dashboard__link">View Queue List</a>
+						<h6>${__("Invoice Queue Status")}</h6>
+						<a href="/app/etims-invoice-queue" class="etims-queue-dashboard__link">${__("View Queue List")}</a>
 					</div>
 					<div class="etims-queue-dashboard__grid">
 						${status_items.join("")}
 					</div>
 					<div class="etims-queue-dashboard__footer">
-						Total: ${stats.total}
+						${__("Total")}: ${stats.total}
 					</div>
 				</div>
 			`;

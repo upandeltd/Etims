@@ -26,7 +26,13 @@ add_to_apps_screen = [
 # ------------------
 
 # include js, css files in header of desk.html
-app_include_css = "/assets/kenya_etims_compliance/css/etims_dashboard.css"
+app_include_css = [
+	# Global eTIMS styles; dashboard styles are namespaced under .etims-dashboard-modal
+	# and .etims-queue-dashboard so they only affect eTIMS Settings UI. Shared utility
+	# classes (.etims-error-list, .etims-qr-code) remain global for dialogs in other forms.
+	"/assets/kenya_etims_compliance/css/etims_dashboard.css",
+	"/assets/kenya_etims_compliance/css/etims_setup_wizard.css",
+]
 # app_include_js = "/assets/kenya_etims_compliance/js/kenya_etims_compliance.js"
 
 # include js, css files in header of web template
