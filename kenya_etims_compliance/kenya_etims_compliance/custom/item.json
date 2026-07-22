@@ -182,7 +182,7 @@
   {
    "dt": "Item",
    "fieldname": "custom_registration_id",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
    "label": "Registration ID",
    "options": "User",
    "insert_after": "custom_etims_branch_user_information",
@@ -201,7 +201,7 @@
   {
    "dt": "Item",
    "fieldname": "custom_modifier_id",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
    "label": "Modifier ID",
    "options": "User",
    "insert_after": "custom_registration_id",
