@@ -304,6 +304,24 @@ fixtures = [
 			]
 		],
 	},
+	{
+		"dt": "Role Profile",
+		"filters": [
+			[
+				"name",
+				"in",
+				[
+					"eTIMS Administrator",
+					"eTIMS Manager",
+					"eTIMS Operator",
+					"eTIMS Auditor",
+					"eTIMS Sales Clerk",
+					"eTIMS Purchase Clerk",
+					"eTIMS Store Keeper",
+				],
+			]
+		],
+	},
 	{"dt": "eTIMS Credit Note Reason", "filters": [["code", "!=", ""]]},
 ]
 

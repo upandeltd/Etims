@@ -1,0 +1,100 @@
+[
+ {
+  "doctype": "Role Profile",
+  "name": "eTIMS Administrator",
+  "role_profile": "eTIMS Administrator",
+  "roles": [
+   {
+    "doctype": "Has Role",
+    "parent": "eTIMS Administrator",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "eTIMS Administrator"
+   }
+  ]
+ },
+ {
+  "doctype": "Role Profile",
+  "name": "eTIMS Manager",
+  "role_profile": "eTIMS Manager",
+  "roles": [
+   {
+    "doctype": "Has Role",
+    "parent": "eTIMS Manager",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "eTIMS Manager"
+   }
+  ]
+ },
+ {
+  "doctype": "Role Profile",
+  "name": "eTIMS Operator",
+  "role_profile": "eTIMS Operator",
+  "roles": [
+   {
+    "doctype": "Has Role",
+    "parent": "eTIMS Operator",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "eTIMS Operator"
+   }
+  ]
+ },
+ {
+  "doctype": "Role Profile",
+  "name": "eTIMS Auditor",
+  "role_profile": "eTIMS Auditor",
+  "roles": [
+   {
+    "doctype": "Has Role",
+    "parent": "eTIMS Auditor",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "eTIMS Auditor"
+   }
+  ]
+ },
+ {
+  "doctype": "Role Profile",
+  "name": "eTIMS Sales Clerk",
+  "role_profile": "eTIMS Sales Clerk",
+  "roles": [
+   {
+    "doctype": "Has Role",
+    "parent": "eTIMS Sales Clerk",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "eTIMS Sales Clerk"
+   }
+  ]
+ },
+ {
+  "doctype": "Role Profile",
+  "name": "eTIMS Purchase Clerk",
+  "role_profile": "eTIMS Purchase Clerk",
+  "roles": [
+   {
+    "doctype": "Has Role",
+    "parent": "eTIMS Purchase Clerk",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "eTIMS Purchase Clerk"
+   }
+  ]
+ },
+ {
+  "doctype": "Role Profile",
+  "name": "eTIMS Store Keeper",
+  "role_profile": "eTIMS Store Keeper",
+  "roles": [
+   {
+    "doctype": "Has Role",
+    "parent": "eTIMS Store Keeper",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "eTIMS Store Keeper"
+   }
+  ]
+ }
+]

@@ -20,6 +20,7 @@
 10. [Breaking Changes](#10-breaking-changes)
 11. [Post-Audit Fixes (2026-07-29)](#11-post-audit-fixes-2026-07-29)
 12. [Workspace Sidebar & Desk Icon Fix (2026-07-29)](#12-workspace-sidebar--desk-icon-fix-2026-07-29)
+13. [Role Profiles (2026-07-29)](#13-role-profiles-2026-07-29)
 
 ---
 
@@ -616,6 +617,23 @@ Two production issues on `mbaguya`: the eTIMS workspace sidebar did not render, 
 - Browser-verified on the running site: opening `/app/etims` renders the full custom sidebar (Getting Started, Daily Operations, Reconciliation, Reports, Monitoring) and shows a single `eTIMS` app icon.
 
 **Files changed:** `hooks.py`, `installation/after_install.py`, `kenya_etims_compliance/page/etims_setup_wizard/etims_setup_wizard.js`, workspace moved to `kenya_etims_compliance/workspace/etims/etims.json`, sidebar at `workspace_sidebar/etims.json`; removed `fixtures/workspace_sidebar.json`, both `desktop_icon/kenya_etims_compliance.json`, and the flat `kenya_etims_compliance/workspace_sidebar/etims_compliance.json`.
+
+---
+
+## 13. Role Profiles (2026-07-29)
+
+Added per-persona **Role Profiles** so an admin can grant eTIMS access in one field on the User form (`role_profile_name`) instead of assigning individual roles. Neither the `matoro` nor `alidav16` copy previously shipped any Role Profile.
+
+### 13.1 What was added
+
+- Seven Role Profiles, one per eTIMS role (least-privilege, eTIMS roles only -- no standard ERPNext roles bundled): `eTIMS Administrator`, `eTIMS Manager`, `eTIMS Operator`, `eTIMS Auditor`, `eTIMS Sales Clerk`, `eTIMS Purchase Clerk`, `eTIMS Store Keeper`. Each profile contains exactly its matching eTIMS role.
+- Shipped as `fixtures/role_profile.json` and registered in `hooks.py` `fixtures` (filtered to the seven names), so they sync on install/migrate like `role.json`.
+
+### 13.2 Note on migrate + background worker
+
+`Role Profile.on_update` enqueues `update_all_users` on the `long` queue (it only runs synchronously under `in_install`/`in_test`) and locks the doc until the job runs. On a normal production server (workers running) this drains automatically. On a worker-less box, the queued action leaves a stale file lock in `sites/<site>/locks/` that blocks the next migrate with `DocumentLockedError` -- clear the locks and run a `bench worker` (long queue) to drain. Verified clean on `mbaguya` with a worker running: migrate succeeds, all seven profiles present with their roles, no residual locks.
+
+**Files changed:** `hooks.py` (Role Profile fixture entry), `kenya_etims_compliance/fixtures/role_profile.json` (new).
 
 ---
 
