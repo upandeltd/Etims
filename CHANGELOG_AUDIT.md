@@ -18,6 +18,7 @@
 8. [Scheduled Tasks](#8-scheduled-tasks)
 9. [Reports](#9-reports)
 10. [Breaking Changes](#10-breaking-changes)
+11. [Post-Audit Fixes (2026-07-29)](#11-post-audit-fixes-2026-07-29)
 
 ---
 
@@ -556,6 +557,36 @@ The modified app expects the following custom fields to exist (created by `insta
 ### 10.5 Settings Dependency
 
 The new `eTIMS Settings` Single DocType must exist for many features to work. The `after_install` hook creates it automatically, but manual installations need to create it.
+
+---
+
+## 11. Post-Audit Fixes (2026-07-29)
+
+Roles/permissions audit and full non-destructive smoke test on production site `mbaguya` (frappe/erpnext v16). Findings remediated:
+
+### 11.1 eTIMS Code Information -- missing role permissions (Medium)
+
+`eTIMS Code Information` shipped with permissions for only `Sales User` and `System Manager`. The intended eTIMS-role grants lived in `installation/etims_roles.py::add_etims_role_permissions()`, which runs in `before_install` (before the app's own DocTypes exist, so every `frappe.db.exists("DocType", ...)` check is False) and is never re-run on migrate -- the grants therefore never applied. Added all seven eTIMS roles directly to `etims_code_information.json` (the durable source of truth): Administrator/Manager full CRUD; Operator/Sales Clerk/Purchase Clerk/Store Keeper create+write, no delete; Auditor read-only.
+
+### 11.2 Removed dead install code (Low)
+
+Deleted the no-op `update_existing_doctype_permissions()` and `add_etims_role_permissions()` from `installation/etims_roles.py`. Both targeted app DocTypes that do not exist at `before_install` time and were never called on migrate. `before_install()` now only calls `create_etims_roles()`. DocType JSON is the single source of truth for permissions.
+
+### 11.3 Dashboard Number Card duplication on migrate (Low/Medium)
+
+`setup_dashboard.py` inserted the "Sales Success Rate" card with `name="Sales Success Rate"` but `label="Sales Success Rate (%)"`. Number Cards autoname from their label, so the idempotency check `frappe.db.exists("Number Card", "Sales Success Rate")` never matched and a duplicate card was created on every `bench migrate`. Set the card `name` to `"Sales Success Rate (%)"` (matching label) and removed the accumulated duplicate on production.
+
+### 11.4 Role fixture never exported (Low)
+
+`hooks.py` declared a `Role` fixture for the seven eTIMS roles, but no `fixtures/role.json` existed, so `bench migrate` could not recreate roles if deleted (they were created only once at `before_install`). Added `fixtures/role.json` with the seven roles.
+
+### 11.5 Verification
+
+- `bench --site mbaguya migrate` runs clean (after_migrate hooks + patches, no errors).
+- Live DB: eTIMS Code Information now carries 9 permission rows (including all 7 eTIMS roles); all 7 roles present; no dangling permission-to-role references; single `Sales Success Rate (%)` card.
+- Full smoke test: 40/40 DocTypes instantiate, 9/9 Script Reports execute, 12/12 Number Cards + dashboard API compute, 5/6 charts (the 6th is an empty-state -- 0 matching rows, framework behaviour, not a defect), workspace + sidebar load, utility functions pass.
+
+**Files changed:** `kenya_etims_compliance/kenya_etims_compliance/doctype/etims_code_information/etims_code_information.json`, `kenya_etims_compliance/installation/etims_roles.py`, `kenya_etims_compliance/setup_dashboard.py`, `kenya_etims_compliance/fixtures/role.json` (new).
 
 ---
 

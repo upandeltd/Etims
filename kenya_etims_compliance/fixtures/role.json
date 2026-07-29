@@ -1,0 +1,79 @@
+[
+ {
+  "doctype": "Role",
+  "name": "eTIMS Administrator",
+  "desk_access": 1,
+  "disabled": 0,
+  "home_page": null,
+  "is_custom": 1,
+  "restrict_to_domain": "0",
+  "role_name": "eTIMS Administrator",
+  "two_factor_auth": 0
+ },
+ {
+  "doctype": "Role",
+  "name": "eTIMS Manager",
+  "desk_access": 1,
+  "disabled": 0,
+  "home_page": null,
+  "is_custom": 1,
+  "restrict_to_domain": "0",
+  "role_name": "eTIMS Manager",
+  "two_factor_auth": 0
+ },
+ {
+  "doctype": "Role",
+  "name": "eTIMS Operator",
+  "desk_access": 1,
+  "disabled": 0,
+  "home_page": null,
+  "is_custom": 1,
+  "restrict_to_domain": "0",
+  "role_name": "eTIMS Operator",
+  "two_factor_auth": 0
+ },
+ {
+  "doctype": "Role",
+  "name": "eTIMS Auditor",
+  "desk_access": 0,
+  "disabled": 0,
+  "home_page": null,
+  "is_custom": 1,
+  "restrict_to_domain": "0",
+  "role_name": "eTIMS Auditor",
+  "two_factor_auth": 0
+ },
+ {
+  "doctype": "Role",
+  "name": "eTIMS Sales Clerk",
+  "desk_access": 1,
+  "disabled": 0,
+  "home_page": null,
+  "is_custom": 1,
+  "restrict_to_domain": "0",
+  "role_name": "eTIMS Sales Clerk",
+  "two_factor_auth": 0
+ },
+ {
+  "doctype": "Role",
+  "name": "eTIMS Purchase Clerk",
+  "desk_access": 1,
+  "disabled": 0,
+  "home_page": null,
+  "is_custom": 1,
+  "restrict_to_domain": "0",
+  "role_name": "eTIMS Purchase Clerk",
+  "two_factor_auth": 0
+ },
+ {
+  "doctype": "Role",
+  "name": "eTIMS Store Keeper",
+  "desk_access": 1,
+  "disabled": 0,
+  "home_page": null,
+  "is_custom": 1,
+  "restrict_to_domain": "0",
+  "role_name": "eTIMS Store Keeper",
+  "two_factor_auth": 0
+ }
+]

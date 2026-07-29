@@ -95,7 +95,7 @@ def create_number_cards():
 			"color": "#e67e22",
 		},
 		{
-			"name": "Sales Success Rate",
+			"name": "Sales Success Rate (%)",
 			"label": "Sales Success Rate (%)",
 			"type": "Custom",
 			"document_type": "Sales Invoice",
