@@ -19,6 +19,7 @@
 9. [Reports](#9-reports)
 10. [Breaking Changes](#10-breaking-changes)
 11. [Post-Audit Fixes (2026-07-29)](#11-post-audit-fixes-2026-07-29)
+12. [Workspace Sidebar & Desk Icon Fix (2026-07-29)](#12-workspace-sidebar--desk-icon-fix-2026-07-29)
 
 ---
 
@@ -587,6 +588,34 @@ Deleted the no-op `update_existing_doctype_permissions()` and `add_etims_role_pe
 - Full smoke test: 40/40 DocTypes instantiate, 9/9 Script Reports execute, 12/12 Number Cards + dashboard API compute, 5/6 charts (the 6th is an empty-state -- 0 matching rows, framework behaviour, not a defect), workspace + sidebar load, utility functions pass.
 
 **Files changed:** `kenya_etims_compliance/kenya_etims_compliance/doctype/etims_code_information/etims_code_information.json`, `kenya_etims_compliance/installation/etims_roles.py`, `kenya_etims_compliance/setup_dashboard.py`, `kenya_etims_compliance/fixtures/role.json` (new).
+
+---
+
+## 12. Workspace Sidebar & Desk Icon Fix (2026-07-29)
+
+Two production issues on `mbaguya`: the eTIMS workspace sidebar did not render, and the desk showed two "eTIMS" icons. Root causes were a workspace/sidebar name mismatch plus non-standard file structure; fixed by aligning to Frappe v16 conventions.
+
+### 12.1 Root cause
+
+- **Sidebar not rendering:** the desk resolves a workspace's `Workspace Sidebar` by matching the sidebar record's name to the workspace name (`frappe.boot.workspace_sidebar_item[<workspace>.toLowerCase()]`, see `frappe/public/js/frappe/ui/sidebar/sidebar.js` + `frappe/boot.py::get_sidebar_items`). The sidebar was named `eTIMS` but the workspace was `eTIMS Compliance` (route `/app/etims-compliance`), so no boot key matched and the custom sidebar never loaded.
+- **Two desk icons:** `create_desktop_icons_from_workspace` (`frappe/desk/doctype/desktop_icon/desktop_icon.py`) hides the workspace-derived Link icon only when the workspace name equals `app_title`. `app_title` is `eTIMS` but the workspace was `eTIMS Compliance`, so the Link icon ("eTIMS Compliance") showed alongside the app's App icon -> duplicate.
+
+### 12.2 Fix -- rename workspace to `eTIMS` and align structure
+
+- Renamed the Workspace `eTIMS Compliance` -> `eTIMS` (name = `app_title` = sidebar name). Route is now `/app/etims`. This makes the sidebar resolve by direct name match AND makes Frappe auto-hide the duplicate workspace icon.
+- Moved the Workspace to the standard folder-per-record path `kenya_etims_compliance/workspace/etims/etims.json` (synced via `IMPORTABLE_DOCTYPES`).
+- Moved the Workspace Sidebar to the standard app-level path `workspace_sidebar/etims.json` (synced via the `app_level_folders` list in `frappe/model/sync.py`); removed the non-standard duplicates: `fixtures/workspace_sidebar.json`, the flat module-dir copy, and the `Workspace`/`Workspace Sidebar` fixture entries + v16 append block in `hooks.py`.
+- Removed the legacy `desktop_icon/*.json` files (both copies); the app tile now comes solely from the standard v16 `add_to_apps_screen` hook (route updated to `/app/etims`).
+- Removed the now-redundant `after_install.setup_workspace_sidebar` (and its `after_migrate` entry) -- the sidebar is synced by the standard mechanism.
+- Updated the setup-wizard redirect + button to `/app/etims` / "Go to eTIMS".
+
+### 12.3 Production remediation + verification
+
+- Renamed the live Workspace doc `eTIMS Compliance` -> `eTIMS`; deleted the two stale Desktop Icons; ran `bench --site mbaguya migrate` (clean); regenerated icons via `create_desktop_icons()`.
+- Live DB after fix: Workspace `eTIMS` present (old name gone), Workspace Sidebar `eTIMS` present (48 items, Home -> `eTIMS`), boot sidebar key `etims` present, exactly one visible desk icon `eTIMS` (-> `/app/etims`).
+- Browser-verified on the running site: opening `/app/etims` renders the full custom sidebar (Getting Started, Daily Operations, Reconciliation, Reports, Monitoring) and shows a single `eTIMS` app icon.
+
+**Files changed:** `hooks.py`, `installation/after_install.py`, `kenya_etims_compliance/page/etims_setup_wizard/etims_setup_wizard.js`, workspace moved to `kenya_etims_compliance/workspace/etims/etims.json`, sidebar at `workspace_sidebar/etims.json`; removed `fixtures/workspace_sidebar.json`, both `desktop_icon/kenya_etims_compliance.json`, and the flat `kenya_etims_compliance/workspace_sidebar/etims_compliance.json`.
 
 ---
 

@@ -345,11 +345,11 @@ frappe.pages["etims-setup-wizard"].on_page_load = function (wrapper) {
 					// Done button
 					$content.append(
 						`<div class="wizard-actions">
-							<button class="btn btn-primary btn-sm done-btn">${__("Go to eTIMS Compliance")}</button>
+							<button class="btn btn-primary btn-sm done-btn">${__("Go to eTIMS")}</button>
 						</div>`
 					);
 					$content.find(".done-btn").on("click", () => {
-						frappe.set_route("app", "etims-compliance");
+						frappe.set_route("app", "etims");
 					});
 				}
 			},

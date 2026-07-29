@@ -37,7 +37,7 @@
  "idx": 0,
  "indicator_color": "green",
  "is_hidden": 0,
- "label": "eTIMS Compliance",
+ "label": "eTIMS",
  "link_type": "DocType",
  "links": [
   {
@@ -451,7 +451,7 @@
  "modified": "2026-07-04 08:00:00.000000",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
- "name": "eTIMS Compliance",
+ "name": "eTIMS",
  "number_cards": [
   {
    "label": "Sales Transmitted",

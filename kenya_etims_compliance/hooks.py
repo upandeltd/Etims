@@ -1,5 +1,3 @@
-import frappe
-
 app_name = "kenya_etims_compliance"
 app_title = "eTIMS"
 app_publisher = "Upande Ltd"
@@ -17,7 +15,7 @@ add_to_apps_screen = [
 		"name": "kenya_etims_compliance",
 		"logo": "/assets/kenya_etims_compliance/images/etims-icon.jpg",
 		"title": "eTIMS",
-		"route": "/app/etims-compliance",
+		"route": "/app/etims",
 		"has_permission": "kenya_etims_compliance.check_app_permission",
 	}
 ]
@@ -100,7 +98,6 @@ jinja = {
 before_install = "kenya_etims_compliance.installation.etims_roles.before_install"
 after_install = "kenya_etims_compliance.installation.after_install.after_install"
 after_migrate = [
-	"kenya_etims_compliance.installation.after_install.setup_workspace_sidebar",
 	"kenya_etims_compliance.custom_methods.install_queue_fields.install_queue_fields",
 	# Create the Number Cards / Dashboard Charts the eTIMS workspace references
 	"kenya_etims_compliance.setup_dashboard.execute",
@@ -289,7 +286,6 @@ scheduler_events = {
 
 fixtures = [
 	{"dt": "Custom Field", "filters": [["module", "=", "Kenya Etims Compliance"]]},
-	{"dt": "Workspace", "filters": [["name", "=", "eTIMS Compliance"]]},
 	{
 		"dt": "Role",
 		"filters": [
@@ -311,14 +307,3 @@ fixtures = [
 	{"dt": "eTIMS Credit Note Reason", "filters": [["code", "!=", ""]]},
 ]
 
-# "Workspace Sidebar" is a v16+ DocType. Including it unconditionally breaks
-# `bench export-fixtures` on v15 (the DocType/table does not exist). Add it only
-# on v16+, matching the version guard in installation/after_install.py. The
-# import path (sync_fixtures) already skips the v16 sidebar JSON on v15.
-try:
-	if int(frappe.__version__.split(".")[0]) >= 16:
-		fixtures.append(
-			{"dt": "Workspace Sidebar", "filters": [["module", "=", "Kenya Etims Compliance"]]}
-		)
-except Exception:
-	pass
