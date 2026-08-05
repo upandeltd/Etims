@@ -5,7 +5,7 @@ from datetime import datetime
 import frappe
 import requests
 from frappe import _, scrub
-from frappe.utils import flt
+from frappe.utils import cint, flt
 
 from kenya_etims_compliance.utils.etims_utils import (
 	apply_tax_bands,
@@ -523,16 +523,24 @@ def get_last_inv_number(doc, branch_id):
 		last_inv_no = settings_docs[0].get("last_purchase_invoice_number") or 0
 
 	try:
-		last_inv = frappe.db.get_all(
-			doc.doctype,
-			filters={"name": ["!=", doc.name], "custom_tax_branch_office": branch_id},
-			fields=["custom_invoice_number"],
-			order_by="custom_invoice_number desc",
-			page_length=1,
+		# custom_invoice_number is a free-text field on this site (legacy supplier
+		# invoice refs like "KRACU0200133329/26" live in the same column as
+		# eTIMS-assigned running numbers), so an ORDER BY on the column would sort
+		# lexically and pick the wrong row, and non-numeric values can't be
+		# incremented. Only numeric-looking values count towards "last number".
+		result = frappe.db.sql(
+			"""
+			SELECT MAX(CAST(custom_invoice_number AS UNSIGNED))
+			FROM `tabPurchase Invoice`
+			WHERE name != %(name)s
+				AND custom_tax_branch_office = %(branch_id)s
+				AND custom_invoice_number REGEXP '^[0-9]+$'
+			""",
+			{"name": doc.name, "branch_id": branch_id},
 		)
 
-		if last_inv and last_inv[0].get("custom_invoice_number"):
-			last_inv_no = max(last_inv_no or 0, last_inv[0].get("custom_invoice_number"))
+		if result and result[0][0] is not None:
+			last_inv_no = max(last_inv_no or 0, cint(result[0][0]))
 
 		cur_number = (last_inv_no or 0) + 1
 
