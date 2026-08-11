@@ -29,6 +29,8 @@ from kenya_etims_compliance.custom_methods.queue_processor import (
 	should_use_queue,
 )
 from kenya_etims_compliance.custom_methods.sales_invoice import (
+	build_sales_payload,
+	etims_sale_item_list_sales,
 	get_total_discount,
 	insert_tax_amounts,
 	validate_inv_number,
@@ -252,6 +254,178 @@ class TestSalesInvoiceCustomMethods(FrappeTestCase):
 			update_modified=True,
 		)
 		self.assertEqual(mock_set_value.call_count, 2)
+
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.get_tax_template_details")
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.frappe.db.get_all")
+	def test_etims_sale_item_list_sales_merges_same_item_code(self, mock_get_all, mock_tax_template):
+		mock_get_all.side_effect = lambda doctype, filters=None, fields=None: [
+			{
+				"custom_item_code": f"KE{filters['item_code']}",
+				"custom_item_classification_code": "5059690800",
+				"custom_item_name": filters["item_code"],
+				"custom_packaging_unit_code": "NT",
+				"custom_quantity_unit_code": "U",
+			}
+		]
+		mock_tax_template.return_value = "B"
+
+		item1 = MockRow(
+			item_code="RAW-MEAT", item_tax_template="VAT-16",
+			idx=1, qty=2, base_rate=100.0, base_amount=200.0,
+			discount_percentage=0, custom_discount_amount_kes=0,
+			base_net_amount=172.41,
+		)
+		item2 = MockRow(
+			item_code="RAW-MEAT", item_tax_template="VAT-16",
+			idx=2, qty=3, base_rate=100.0, base_amount=300.0,
+			discount_percentage=0, custom_discount_amount_kes=0,
+			base_net_amount=258.62,
+		)
+		doc = MagicMock()
+		doc.items = [item1, item2]
+
+		# KRA rejects an itemList with the same item code split across rows
+		# ("Supply/Taxable amount is incorrect for item X") - they must merge
+		# into a single summed entry.
+		result = etims_sale_item_list_sales(doc)
+
+		self.assertEqual(len(result), 1)
+		row = result[0]
+		self.assertEqual(row["itemCd"], "KERAW-MEAT")
+		self.assertEqual(row["itemSeq"], 1)
+		self.assertEqual(row["qty"], 5)
+		self.assertEqual(row["pkg"], 5)
+		self.assertEqual(row["splyAmt"], 500.0)
+		self.assertEqual(row["taxblAmt"], round(172.41 + 258.62, 2))
+
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.get_tax_template_details")
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.frappe.db.get_all")
+	def test_etims_sale_item_list_sales_keeps_separate_when_tax_code_differs(
+		self, mock_get_all, mock_tax_template
+	):
+		mock_get_all.return_value = [
+			{
+				"custom_item_code": "KERAW-MEAT",
+				"custom_item_classification_code": "5059690800",
+				"custom_item_name": "Raw Meat",
+				"custom_packaging_unit_code": "NT",
+				"custom_quantity_unit_code": "U",
+			}
+		]
+		mock_tax_template.side_effect = ["B", "D"]
+
+		item1 = MockRow(
+			item_code="RAW-MEAT", item_tax_template="VAT-16",
+			idx=1, qty=2, base_rate=100.0, base_amount=200.0,
+			discount_percentage=0, custom_discount_amount_kes=0,
+			base_net_amount=172.41,
+		)
+		item2 = MockRow(
+			item_code="RAW-MEAT", item_tax_template="VAT-EXEMPT",
+			idx=2, qty=3, base_rate=100.0, base_amount=300.0,
+			discount_percentage=0, custom_discount_amount_kes=0,
+			base_net_amount=300.0,
+		)
+		doc = MagicMock()
+		doc.items = [item1, item2]
+
+		# A genuine tax-code split on the same item code must NOT be merged.
+		result = etims_sale_item_list_sales(doc)
+
+		self.assertEqual(len(result), 2)
+		self.assertEqual({r["taxTyCd"] for r in result}, {"B", "D"})
+		self.assertEqual([r["itemSeq"] for r in result], [1, 2])
+
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.frappe.db.set_value")
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.get_receipt_label")
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.get_etims_settings")
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.apply_tax_bands")
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.etims_sale_item_list_sales")
+	def test_build_sales_payload_tot_taxbl_amt_includes_nontaxable(
+		self, mock_item_list, mock_apply_bands, mock_get_settings, mock_get_label, mock_set_value
+	):
+		# Regression test for ACC-SINV-2026-00020: a wholly zero-rated/exempt
+		# invoice has custom_total_taxable_amount == 0 and the whole amount in
+		# custom_total_nontaxable_amount. totTaxblAmt must reflect both, or KRA
+		# rejects with "totTaxblAmt (0) must match the sum of itemList taxblAmt".
+		mock_item_list.return_value = []
+		mock_get_settings.return_value = {"vat_obligation": "Registered", "training_mode": 0}
+		mock_get_label.return_value = "RCPT-1"
+
+		doc = MagicMock()
+		doc.modified = "2026-08-11 16:00:00.000000"
+		doc.posting_date = "2026-08-11"
+		doc.custom_item_count = 1
+		doc.items = []
+		doc.name = "ACC-SINV-2026-00020"
+		doc.custom_invoice_number = 17
+		doc.custom_original_invoice_number = 0
+		doc.tax_id = "P000000000A"
+		doc.customer = "Mama Mboga Stores Ltd"
+		doc.custom_sales_type_code = "N"
+		doc.custom_receipt_type_code = "S"
+		doc.custom_payment_type_code = "01"
+		doc.custom_invoice_status_code = "02"
+		doc.custom_total_taxable_amount = 0
+		doc.custom_total_nontaxable_amount = 50300.0
+		doc.base_total_taxes_and_charges = 0
+		doc.base_grand_total = 50300.0
+		doc.remarks = ""
+		doc.owner = "Administrator"
+		doc.modified_by = "Administrator"
+		doc.is_return = 0
+		doc.taxes = []
+
+		payload = build_sales_payload(doc)
+
+		self.assertEqual(payload["totTaxblAmt"], 50300.0)
+
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.frappe.db.set_value")
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.get_receipt_label")
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.get_etims_settings")
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.apply_tax_bands")
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.etims_sale_item_list_sales")
+	def test_build_sales_payload_tot_item_cnt_matches_item_list_length(
+		self, mock_item_list, mock_apply_bands, mock_get_settings, mock_get_label, mock_set_value
+	):
+		# Regression test for ACC-SINV-2026-00020 (2nd failure): two Sales Invoice
+		# Item rows sharing an item code merge into ONE KRA itemList line
+		# (etims_sale_item_list_sales dedup), but custom_item_count is stamped
+		# once at submit time from the RAW row count. totItemCnt must reflect
+		# the actual itemList sent, or KRA rejects with "Item Count error".
+		mock_item_list.return_value = [{"itemSeq": 1}]  # 2 raw rows merged to 1
+		mock_get_settings.return_value = {"vat_obligation": "Registered", "training_mode": 0}
+		mock_get_label.return_value = "RCPT-1"
+
+		doc = MagicMock()
+		doc.modified = "2026-08-11 16:00:00.000000"
+		doc.posting_date = "2026-08-11"
+		doc.custom_item_count = 2  # stale: stamped from raw doc.items count pre-dedup
+		doc.items = [MagicMock(), MagicMock()]
+		doc.name = "ACC-SINV-2026-00020"
+		doc.custom_invoice_number = 17
+		doc.custom_original_invoice_number = 0
+		doc.tax_id = "P000000000A"
+		doc.customer = "Mama Mboga Stores Ltd"
+		doc.custom_sales_type_code = "N"
+		doc.custom_receipt_type_code = "S"
+		doc.custom_payment_type_code = "01"
+		doc.custom_invoice_status_code = "02"
+		doc.custom_total_taxable_amount = 0
+		doc.custom_total_nontaxable_amount = 50300.0
+		doc.base_total_taxes_and_charges = 0
+		doc.base_grand_total = 50300.0
+		doc.remarks = ""
+		doc.owner = "Administrator"
+		doc.modified_by = "Administrator"
+		doc.is_return = 0
+		doc.taxes = []
+
+		payload = build_sales_payload(doc)
+
+		self.assertEqual(payload["totItemCnt"], 1)
+		self.assertEqual(payload["totItemCnt"], len(payload["itemList"]))
+		self.assertNotEqual(payload["totItemCnt"], doc.custom_item_count)
 
 
 class TestPurchaseInvoiceCustomMethods(FrappeTestCase):

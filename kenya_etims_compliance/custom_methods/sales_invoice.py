@@ -487,7 +487,7 @@ def validate_inv_number(doc):
 
 
 def etims_sale_item_list_sales(doc):
-	sales_item_list = []
+	merged_items = {}
 	for item in doc.items:
 		item_tax_code = get_tax_template_details(item.get("item_tax_template"))
 		item_detail = frappe.db.get_all(
@@ -503,9 +503,11 @@ def etims_sale_item_list_sales(doc):
 		)
 		if not item_detail:
 			frappe.throw(f"Item {item.get('item_code')} not found or is disabled")
-		item_etims_data = {
-			"itemSeq": item.get("idx"),
-			"itemCd": item_detail[0].get("custom_item_code"),
+
+		item_cd = item_detail[0].get("custom_item_code")
+		dc_amt = abs(round((item.get("custom_discount_amount_kes") * item.get("qty")), 2))
+		row = {
+			"itemCd": item_cd,
 			"itemClsCd": item_detail[0].get("custom_item_classification_code"),
 			"itemNm": item_detail[0].get("custom_item_name"),
 			# "bcd":null,
@@ -513,23 +515,40 @@ def etims_sale_item_list_sales(doc):
 			"pkg": abs(item.get("qty")),
 			"qtyUnitCd": item_detail[0].get("custom_quantity_unit_code"),
 			"qty": abs(item.get("qty")),
-			"prc": abs(item.get("base_rate")),
 			"splyAmt": abs(item.get("base_amount")),
-			"dcRt": abs(item.get("discount_percentage")),
-			"dcAmt": abs(round((item.get("custom_discount_amount_kes") * item.get("qty")), 2)),
+			"dcAmt": dc_amt,
 			# "isrccCd":null,
 			# "isrccNm":null,
 			# "isrcRt":null,
 			# "isrcAmt":null,
-			"totDcAmt": abs(round((item.get("custom_discount_amount_kes") * item.get("qty")), 2)),
+			"totDcAmt": dc_amt,
 			"taxTyCd": item_tax_code,
 			"taxblAmt": abs(round(item.get("base_net_amount"), 2)),
 			"taxAmt": abs(round((item.get("base_amount") - item.get("base_net_amount")), 2)),
 			"totAmt": abs(item.get("base_amount")),
 		}
 
-		if item_etims_data not in sales_item_list:
-			sales_item_list.append(item_etims_data)
+		# KRA validates itemCd as a per-transaction key: the same item code split
+		# across multiple ERPNext rows (e.g. a return crediting several original
+		# sale lines, or a rate override mid-invoice) must collapse into ONE
+		# itemList entry with summed quantities/amounts, or KRA rejects the
+		# payload ("Supply/Taxable amount is incorrect for item X", "item code X
+		# appears more than once"). Only merge rows that also share a tax type -
+		# a genuine tax-code split on the same item must stay separate.
+		key = (item_cd, item_tax_code)
+		if key in merged_items:
+			existing = merged_items[key]
+			for field in ("pkg", "qty", "splyAmt", "dcAmt", "totDcAmt", "taxblAmt", "taxAmt", "totAmt"):
+				existing[field] = round(existing[field] + row[field], 2)
+		else:
+			merged_items[key] = row
+
+	sales_item_list = []
+	for idx, row in enumerate(merged_items.values(), start=1):
+		row["itemSeq"] = idx
+		row["prc"] = round(row["splyAmt"] / row["qty"], 2) if row["qty"] else 0
+		row["dcRt"] = round((row["dcAmt"] / row["splyAmt"]) * 100, 2) if row["splyAmt"] else 0
+		sales_item_list.append(row)
 
 	return sales_item_list
 
@@ -794,6 +813,8 @@ def build_sales_payload(doc):
 	if count < 1:
 		frappe.throw(_("Sales Invoice must have at least one item to submit to eTIMS"))
 
+	item_list = etims_sale_item_list_sales(doc)
+
 	payload = {
 		"trdInvcNo": doc.name,
 		"invcNo": doc.custom_invoice_number,
@@ -807,8 +828,8 @@ def build_sales_payload(doc):
 		"cfmDt": conc_datetime_str,
 		"salesDt": date_str,
 		"stockRlsDt": date_time_str,
-		"totItemCnt": count,
-		"totTaxblAmt": abs(doc.custom_total_taxable_amount or 0),
+		"totItemCnt": len(item_list),
+		"totTaxblAmt": abs((doc.custom_total_taxable_amount or 0) + (doc.custom_total_nontaxable_amount or 0)),
 		"totTaxAmt": abs(doc.base_total_taxes_and_charges or 0),
 		"totAmt": abs(doc.base_grand_total or 0),
 		"prchrAcptcYn": "N",
@@ -822,7 +843,7 @@ def build_sales_payload(doc):
 			"rcptPbctDt": date_time_str,
 			"prchrAcptcYn": "N",
 		},
-		"itemList": etims_sale_item_list_sales(doc),
+		"itemList": item_list,
 	}
 
 	# KRA tax bands A-E (shared, summed-per-band, null-guarded helper)
