@@ -58,6 +58,7 @@ doctype_js = {
 # include js in doctype views
 doctype_list_js = {
 	"Item": "custom_methods/item_list.js",
+	"eTIMS Invoice Queue": "custom_methods/etims_invoice_queue_list.js",
 }
 
 # Svg Icons
