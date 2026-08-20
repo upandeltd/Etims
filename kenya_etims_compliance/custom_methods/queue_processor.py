@@ -647,3 +647,67 @@ def _handle_stock_entry_success(docname, data, queue_entry):
 		update_modified=False,
 	)
 	frappe.db.commit()
+
+
+# A Sales Invoice is only fully fiscalised once the SCU signature landed on the
+# document. `_handle_success` deliberately swallows a post-success failure so a
+# QR/attachment error cannot bounce an already-accepted entry back to Failed and
+# re-POST it (that would mint a DUPLICATE fiscal receipt at KRA). The cost is a
+# durable split-brain: the queue row says Sent, the invoice has no signature, no
+# QR and no receipt, and nothing ever retries it. This window also opens on a
+# hard worker kill between the Sent commit and `_handle_success`.
+REPAIR_LOOKBACK_DAYS = 7
+
+
+def repair_sent_without_signature():
+	"""Hourly scheduler: replay post-success work for Sent-but-unsigned entries.
+
+	Replays from the queue row's stored `response_data`, so KRA is never
+	contacted and no second fiscal receipt can be created. Idempotent: an entry
+	whose invoice already carries the signature is skipped, and each replay is
+	the same code path the worker would have run.
+	"""
+	cutoff = add_to_date(now_datetime(), days=-REPAIR_LOOKBACK_DAYS)
+	candidates = frappe.get_all(
+		"eTIMS Invoice Queue",
+		filters={
+			"status": "Sent",
+			"reference_doctype": "Sales Invoice",
+			"sent_at": [">", cutoff],
+		},
+		fields=["name", "reference_name", "response_data"],
+		limit=200,
+	)
+
+	repaired = 0
+	for entry in candidates:
+		if not entry.response_data:
+			continue
+		if frappe.db.get_value(
+			"Sales Invoice", entry.reference_name, "custom_receipt_signature"
+		):
+			continue
+
+		try:
+			data = json.loads(entry.response_data)
+		except (ValueError, TypeError):
+			continue
+		if not data.get("sdcDateTime"):
+			# Not a signing response (e.g. a stock-master ack) — nothing to replay.
+			continue
+
+		queue_entry = frappe.get_doc("eTIMS Invoice Queue", entry.name)
+		try:
+			_handle_sales_invoice_success(entry.reference_name, data, queue_entry)
+			frappe.db.commit()
+			repaired += 1
+		except Exception:
+			frappe.db.rollback()
+			frappe.log_error(
+				title=f"eTIMS repair replay failed: {entry.reference_name}"[:140],
+				message=traceback.format_exc(),
+			)
+
+	if repaired:
+		frappe.logger().info(f"eTIMS: repaired {repaired} Sent-but-unsigned invoice(s)")
+	return repaired

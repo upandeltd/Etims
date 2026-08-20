@@ -15,6 +15,19 @@ def on_submit(doc, method):
 	if not eTIMS.get_user_branch_id():
 		return
 
+	# Same rule as the sales path: an item KRA does not know about cannot be
+	# declared. Enqueuing it anyway just buries a guaranteed rejection in the
+	# retry loop, so hold the whole document back with the reason recorded.
+	from kenya_etims_compliance.custom_methods.sales_invoice import kra_transmission_problems
+
+	problems = kra_transmission_problems(doc)
+	if problems:
+		frappe.log_error(
+			title=f"eTIMS: stock master for {doc.name} held back from KRA",
+			message="\n".join(problems),
+		)
+		return
+
 	# Respect the same enable_queue toggle the invoice path uses. When queueing
 	# is enabled, hand the whole per-item loop to the existing queue — never
 	# issue sequential blocking KRA calls inside a submit transaction.

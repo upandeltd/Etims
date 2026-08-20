@@ -200,6 +200,11 @@ scheduler_events = {
 		"*/5 * * * *": ["kenya_etims_compliance.custom_methods.queue_processor.retry_failed_invoices"],
 		# Per TIS spec §21.8: pull pending KRA purchase records every 15 min
 		"*/15 * * * *": ["kenya_etims_compliance.tasks.fetch_purchase_transactions"],
+		# A queue row can settle on "Sent" while its Sales Invoice never got the
+		# SCU signature/QR, because post-success work is deliberately swallowed
+		# rather than re-POSTed (a retry would duplicate the fiscal receipt).
+		# Replay that work hourly from the stored response — never hits KRA.
+		"0 * * * *": ["kenya_etims_compliance.custom_methods.queue_processor.repair_sent_without_signature"],
 	},
 	"daily": [
 		"kenya_etims_compliance.tasks.fetch_kra_notices",
