@@ -20,7 +20,7 @@
 }
 
 .etims-setup-wizard .etims-step-indicator.active {
-	border-color: var(--primary);
+	border-color: var(--ink-gray-9);
 }
 
 .etims-setup-wizard .etims-step-indicator.completed {
@@ -41,7 +41,7 @@
 }
 
 .etims-setup-wizard .etims-step-indicator.active .step-num {
-	background-color: var(--primary);
+	background-color: var(--ink-gray-9);
 	color: var(--neutral-white);
 }
 

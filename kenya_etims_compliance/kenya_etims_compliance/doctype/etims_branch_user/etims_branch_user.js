@@ -13,15 +13,23 @@ frappe.ui.form.on("eTIMS Branch User", {
             freeze: true,
             callback: function(r)   {
                 // console.log(r.message)
-                let keys = Object.keys(r.message)
-                let values = Object.values(r.message)
+                if (!r || !r.message || !Object.keys(r.message).length) return;
+                let keys = Object.keys(r.message);
+                let values = Object.values(r.message);
                 frappe.msgprint({
                     title: __(keys[0]),
-                    indicator: 'green',
-                    message: __(values[0])
+                    indicator: keys[0] === 'Success' ? 'green' : 'red',
+                    message: __('{0}', [frappe.utils.escape_html(String(values[0] ?? ''))])
                 });
 
                 refresh_field("saved")
+            },
+            error: function(r) {
+                frappe.msgprint({
+                    title: __('Connection Error'),
+                    indicator: 'red',
+                    message: __('Could not reach eTIMS: {0}', [frappe.utils.escape_html(String((r && r.message) || ''))])
+                });
             }
         })
     }

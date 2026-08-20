@@ -45,7 +45,7 @@
 }
 
 .etims-dashboard-modal .etims-dashboard-card--blue {
-	border-color: var(--primary);
+	border-color: var(--ink-gray-9);
 	background-color: var(--surface-blue-1);
 }
 
@@ -99,7 +99,7 @@
 	margin: 16px 0;
 	padding: 16px;
 	background: var(--surface-blue-1);
-	border: 1px solid var(--primary);
+	border: 1px solid var(--ink-gray-9);
 	border-radius: var(--border-radius-md);
 }
 
@@ -117,7 +117,7 @@
 
 .etims-queue-dashboard__link {
 	font-size: var(--text-xs);
-	color: var(--primary);
+	color: var(--ink-gray-9);
 	text-decoration: none;
 }
 
@@ -143,7 +143,7 @@
 }
 
 .etims-queue-item__count.etims-text-blue {
-	color: var(--primary);
+	color: var(--ink-gray-9);
 }
 
 .etims-queue-item__count.etims-text-green {

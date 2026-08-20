@@ -2,6 +2,10 @@ import frappe
 import requests
 from frappe import _
 
+from kenya_etims_compliance.custom_methods.queue_processor import enqueue_invoice
+from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import (
+	get_etims_settings,
+)
 from kenya_etims_compliance.utils.etims_utils import eTIMS
 from kenya_etims_compliance.utils.kra_client import KRAClient
 
@@ -9,6 +13,13 @@ from kenya_etims_compliance.utils.kra_client import KRAClient
 def on_submit(doc, method):
 	# Skip eTIMS stock master update if the current user has no Tax Branch Office configured
 	if not eTIMS.get_user_branch_id():
+		return
+
+	# Respect the same enable_queue toggle the invoice path uses. When queueing
+	# is enabled, hand the whole per-item loop to the existing queue — never
+	# issue sequential blocking KRA calls inside a submit transaction.
+	if get_etims_settings().get("enable_queue", 1):
+		_enqueue_stock_master(doc)
 		return
 
 	mod_user_name = eTIMS.get_name_of_user(doc.modified_by)
@@ -24,6 +35,7 @@ def on_submit(doc, method):
 				succeeded += 1
 			except (
 				frappe.DoesNotExistError,
+				frappe.ValidationError,
 				requests.ConnectionError,
 				requests.Timeout,
 				requests.HTTPError,
@@ -48,6 +60,51 @@ def on_submit(doc, method):
 		frappe.msgprint(
 			_("eTIMS Master Stock update failed for {0} item(s):<br>{1}").format(len(failed), details),
 			indicator="red", title=_("eTIMS update failed"),
+		)
+
+
+def _enqueue_stock_master(doc):
+	"""Queue every stock-maintained line item for KRA stock-master sync.
+
+	Reuses the existing queue — one entry per item, same retry/circuit-breaker
+	path the invoice queues take. The on-success handler in queue_processor
+	writes custom_stock_master_updated=1 only when KRA returns Success.
+	"""
+	branch_id = None
+	try:
+		branch_id = KRAClient()._get_user_branch_id()
+	except (requests.ConnectionError, requests.Timeout, requests.HTTPError) as e:
+		frappe.log_error("eTIMS: Failed to get branch ID for stock master queue", str(e))
+
+	mod_user_name = eTIMS.get_name_of_user(doc.modified_by)
+	reg_user_name = eTIMS.get_name_of_user(doc.owner)
+
+	count = 0
+	for item in doc.items:
+		if item.get("custom_maintain_stock") != 1:
+			continue
+		item_code = frappe.db.get_value("Item", item.get("item_code"), "custom_item_code")
+		quantity = get_bin_qty(item.get("item_code"), item.get("warehouse"))
+		payload = {
+			"itemCd": item_code,
+			"rsdQty": quantity,
+			"regrId": doc.owner,
+			"regrNm": reg_user_name,
+			"modrId": doc.modified_by,
+			"modrNm": mod_user_name,
+		}
+		enqueue_invoice(
+			doc=doc,
+			payload=payload,
+			api_endpoint="save_stock_master",
+			branch_id=branch_id,
+		)
+		count += 1
+
+	if count:
+		frappe.msgprint(
+			_("eTIMS Master Stock update queued for {0} item(s).").format(count),
+			indicator="blue",
 		)
 
 
@@ -165,4 +222,9 @@ def save_stock_master(payload):
 	result = KRAClient().post("saveStockMaster", payload)
 	if result.get("Success"):
 		return {"Success": result.get("Success")}
-	return {"Error": result.get("Error", "Oops Bad Request!")}
+	# Per contract C-1: raise on rejection instead of returning a soft error
+	# dict — callers expect ValidationError to be catchable per-item.
+	frappe.throw(
+		_("eTIMS stock master rejected: {0}").format(result.get("Error") or "Oops Bad Request!"),
+		frappe.ValidationError,
+	)

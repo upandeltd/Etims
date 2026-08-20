@@ -14,7 +14,7 @@ class TISDeviceInitialization(Document):
 	# Method to initialize and verify a device with etims
 	@frappe.whitelist()
 	def deviceVerificationReq(self):
-		payload = {"tin": self.pin, "bhfId": self.branch_id, "dvcSrlNo": self.device_serial_number}
+		payload = {"tin": self.get_password("pin", raise_exception=False), "bhfId": self.branch_id, "dvcSrlNo": self.device_serial_number}
 
 		try:
 			api_url = get_api_url(self.api_mode or "Sandbox")

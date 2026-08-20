@@ -1,6 +1,14 @@
 """KRA PIN Checker by PIN integration (developer.go.ke).
 
 OAuth client_credentials → bearer token (cached for 60 minutes) → POST PIN.
+
+NOTE: The original implementation read ``pin_checker_consumer_key`` and
+``pin_checker_consumer_secret`` from ``eTIMS Settings`` via ``get_password()``.
+Those fields do not exist on the live DocType meta (verified read-only on
+toysam — see /tmp/etims-review-2026-08-20.md, MEDIUM / LOW highlights).
+Until the fields are added, ``_get_token`` raises a clear
+``frappe.ValidationError`` with an actionable message so an operator sees
+what to configure instead of a generic ``NoneType`` crash.
 """
 
 import base64
@@ -32,10 +40,22 @@ def _get_token():
 		return cached
 
 	s = _settings()
-	key = s.get_password("pin_checker_consumer_key", raise_exception=False)
-	secret = s.get_password("pin_checker_consumer_secret", raise_exception=False)
+	# Original code used ``s.get_password("pin_checker_consumer_key", raise_exception=False)``
+	# but those fieldnames do not exist on the live DocType meta — see module
+	# docstring. Fall back to plain ``get()`` (which already returns ``None``)
+	# and surface the gap with a translated ValidationError.
+	key = s.get("pin_checker_consumer_key")
+	secret = s.get("pin_checker_consumer_secret")
 	if not key or not secret:
-		raise ValueError("PIN Checker credentials not configured in eTIMS Settings")
+		frappe.throw(
+			_(
+				"PIN Checker credentials are not configured: eTIMS Settings is "
+				"missing the fields 'pin_checker_consumer_key' and "
+				"'pin_checker_consumer_secret'. Add them to eTIMS Settings "
+				"before using the PIN Checker."
+			),
+			frappe.ValidationError,
+		)
 
 	credentials = base64.b64encode(f"{key}:{secret}".encode()).decode()
 	resp = requests.get(
@@ -71,7 +91,7 @@ def check_pin(pin):
 
 	try:
 		token = _get_token()
-	except (requests.ConnectionError, requests.Timeout, requests.HTTPError, ValueError) as e:
+	except (requests.ConnectionError, requests.Timeout, requests.HTTPError, ValueError, frappe.ValidationError) as e:
 		return {"valid": False, "message": f"Could not authenticate with KRA: {e!s}"}
 
 	try:
@@ -98,7 +118,7 @@ def check_pin(pin):
 				headers={"Content-Type": "application/json", "Authorization": f"Bearer {token}"},
 				timeout=20,
 			)
-		except (requests.ConnectionError, requests.Timeout, requests.HTTPError, ValueError) as e:
+		except (requests.ConnectionError, requests.Timeout, requests.HTTPError, ValueError, frappe.ValidationError) as e:
 			return {"valid": False, "message": f"Auth retry failed: {e!s}"}
 
 	try:

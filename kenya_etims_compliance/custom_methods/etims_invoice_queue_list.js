@@ -23,19 +23,14 @@ frappe.listview_settings["eTIMS Invoice Queue"].onload = function (listview) {
 						freeze: true,
 						freeze_message: __("Re-queuing failed entries..."),
 						callback: function (r) {
-							if (!r.message) return;
-							const count = r.message.enqueued;
-							if (count > 0) {
-								frappe.show_alert({
-									message: __("{0} entries re-queued for processing", [count]),
-									indicator: "green",
-								});
-							} else {
-								frappe.show_alert({
-									message: __("No failed entries are eligible for retry"),
-									indicator: "orange",
-								});
-							}
+							// bulk_retry_failed() dispatches a background job and
+							// returns {scheduled: true} - the count is not known
+							// synchronously, so report the hand-off, not a total.
+							if (!r.message || !r.message.scheduled) return;
+							frappe.show_alert({
+								message: __("Retry scheduled - eligible failed entries are being re-queued"),
+								indicator: "green",
+							});
 							listview.refresh();
 						},
 					});

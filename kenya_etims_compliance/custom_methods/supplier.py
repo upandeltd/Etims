@@ -6,6 +6,8 @@ import frappe
 from frappe import _
 from frappe.utils import now_datetime
 
+from kenya_etims_compliance.utils.permissions import require
+
 # KRA PIN format per eTIMS spec: letter (A or P) + 9 digits + uppercase letter
 KRA_PIN_REGEX = re.compile(r"^[AP]\d{9}[A-Z]$")
 
@@ -22,6 +24,10 @@ def verify_supplier(supplier_name):
 	    {"status": "warning", "message": "..."} when PIN is valid but Suspended/Cancelled/Stopped
 	    {"status": "error",   "message": "..."} when not found / invalid format / network error
 	"""
+	# HIGH — ungated. State-changing (writes custom_kra_pin_verified_date) and
+	# invokes the same external PIN oracle as customer.check_pin_with_kra.
+	require("Supplier", "write")
+
 	from kenya_etims_compliance.utils.pin_checker import check_pin
 
 	supplier = frappe.get_doc("Supplier", supplier_name)
@@ -42,7 +48,7 @@ def verify_supplier(supplier_name):
 		"custom_kra_pin_verified": 1 if status_of_pin == "Active" else 0,
 		"custom_kra_pin_verified_date": now_datetime(),
 	}
-	frappe.db.set_value("Supplier", supplier_name, updates, update_modified=False)
+	frappe.db.set_value("Supplier", supplier_name, updates)
 
 	if status_of_pin == "Active":
 		return {

@@ -51,7 +51,7 @@
   },
   {
    "fieldname": "password",
-   "fieldtype": "Data",
+   "fieldtype": "Password",
    "label": "Password",
    "length": 255,
    "reqd": 1
@@ -166,16 +166,36 @@
    "write": 1
   },
   {
-   "create": 1,
-   "delete": 1,
    "email": 1,
    "export": 1,
    "print": 1,
-   "read": 1,
    "report": 1,
-   "role": "Sales User",
+   "role": "eTIMS Administrator",
    "share": 1,
-   "write": 1
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "report": 1,
+   "role": "eTIMS Manager",
+   "share": 1,
+   "read": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "report": 1,
+   "role": "eTIMS Auditor",
+   "share": 1,
+   "read": 1
   }
  ],
  "sort_field": "modified",

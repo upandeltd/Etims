@@ -46,14 +46,13 @@ def get_setup_status():
 		status["pin"] = companies[0].tax_id
 
 	# Check device initialization
-	devices = frappe.get_all(
-		"TIS Device Initialization",
-		filters={"active": 1},
-		fields=["name", "branch_id", "api_mode", "communication_key"],
-		limit=1,
+	device_names = frappe.get_all(
+		"TIS Device Initialization", filters={"active": 1}, pluck="name", limit=1
 	)
-	if devices and devices[0].communication_key:
-		status["device_initialized"] = True
+	if device_names:
+		device = frappe.get_doc("TIS Device Initialization", device_names[0])
+		if device.get_password("communication_key", raise_exception=False):
+			status["device_initialized"] = True
 
 	# Check branch
 	branches = frappe.get_all("Tax Branch Office", limit=1)
@@ -109,19 +108,32 @@ def step2_test_connectivity(api_mode="Sandbox"):
 	from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import (
 		get_api_url,
 	)
-	from kenya_etims_compliance.utils.kra_client import KRAClient
 
-	url = get_api_url(api_mode)
+	# Probe the REQUESTED api_mode directly. Going through KRAClient().post()
+	# would resolve the URL from TIS Device Initialization.api_mode and ignore
+	# the operator's choice — so step 2 would report "Connected to Production"
+	# after actually probing Sandbox (or vice versa). Bypass KRAClient here:
+	# this is a connectivity probe, not a real KRA call that needs the audit
+	# trail or circuit breaker.
+	url = get_api_url(api_mode).rstrip("/") + "/selectCodeList"
 	payload = {"lastReqDt": "20200101000000"}
 	try:
-		result = KRAClient().post("selectCodeList", payload)
-		if result.get("Success") is not None or not result.get("Retryable"):
-			# Any non-retryable response (success or application-level error) means
-			# we reached the API successfully.
-			return {"status": "success", "message": f"Connected to {api_mode} API", "url": url}
-		return {"status": "error", "message": result.get("Error", "API unreachable")}
+		resp = requests.post(
+			url,
+			json=payload,
+			headers={"Content-Type": "application/json"},
+			timeout=10,
+		)
 	except (requests.ConnectionError, requests.Timeout, requests.HTTPError) as e:
 		return {"status": "error", "message": str(e)[:200]}
+	# Any HTTP response — success, app error, or 4xx — means we reached the
+	# requested endpoint. 5xx is "we got there but their backend is down".
+	if resp.status_code >= 500:
+		return {
+			"status": "error",
+			"message": f"KRA {api_mode} backend returned HTTP {resp.status_code}",
+		}
+	return {"status": "success", "message": f"Connected to {api_mode} API", "url": url}
 
 
 @frappe.whitelist()

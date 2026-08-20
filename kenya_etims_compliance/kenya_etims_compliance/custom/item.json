@@ -6,7 +6,7 @@
    "fieldtype": "Data",
    "label": "Item Code",
    "insert_after": "custom_item_information",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -14,7 +14,7 @@
    "fieldtype": "Data",
    "label": "Item Type Code",
    "insert_after": "custom_item_code",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -22,7 +22,7 @@
    "fieldtype": "Data",
    "label": "Item Name",
    "insert_after": "custom_item_type_code",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -30,7 +30,7 @@
    "fieldtype": "Data",
    "label": "Item Standard Name",
    "insert_after": "custom_item_name",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -40,7 +40,7 @@
    "insert_after": "custom_column_break_fblk2",
    "fetch_from": "custom_country_of_origin.code_name",
    "fetch_if_empty": 1,
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -48,7 +48,7 @@
    "fieldtype": "Data",
    "label": "Packaging Unit Code",
    "insert_after": "custom_origin_place_code_nation",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -56,7 +56,7 @@
    "fieldtype": "Data",
    "label": "Quantity Unit Code",
    "insert_after": "custom_packaging_unit_code",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -64,7 +64,7 @@
    "fieldtype": "Data",
    "label": "Taxation Type Code",
    "insert_after": "custom_quantity_unit_code",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -72,7 +72,7 @@
    "fieldtype": "Data",
    "label": "Batch Number",
    "insert_after": "custom_taxation_type_code",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -80,7 +80,7 @@
    "fieldtype": "Data",
    "label": "Barcode",
    "insert_after": "custom_batch_number",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -88,7 +88,7 @@
    "fieldtype": "Data",
    "label": "Default Unit Price",
    "insert_after": "custom_barcode",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -96,7 +96,7 @@
    "fieldtype": "Data",
    "label": "Group1 Unit Price",
    "insert_after": "custom_default_unit_price",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -104,7 +104,7 @@
    "fieldtype": "Column Break",
    "label": null,
    "insert_after": "custom_group1_unit_price",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -112,7 +112,7 @@
    "fieldtype": "Data",
    "label": "Group2 Unit Price",
    "insert_after": "custom_column_break_yboga",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -120,7 +120,7 @@
    "fieldtype": "Data",
    "label": "Group3 Unit Price",
    "insert_after": "custom_group2_unit_price",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -128,7 +128,7 @@
    "fieldtype": "Data",
    "label": "Group4 Unit Price",
    "insert_after": "custom_group3_unit_price",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -136,7 +136,7 @@
    "fieldtype": "Data",
    "label": "Group5 Unit Price",
    "insert_after": "custom_group4_unit_price",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -144,7 +144,7 @@
    "fieldtype": "Data",
    "label": "Additional Information",
    "insert_after": "custom_group5_unit_price",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -152,7 +152,7 @@
    "fieldtype": "Data",
    "label": "Safety Quantity",
    "insert_after": "custom_additional_information",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -161,7 +161,7 @@
    "label": "Insurance Appicable(Y/N)",
    "default": "N",
    "insert_after": "custom_safety_quantity",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -169,7 +169,7 @@
    "fieldtype": "Column Break",
    "label": null,
    "insert_after": "custom_insurance_appicableyn",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -177,7 +177,7 @@
    "fieldtype": "Data",
    "label": "Used / UnUsed",
    "insert_after": "custom_item_classification_name",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -186,7 +186,7 @@
    "label": "Registration ID",
    "options": "User",
    "insert_after": "custom_etims_branch_user_information",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -196,7 +196,7 @@
    "fetch_from": "custom_registration_id.full_name",
    "fetch_if_empty": 1,
    "insert_after": "custom_modifier_name",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -205,7 +205,7 @@
    "label": "Modifier ID",
    "options": "User",
    "insert_after": "custom_registration_id",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -215,7 +215,7 @@
    "fetch_from": "custom_modifier_id.full_name",
    "fetch_if_empty": 1,
    "insert_after": "custom_modifier_id",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -223,7 +223,7 @@
    "fieldtype": "Check",
    "label": "Registered In eTIMS",
    "insert_after": "custom_column_break_8ehuj",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -232,7 +232,7 @@
    "label": "Update Item To Etims",
    "depends_on": "eval:doc.custom_registered_in_tims != 1",
    "insert_after": "custom_country_of_origin",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -242,7 +242,7 @@
    "options": "eTIMS Packing Unit",
    "default": "",
    "insert_after": "custom_default_quantity_unit",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -251,7 +251,7 @@
    "label": "Country Of Origin",
    "options": "eTIMS Country",
    "insert_after": "custom_default_packing_unit",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -259,7 +259,7 @@
    "fieldtype": "Column Break",
    "label": null,
    "insert_after": "custom_item_standard_name",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -267,7 +267,7 @@
    "fieldtype": "Button",
    "label": "Register Item",
    "insert_after": "custom_update_item_to_tims",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -275,7 +275,7 @@
    "fieldtype": "Check",
    "label": "Is Import Item",
    "insert_after": "stock_uom",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -284,7 +284,7 @@
    "label": "Update Item",
    "depends_on": "eval:doc.custom_is_import_item==1",
    "insert_after": "custom_remark",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -294,7 +294,7 @@
    "depends_on": "eval:doc.custom_is_import_item==1",
    "mandatory_depends_on": "eval:doc.custom_is_import_item==1",
    "insert_after": "custom_update_import_item",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -304,7 +304,7 @@
    "depends_on": "eval:doc.custom_is_import_item==1",
    "mandatory_depends_on": "eval:doc.custom_is_import_item==1",
    "insert_after": "custom_declaration_date",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -315,7 +315,7 @@
    "depends_on": "eval:doc.custom_is_import_item==1",
    "mandatory_depends_on": "eval:doc.custom_is_import_item==1",
    "insert_after": "custom_hs_code",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -324,7 +324,7 @@
    "label": "Remark",
    "depends_on": "eval:doc.custom_is_import_item==1",
    "insert_after": "custom_column_break_gxzlb",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -332,7 +332,7 @@
    "fieldtype": "Tab Break",
    "label": "Import Item Information",
    "insert_after": "custom_etims_branch_user_information",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -342,7 +342,7 @@
    "depends_on": "eval:doc.custom_is_import_item==1",
    "mandatory_depends_on": "eval:doc.custom_is_import_item==1",
    "insert_after": "custom_task_code",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -350,7 +350,7 @@
    "fieldtype": "Column Break",
    "label": null,
    "insert_after": "custom_import_item_status_code",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -358,7 +358,7 @@
    "fieldtype": "Tab Break",
    "label": "eTIMS Information",
    "insert_after": "brand",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -367,7 +367,7 @@
    "label": "Default Quantity Unit",
    "options": "eTIMS Quantity Unit",
    "insert_after": "custom_column_break_x69al",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -377,7 +377,7 @@
    "fetch_from": "custom_item_classification_code.item_class_name",
    "fetch_if_empty": 1,
    "insert_after": "custom_item_classification_code",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -386,7 +386,7 @@
    "label": "Item Classification Code",
    "options": "eTIMS Item Classification",
    "insert_after": "custom_item_registration",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -395,7 +395,7 @@
    "label": "Item Registration",
    "collapsible": 0,
    "insert_after": "custom_etims_information",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -403,7 +403,7 @@
    "fieldtype": "Column Break",
    "label": "",
    "insert_after": "custom_used__unused",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -412,7 +412,7 @@
    "label": "Item Information",
    "collapsible": 1,
    "insert_after": "custom_register_item",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   },
   {
    "dt": "Item",
@@ -421,16 +421,7 @@
    "label": "Etims branch user information",
    "collapsible": 1,
    "insert_after": "custom_registered_in_tims",
-   "module": "Upande-eTIMS"
-  },
-  {
-   "dt": "Item",
-   "fieldname": "reading_required",
-   "fieldtype": "Check",
-   "label": "Reading required",
-   "description": "If the item requires Gas or Electricity or similar meter reading to charge the customer.",
-   "insert_after": "is_sales_item",
-   "module": "Upande-eTIMS"
+   "module": "Kenya Etims Compliance"
   }
  ],
  "custom_perms": [],

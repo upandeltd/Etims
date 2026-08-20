@@ -6,7 +6,7 @@ from frappe import _
 
 from kenya_etims_compliance.utils.etims_utils import eTIMS
 from kenya_etims_compliance.utils.kra_client import KRAClient
-from kenya_etims_compliance.utils.permissions import can_sync_to_etims
+from kenya_etims_compliance.utils.permissions import can_sync_to_etims, require
 
 
 # This part describes the components of SaveItem API function (url : /saveItem) and data types for each item.
@@ -49,6 +49,10 @@ def _get_branch_user_name(system_user):
 
 @frappe.whitelist()
 def validate_items_for_etims(items=None):
+	# Proxies a KRA lookup on the company's credentials, so it must not be
+	# reachable by any authenticated session.
+	require("Item", "read")
+
 	import json
 
 	if isinstance(items, str):
@@ -69,6 +73,10 @@ def validate_items_for_etims(items=None):
 
 @frappe.whitelist()
 def validate_item_for_etims(doc_name):
+	# Proxies a KRA lookup on the company's credentials, so it must not be
+	# reachable by any authenticated session.
+	require("Item", "read")
+
 	item = frappe.get_doc("Item", doc_name)
 	errors = []
 
@@ -144,6 +152,10 @@ def itemSaveReq(doc_name):
 
 @frappe.whitelist()
 def searchItemReq(item_code=None, item_name=None, last_req_dt=None):
+	# Proxies a KRA lookup on the company's credentials, so it must not be
+	# reachable by any authenticated session.
+	require("Item", "read")
+
 	response = eTIMS.searchItem(item_code, item_name, last_req_dt)
 
 	for key, value in response.items():
@@ -156,6 +168,10 @@ def searchItemReq(item_code=None, item_name=None, last_req_dt=None):
 
 @frappe.whitelist()
 def selectItemReq(item_code):
+	# Proxies a KRA lookup on the company's credentials, so it must not be
+	# reachable by any authenticated session.
+	require("Item", "read")
+
 	response = eTIMS.selectItem(item_code)
 
 	for key, value in response.items():

@@ -2,17 +2,24 @@
 # For license information, please see license.txt
 
 """
-eTIMS Role Installation
-
-This script creates eTIMS-specific roles with appropriate permissions
-for the Kenya eTIMS Compliance application.
+eTIMS Role Installation — kept for back-compat; the actual role creation is
+driven by ``fixtures/role.json`` via ``sync_fixtures`` at the end of ``bench
+install`` / ``bench migrate``. Earlier this module pre-created the same seven
+roles under ``before_install`` and then ``sync_fixtures`` delete-and-reinserted
+them — wiping the descriptions that were just written. The fixture is the
+single source of truth now.
 """
 
 import frappe
 
 
 def create_etims_roles():
-	"""Create all eTIMS-specific roles"""
+	"""Create all eTIMS-specific roles from the role.json fixture data.
+
+	Mirrors the data in ``fixtures/role.json`` for callers that need the
+	descriptions locally (e.g. ``bench execute``). ``before_install`` /
+	``after_install`` flows should rely on ``sync_fixtures`` instead.
+	"""
 
 	roles = [
 		{
@@ -84,17 +91,3 @@ def create_etims_roles():
 			frappe.msgprint(f"Role already exists: {role_data['role_name']}")
 
 	return created_roles
-
-
-def before_install():
-	"""Run before app installation to set up roles"""
-	try:
-		create_etims_roles()
-		frappe.msgprint("eTIMS roles installed successfully!")
-	except Exception as e:
-		frappe.msgprint(f"Error installing eTIMS roles: {e!s}")
-		raise
-
-
-if __name__ == "__main__":
-	before_install()

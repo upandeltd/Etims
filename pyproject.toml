@@ -12,7 +12,6 @@ dependencies = [
 
     #eTIMS integration dependencies
     "segno~=1.6.1",
-    "stripe~=2.56.0",
 ]
 
 [build-system]
@@ -25,6 +24,7 @@ build-backend = "flit_core.buildapi"
 
 [tool.bench.frappe-dependencies]
 frappe = ">=15.0.0,<20.0.0"
+erpnext = ">=16.0.0,<17.0.0"
 
 [tool.ruff]
 line-length = 110

@@ -5,10 +5,11 @@ import frappe
 import requests
 from frappe import _
 from frappe.utils import add_to_date, now_datetime
+from rq.timeouts import JobTimeoutException
 
+from kenya_etims_compliance.custom_methods.notifications import send_queue_failure_alert
 from kenya_etims_compliance.utils.etims_utils import eTIMS
 from kenya_etims_compliance.utils.kra_client import KRAClient
-
 
 def should_use_queue():
 	"""Return whether the queue should be used based on eTIMS settings."""
@@ -59,11 +60,11 @@ def enqueue_invoice(doc, payload, api_endpoint, branch_id=None):
 
 	frappe.enqueue(
 		"kenya_etims_compliance.custom_methods.queue_processor.process_queue_entry",
-		queue="short",
+		queue="long",
+		timeout=600,
 		queue_entry_name=queue_entry.name,
 		enqueue_after_commit=True,
 	)
-
 	return queue_entry.name
 
 
@@ -74,15 +75,45 @@ def process_queue_entry(queue_entry_name):
 	Calls the KRA API and updates both the queue entry and source document.
 	"""
 	# Lock the queue entry to prevent concurrent processing
-	status = frappe.db.sql(
+	locked_status = frappe.db.sql(
 		"SELECT status FROM `tabeTIMS Invoice Queue` WHERE name=%s FOR UPDATE",
 		queue_entry_name,
 		as_dict=True,
 	)
-	if not status or status[0].status not in ("Queued", "Failed"):
+	if not locked_status or locked_status[0].status not in ("Queued", "Failed"):
 		return  # Already processing or sent
 
 	queue_entry = frappe.get_doc("eTIMS Invoice Queue", queue_entry_name)
+
+	# Cancel-guard (CRITICAL 3): the source doc may have been cancelled or
+	# amended away after the queue entry was written but before we get here.
+	# Without this check, a cancelled invoice still gets signed as a valid
+	# sale. The cancel hook (InvoiceLifecycle) marks the entry Cancelled;
+	# this guard also catches "docstatus dropped" cases the hook missed.
+	try:
+		ref_doc = frappe.get_doc(
+			queue_entry.reference_doctype, queue_entry.reference_name
+		)
+		if ref_doc.docstatus != 1:
+			queue_entry.status = "Cancelled"
+			queue_entry.last_error = (
+				f"Reference {queue_entry.reference_doctype} {queue_entry.reference_name} "
+				f"is no longer submitted (docstatus={ref_doc.docstatus}). Skipping KRA submission."
+			)
+			queue_entry.save(ignore_permissions=True)
+			frappe.db.commit()
+			_update_source_status(queue_entry, "Cancelled")
+			return
+	except frappe.DoesNotExistError:
+		queue_entry.status = "Cancelled"
+		queue_entry.last_error = (
+			f"Reference {queue_entry.reference_doctype} {queue_entry.reference_name} no longer exists."
+		)
+		queue_entry.save(ignore_permissions=True)
+		frappe.db.commit()
+		_update_source_status(queue_entry, "Cancelled")
+		return
+
 	queue_entry.status = "Processing"
 	queue_entry.processing_at = now_datetime()
 	queue_entry.save(ignore_permissions=True)
@@ -104,19 +135,24 @@ def process_queue_entry(queue_entry_name):
 		# and return 404. In that case we still attempt the actual submission
 		# because saveTrnsSalesOsdc may work fine (the original app behaviour).
 		if client.headers:
-			status = client.check_status()
-			error_msg = status.get("error", "")
+			preflight = client.check_status()
+			error_msg = preflight.get("error", "")
 			is_404_preflight = "404" in error_msg or "invalid JSON" in error_msg.lower()
 
-			if not status.get("connected") and not is_404_preflight:
-				# OSCU/VSCU is genuinely down — leave in Queued state for retry later
+			if not preflight.get("connected") and not is_404_preflight:
+				# OSCU/VSCU is genuinely down — leave in Queued state for retry later.
+				# CRITICAL 5 fix: bump retry_count so the exhaustion guard can fire.
 				queue_entry.reload()
-				queue_entry.status = "Queued"
+				queue_entry.retry_count = (queue_entry.retry_count or 0) + 1
+				exhausted = queue_entry.retry_count >= (queue_entry.max_retries or 3)
+				queue_entry.status = "Failed" if exhausted else "Queued"
 				queue_entry.last_error = f"Pre-flight check failed: {error_msg}"
-				queue_entry.next_retry_at = _calculate_next_retry(queue_entry.retry_count or 0)
+				queue_entry.next_retry_at = None if exhausted else _calculate_next_retry(queue_entry.retry_count)
 				queue_entry.save(ignore_permissions=True)
 				frappe.db.commit()
-				_update_source_status(queue_entry, "Queued")
+				_update_source_status(queue_entry, queue_entry.status)
+				if queue_entry.status == "Failed":
+					_handle_exhausted(queue_entry)
 				return
 
 		# Fail fast if no authentication headers — prevents cryptic KRA error 900
@@ -149,6 +185,19 @@ def process_queue_entry(queue_entry_name):
 		# Update the source document with KRA response data
 		_handle_success(queue_entry, result)
 
+	except JobTimeoutException:
+		# RQ timeout — let it propagate so the worker marks the job failed and
+		# the scheduler can retry on the next tick. Do NOT swallow as Failed
+		# (CRITICAL 5/timeout bug): the worker must NOT silently re-enqueue.
+		frappe.db.rollback()
+		raise
+	except frappe.ValidationError:
+		# Validation errors are deterministic and should bubble up to the user
+		# (e.g. a stale branch_id after a credentials rotation). Retrying is
+		# pointless and the original ValidationError is more informative than
+		# a generic Failed retry path.
+		frappe.db.rollback()
+		raise
 	except Exception as e:
 		frappe.db.rollback()
 
@@ -173,11 +222,17 @@ def process_queue_entry(queue_entry_name):
 		error_msg = str(e)[:2000]
 
 		queue_entry.reload()
-		queue_entry.status = "Failed"
 		queue_entry.retry_count = (queue_entry.retry_count or 0) + 1
-		queue_entry.last_error = error_msg
-		queue_entry.next_retry_at = _calculate_next_retry(queue_entry.retry_count)
-		queue_entry.save(ignore_permissions=True)
+		new_retry_count = queue_entry.retry_count
+		queue_entry.status = "Failed"
+		if new_retry_count >= (queue_entry.max_retries or 3):
+			queue_entry.last_error = (
+				f"Exhausted after {new_retry_count} attempts: {error_msg}"
+			)
+			queue_entry.next_retry_at = None
+		else:
+			queue_entry.last_error = error_msg
+			queue_entry.next_retry_at = _calculate_next_retry(new_retry_count)
 		frappe.db.commit()
 
 		_update_source_status(queue_entry, "Failed", error_msg)
@@ -186,6 +241,9 @@ def process_queue_entry(queue_entry_name):
 			title=f"eTIMS Queue Error: {queue_entry.reference_name}",
 			message=traceback.format_exc(),
 		)
+
+		if queue_entry.status == "Failed" and new_retry_count >= (queue_entry.max_retries or 3):
+			_handle_exhausted(queue_entry)
 
 
 # A fresh enqueue is processed by its enqueue_after_commit job within seconds;
@@ -280,7 +338,8 @@ def retry_failed_invoices():
 
 		frappe.enqueue(
 			"kenya_etims_compliance.custom_methods.queue_processor.process_queue_entry",
-			queue="short",
+			queue="long",
+			timeout=600,
 			queue_entry_name=entry.name,
 		)
 
@@ -304,13 +363,10 @@ def retry_single_entry(queue_entry_name):
 	if entry.status != "Failed":
 		frappe.throw(_("Only failed entries can be retried"))
 
-	entry.status = "Queued"
-	entry.next_retry_at = None
-	entry.save(ignore_permissions=True)
-
 	frappe.enqueue(
 		"kenya_etims_compliance.custom_methods.queue_processor.process_queue_entry",
-		queue="short",
+		queue="long",
+		timeout=600,
 		queue_entry_name=entry.name,
 	)
 	return {"status": "enqueued"}
@@ -318,19 +374,42 @@ def retry_single_entry(queue_entry_name):
 
 @frappe.whitelist()
 def bulk_retry_failed():
-	"""Retry all failed entries that haven't exceeded max retries."""
+	"""Retry all failed entries that haven't exceeded max retries.
+
+	HIGH (Jobs/scheduler): bound the batch (was unbounded — `get_all` defaults
+	to unlimited and could enqueue thousands in a single HTTP request) and
+	schedule the dispatch as a background job so the user request returns
+	immediately instead of holding a transaction open across every enqueue.
+	"""
 	frappe.has_permission("eTIMS Invoice Queue", "write", throw=True)
+	frappe.enqueue(
+		"kenya_etims_compliance.custom_methods.queue_processor._bulk_retry_failed_job",
+		queue="long",
+		timeout=600,
+	)
+	return {"scheduled": True}
+
+
+def _bulk_retry_failed_job():
+	"""Background worker half of `bulk_retry_failed`.
+
+	Processes at most 200 entries per tick — a runaway retry storm should not
+	hammer KRA all at once. The next manual click resumes from where this left
+	off (queue entries have stable ``name`` autoincrements).
+	"""
 	failed = frappe.get_all(
 		"eTIMS Invoice Queue",
 		filters={"status": "Failed"},
 		fields=["name", "retry_count", "max_retries"],
+		limit=200,
 	)
 	count = 0
 	for entry in failed:
 		if (entry.retry_count or 0) < (entry.max_retries or 3):
 			frappe.enqueue(
 				"kenya_etims_compliance.custom_methods.queue_processor.process_queue_entry",
-				queue="short",
+				queue="long",
+				timeout=600,
 				queue_entry_name=entry.name,
 			)
 			count += 1
@@ -338,9 +417,97 @@ def bulk_retry_failed():
 
 
 def _calculate_next_retry(retry_count):
-	"""Exponential backoff: 1m, 2m, 4m, 8m, 16m, 30m (cap)."""
-	delay_minutes = min(2 ** (retry_count - 1), 30)
+	"""Exponential backoff: 1m, 2m, 4m, 8m, 16m, 30m (cap).
+
+	HIGH (Jobs/scheduler): with retry_count=0 the old `2 ** (retry_count - 1)`
+	produced 2**-1 = 0.5 — pinned at the floor — combined with the CRITICAL 5
+	pre-flight path that pinned every retry at 30s forever. Clamp the minimum
+	at 1 minute and cap at 30 minutes.
+	"""
+	delay_minutes = min(max(2 ** (retry_count - 1), 1), 30)
 	return add_to_date(now_datetime(), minutes=delay_minutes)
+
+
+
+def _handle_exhausted(queue_entry):
+	"""Mark an exhausted queue entry and notify the eTIMS administrators.
+
+	CRITICAL 6: the old path left exhausted entries on Failed with no alert —
+	a 10-minute outage would silently abandon every invoice queued in that
+	window. The DocType status options are
+	``Queued / Processing / Sent / Failed / Cancelled``; per the project
+	contract we use ``Failed`` as the terminal status (no dedicated
+	``Exhausted`` option exists in the JSON) and rely on the explicit
+	"Exhausted after N attempts" prefix on ``last_error`` plus this alert to
+	flag the entry for operator attention. Re-running this helper is a no-op:
+	the entry is already Failed and the alert is re-fireable, so a manual
+	retry + re-exhaustion sends a fresh alert.
+	"""
+	try:
+		send_queue_failure_alert(queue_entry.name)
+	except Exception:
+		frappe.log_error(
+			title=f"eTIMS exhausted alert FAILED: {queue_entry.reference_name}"[:140],
+			message=traceback.format_exc(),
+		)
+
+
+# HIGH (Jobs/scheduler): bounded retention for terminal entries. Without this
+# the queue grows one row per invoice forever and is polled four times per
+# scheduler tick on unindexed columns. Sent + Failed entries older than this
+# are deleted (their KRA fiscal receipt is already in the eTIMS Notice /
+# register tables; the queue row is just a transient audit pointer).
+# Cancelled entries are kept for 30 days to give operators time to investigate
+# a cancellation that fired after the queue was already populated.
+TERMINAL_RETENTION_DAYS = 90
+CANCELLED_RETENTION_DAYS = 30
+FAILED_RETENTION_DAYS = 180
+
+
+def cleanup_terminal_queue_entries():
+	"""Daily scheduler: prune terminal eTIMS Invoice Queue entries.
+
+	HIGH (Jobs/scheduler): without this the table grows one row per invoice
+	forever and is polled four times per scheduler tick on unindexed columns.
+	Retention windows:
+	  - Sent:   90 days (KRA fiscal receipt lives in the register tables; the
+	            queue row is just a transient audit pointer).
+	  - Cancelled: 30 days (give operators time to investigate a cancellation
+	               that fired after the queue was already populated).
+	  - Failed: 180 days (long — Failed entries are the ones that triggered
+	            an operator alert; we keep the trail through audit cycles).
+	"""
+	now = now_datetime()
+	sent_cutoff = add_to_date(now, days=-TERMINAL_RETENTION_DAYS)
+	cancelled_cutoff = add_to_date(now, days=-CANCELLED_RETENTION_DAYS)
+	failed_cutoff = add_to_date(now, days=-FAILED_RETENTION_DAYS)
+
+	sent_deleted = frappe.db.delete(
+		"eTIMS Invoice Queue",
+		{"status": "Sent", "sent_at": ["<", sent_cutoff]},
+	)
+	cancelled_deleted = frappe.db.delete(
+		"eTIMS Invoice Queue",
+		{"status": "Cancelled", "modified": ["<", cancelled_cutoff]},
+	)
+	failed_deleted = frappe.db.delete(
+		"eTIMS Invoice Queue",
+		{"status": "Failed", "modified": ["<", failed_cutoff]},
+	)
+
+	if sent_deleted or cancelled_deleted or failed_deleted:
+		frappe.db.commit()
+		frappe.logger().info(
+			"eTIMS queue retention: deleted Sent=%s Cancelled=%s Failed=%s",
+			sent_deleted,
+			cancelled_deleted,
+			failed_deleted,
+		)
+	return {
+		"sent_deleted": sent_deleted,
+		"cancelled_deleted": cancelled_deleted,
+		"failed_deleted": failed_deleted,
+	}
 
 
 def _update_source_status(queue_entry, status, error_msg=None):

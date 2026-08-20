@@ -8,10 +8,17 @@ import frappe
 from frappe import _
 from frappe.utils import now_datetime
 
+from kenya_etims_compliance.utils.permissions import require
+
 
 def fetch_and_process_imports():
 	"""Daily: Fetch pending import items from KRA and process them."""
 	from kenya_etims_compliance.utils.kra_client import KRAClient
+
+	# Background scheduled job — the scheduler queue is itself privileged,
+	# but the writes below hit Stock Entry (inventory + GL) so we still call
+	# require() so a stolen scheduler context can't mutate state.
+	require("Stock Entry", "create")
 
 	# Step 1: Fetch pending imports
 	client = KRAClient()
@@ -58,14 +65,14 @@ def fetch_and_process_imports():
 				"invoice_foreign_currency_crt": item.get("invcFcurExcrt"),
 			}
 		)
-		import_doc.insert(ignore_permissions=True)
+		import_doc.insert()
 		fetched += 1
 
 		# Step 2: Try to auto-match to local item
 		matched_item = _match_import_to_local_item(import_doc)
 		if matched_item:
 			import_doc.item_name = matched_item
-			import_doc.save(ignore_permissions=True)
+			import_doc.save()
 
 			# Step 3: Create Stock Entry if not already created
 			if not import_doc.stock_entry_created:
@@ -73,10 +80,9 @@ def fetch_and_process_imports():
 				if stock_entry:
 					import_doc.stock_entry = stock_entry.name
 					import_doc.stock_entry_created = 1
-					import_doc.save(ignore_permissions=True)
+					import_doc.save()
 					processed += 1
 
-	frappe.db.commit()
 	return {"fetched": fetched, "processed": processed}
 
 
@@ -150,13 +156,19 @@ def _create_stock_entry(import_doc, item_name):
 			],
 		}
 	)
-	stock_entry.insert(ignore_permissions=True)
+	stock_entry.insert()
 	return stock_entry
 
 
 @frappe.whitelist()
 def process_import_item(import_item_name):
 	"""Manually process a single import item."""
+	# CRITICAL 8 gate: this whitelisted endpoint creates Stock Entries (inventory
+	# + GL write) via _create_stock_entry. Without a gate, any authenticated
+	# session — including portal Website Users — could hit this. We require
+	# Stock Entry create since that's the destructive side-effect.
+	require("Stock Entry", "create")
+
 	import_doc = frappe.get_doc("eTIMS Import Item", import_item_name)
 
 	if import_doc.stock_entry_created:
@@ -171,8 +183,7 @@ def process_import_item(import_item_name):
 		import_doc.stock_entry = stock_entry.name
 		import_doc.stock_entry_created = 1
 		import_doc.item_name = matched
-		import_doc.save(ignore_permissions=True)
-		frappe.db.commit()
+		import_doc.save()
 		return {"status": "success", "stock_entry": stock_entry.name}
 
 	frappe.throw(_("Could not create Stock Entry — check warehouse configuration"))

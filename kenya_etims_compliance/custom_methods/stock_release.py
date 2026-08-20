@@ -6,7 +6,7 @@ from frappe import _
 from frappe.utils import cint
 
 from kenya_etims_compliance.utils.etims_utils import eTIMS
-from kenya_etims_compliance.utils.permissions import can_sync_to_etims
+from kenya_etims_compliance.utils.permissions import can_sync_to_etims, require
 
 
 @frappe.whitelist()
@@ -62,6 +62,10 @@ def sync_stock_release_number(sar_no, org_sar_no=0, sar_type=None):
 @frappe.whitelist()
 def search_stock_release_no(sar_no=None, last_req_dt=None):
 	"""Search stock release numbers"""
+	# Proxies a KRA lookup on the company's credentials, so it must not be
+	# reachable by any authenticated session.
+	require("eTIMS Stock Release Number", "read")
+
 	response = eTIMS.searchStockReleaseNo(sar_no, last_req_dt)
 
 	for key, value in response.items():
@@ -75,6 +79,10 @@ def search_stock_release_no(sar_no=None, last_req_dt=None):
 @frappe.whitelist()
 def get_stock_release_list(last_req_dt=None):
 	"""Get stock release number list"""
+	# Proxies a KRA lookup on the company's credentials, so it must not be
+	# reachable by any authenticated session.
+	require("eTIMS Stock Release Number", "read")
+
 	response = eTIMS.selectStockReleaseNoList(last_req_dt)
 
 	for key, value in response.items():

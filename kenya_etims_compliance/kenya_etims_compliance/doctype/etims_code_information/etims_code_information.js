@@ -10,65 +10,76 @@ frappe.ui.form.on("eTIMS Code Information", {
             // // freeze the screen until the request is completed
             freeze: true,
             callback: function(r)  {
-                let keys = Object.keys(r.message)
-                let values = Object.values(r.message)
+                if (!r || !r.message || !Object.keys(r.message).length) return;
+                let keys = Object.keys(r.message);
+                let values = Object.values(r.message);
                 frappe.msgprint({
                     title: __(keys[0]),
-                    indicator: 'green',
-                    message: __(values[0])
+                    indicator: keys[0] === 'Success' ? 'green' : 'red',
+                    message: __('{0}', [frappe.utils.escape_html(String(values[0] ?? ''))])
                 });
 
                 frm.refresh_field("last_search_date_and_time")
+            },
+            error: function(r) {
+                frappe.msgprint({
+                    title: __('Connection Error'),
+                    indicator: 'red',
+                    message: __('Could not reach eTIMS: {0}', [frappe.utils.escape_html(String((r && r.message) || ''))])
+                });
             }
         })
     },
-    
-    code_response_url: function(frm){
-        frappe.set_route("List", "eTIMS Code Classification")
-    },
-
     search_customer: function(frm){
-        // call with all options
         frappe.call({
-            method: 'custSearchReq',
+            method: 'customerSearchReq',
             doc: frm.doc,
-            // // freeze the screen until the request is completed
             freeze: true,
             callback: function(r)   {
-                let keys = Object.keys(r.message)
-                let values = Object.values(r.message)
+                if (!r || !r.message || !Object.keys(r.message).length) return;
+                let keys = Object.keys(r.message);
+                let values = Object.values(r.message);
                 frappe.msgprint({
                     title: __(keys[0]),
-                    indicator: 'green',
-                    message: __(values[0])
+                    indicator: keys[0] === 'Success' ? 'green' : 'red',
+                    message: __('{0}', [frappe.utils.escape_html(String(values[0] ?? ''))])
                 });
 
                 frm.refresh_field("customer_details")
+            },
+            error: function(r) {
+                frappe.msgprint({
+                    title: __('Connection Error'),
+                    indicator: 'red',
+                    message: __('Could not reach eTIMS: {0}', [frappe.utils.escape_html(String((r && r.message) || ''))])
+                });
             }
         })
     },
-
     search_notice: function(frm){
-        // call with all options
         frappe.call({
             method: 'noticeSearchReq',
             doc: frm.doc,
-            // // freeze the screen until the request is completed
             freeze: true,
             callback: function(r)   {
-                let keys = Object.keys(r.message)
-                let values = Object.values(r.message)
+                if (!r || !r.message || !Object.keys(r.message).length) return;
+                let keys = Object.keys(r.message);
+                let values = Object.values(r.message);
                 frappe.msgprint({
                     title: __(keys[0]),
-                    indicator: 'green',
-                    message: __(values[0])
+                    indicator: keys[0] === 'Success' ? 'green' : 'red',
+                    message: __('{0}', [frappe.utils.escape_html(String(values[0] ?? ''))])
                 });
 
                 frm.refresh_field("notices")
-                frm.refresh_field("last_request_date")
+            },
+            error: function(r) {
+                frappe.msgprint({
+                    title: __('Connection Error'),
+                    indicator: 'red',
+                    message: __('Could not reach eTIMS: {0}', [frappe.utils.escape_html(String((r && r.message) || ''))])
+                });
             }
         })
-
-        // doc.save()
     }
 });

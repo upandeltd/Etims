@@ -149,6 +149,9 @@ class KRAClient:
 	def insert_stock_io(self, payload, reference_doctype=None, reference_name=None):
 		return self.post("insertStockIO", payload, reference_doctype, reference_name)
 
+	def save_stock_master(self, payload, reference_doctype=None, reference_name=None):
+		return self.post("saveStockMaster", payload, reference_doctype, reference_name)
+
 	def save_item(self, payload, reference_doctype=None, reference_name=None):
 		return self.post("saveItem", payload, reference_doctype, reference_name)
 
@@ -232,18 +235,19 @@ class KRAClient:
 	def _load_headers(self):
 		if not self.branch_id:
 			return {}
-		header_docs = frappe.db.get_all(
+		header_names = frappe.db.get_all(
 			"TIS Device Initialization",
 			filters={"branch_id": self.branch_id, "active": 1},
-			fields=["pin", "branch_id", "communication_key"],
+			pluck="name",
 		)
-		if header_docs:
-			return {
-				"tin": header_docs[0].get("pin"),
-				"bhfId": header_docs[0].get("branch_id"),
-				"cmcKey": header_docs[0].get("communication_key"),
-			}
-		return {}
+		if not header_names:
+			return {}
+		device = frappe.get_doc("TIS Device Initialization", header_names[0])
+		return {
+			"tin": device.get_password("pin", raise_exception=False),
+			"bhfId": device.branch_id,
+			"cmcKey": device.get_password("communication_key", raise_exception=False),
+		}
 
 	def _get_base_url(self):
 		from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import (

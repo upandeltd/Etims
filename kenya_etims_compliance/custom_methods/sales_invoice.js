@@ -77,15 +77,21 @@ frappe.ui.form.on("Sales Invoice",{
                     freeze: true,
                     freeze_message: __('Searching eTIMS...'),
                     callback: function(r) {
-                        if (r.message) {
-                            let keys = Object.keys(r.message);
-                            let values = Object.values(r.message);
-                            frappe.msgprint({
-                                title: __(keys[0]),
-                                indicator: keys[0] === 'Success' ? 'green' : 'red',
-                                message: __(JSON.stringify(values[0], null, 2))
-                            });
-                        }
+                        if (!r || !r.message || !Object.keys(r.message).length) return;
+                        let keys = Object.keys(r.message);
+                        let values = Object.values(r.message);
+                        frappe.msgprint({
+                            title: __(keys[0]),
+                            indicator: keys[0] === 'Success' ? 'green' : 'red',
+                            message: __('{0}', [frappe.utils.escape_html(JSON.stringify(values[0] ?? '', null, 2))])
+                        });
+                    },
+                    error: function(r) {
+                        frappe.msgprint({
+                            title: __('Connection Error'),
+                            indicator: 'red',
+                            message: __('Could not reach eTIMS: {0}', [frappe.utils.escape_html(String((r && r.message) || ''))])
+                        });
                     }
                 });
             }, __('eTIMS Actions'));
@@ -179,12 +185,20 @@ frappe.ui.form.on("Sales Invoice",{
             },
             freeze: true,
             callback: function(r) {
+                if (!r || !r.message || !Object.keys(r.message).length) return;
                 let keys = Object.keys(r.message)
                 let values = Object.values(r.message)
                 frappe.msgprint({
                     title: __(keys[0]),
                     indicator: keys[0] === 'Success' ? 'green' : 'red',
-                    message: __(JSON.stringify(values[0], null, 2))
+                    message: __('{0}', [frappe.utils.escape_html(JSON.stringify(values[0] ?? '', null, 2))])
+                });
+            },
+            error: function(r) {
+                frappe.msgprint({
+                    title: __('Connection Error'),
+                    indicator: 'red',
+                    message: __('Could not reach eTIMS: {0}', [frappe.utils.escape_html(String((r && r.message) || ''))])
                 });
             }
         })

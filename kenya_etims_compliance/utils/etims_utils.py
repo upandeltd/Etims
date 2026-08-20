@@ -19,19 +19,19 @@ class eTIMS:
 				branch_id = devices[0].get("branch_id")
 		if not branch_id:
 			return None
-		header_docs = frappe.db.get_all(
+		header_names = frappe.db.get_all(
 			"TIS Device Initialization",
 			filters={"branch_id": branch_id, "active": 1},
-			fields=["pin", "branch_id", "communication_key"],
+			pluck="name",
 		)
-
-		if header_docs:
-			return {
-				"tin": header_docs[0].get("pin"),
-				"bhfId": header_docs[0].get("branch_id"),
-				"cmcKey": header_docs[0].get("communication_key"),
-			}
-
+		if not header_names:
+			return {}
+		device = frappe.get_doc("TIS Device Initialization", header_names[0])
+		return {
+			"tin": device.get_password("pin", raise_exception=False),
+			"bhfId": device.branch_id,
+			"cmcKey": device.get_password("communication_key", raise_exception=False),
+		}
 	@staticmethod
 	def get_base_url():
 		base_url = frappe.utils.get_url()

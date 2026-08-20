@@ -436,22 +436,53 @@ class TestSalesInvoiceCustomMethods(FrappeTestCase):
 class TestPurchaseInvoiceCustomMethods(FrappeTestCase):
 	"""Tests for kenya_etims_compliance.custom_methods.purchase_invoice"""
 
-	@patch("kenya_etims_compliance.custom_methods.purchase_invoice.insert_invoice_number")
 	@patch("kenya_etims_compliance.custom_methods.purchase_invoice.validate_inv_number")
 	@patch("kenya_etims_compliance.custom_methods.purchase_invoice.frappe.db.exists")
-	def test_validate(self, mock_exists, mock_validate_inv_number, mock_insert_invoice_number):
+	def test_validate_throws_on_invoice_number_collision(self, mock_exists, mock_validate_inv_number):
+		"""A colliding custom_invoice_number must block the save, not be silently
+		reallocated — the column also holds free-text supplier references."""
 		mock_exists.return_value = True
 		mock_validate_inv_number.return_value = [10, 20, 30]
 
 		doc = MagicMock()
+		doc.custom_update_purchase_in_tims = 1
+		doc.custom_invoice_number = 20
+		doc.name = "PINV-001"
+
+		with self.assertRaises(frappe.ValidationError):
+			validate_purchase_invoice(doc, None)
+
+		mock_exists.assert_called_once_with("Purchase Invoice", {"name": "PINV-001"})
+		mock_validate_inv_number.assert_called_once_with(doc)
+
+	@patch("kenya_etims_compliance.custom_methods.purchase_invoice.validate_inv_number")
+	@patch("kenya_etims_compliance.custom_methods.purchase_invoice.frappe.db.exists")
+	def test_validate_passes_without_collision(self, mock_exists, mock_validate_inv_number):
+		mock_exists.return_value = True
+		mock_validate_inv_number.return_value = [10, 30]
+
+		doc = MagicMock()
+		doc.custom_update_purchase_in_tims = 1
 		doc.custom_invoice_number = 20
 		doc.name = "PINV-001"
 
 		validate_purchase_invoice(doc, None)
 
-		mock_exists.assert_called_once_with("Purchase Invoice", {"name": "PINV-001"})
 		mock_validate_inv_number.assert_called_once_with(doc)
-		mock_insert_invoice_number.assert_called_once_with(doc, None)
+
+	@patch("kenya_etims_compliance.custom_methods.purchase_invoice.validate_inv_number")
+	@patch("kenya_etims_compliance.custom_methods.purchase_invoice.frappe.db.exists")
+	def test_validate_skipped_when_etims_disabled(self, mock_exists, mock_validate_inv_number):
+		"""The whole check is gated on custom_update_purchase_in_tims."""
+		doc = MagicMock()
+		doc.custom_update_purchase_in_tims = 0
+		doc.custom_invoice_number = 20
+		doc.name = "PINV-001"
+
+		validate_purchase_invoice(doc, None)
+
+		mock_exists.assert_not_called()
+		mock_validate_inv_number.assert_not_called()
 
 	def test_get_total_discount_with_discount(self):
 		item1 = MockRow(discount_percentage=10, discount_amount=5, qty=2)

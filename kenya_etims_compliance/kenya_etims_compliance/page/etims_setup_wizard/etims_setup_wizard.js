@@ -106,9 +106,9 @@ frappe.pages["etims-setup-wizard"].on_page_load = function (wrapper) {
 						current_step++;
 						render_step();
 					} else {
-						$content.find(".step-result").html(
-							`<div class="alert alert-warning">${r.message.message}</div>`
-						);
+						const $step1_result = $content.find(".step-result");
+							$step1_result.empty();
+							$("<div></div>", { class: "alert alert-warning", text: r.message.message }).appendTo($step1_result);
 					}
 				},
 			});
@@ -137,16 +137,15 @@ frappe.pages["etims-setup-wizard"].on_page_load = function (wrapper) {
 				method: "kenya_etims_compliance.custom_methods.setup_wizard.step2_test_connectivity",
 				args: { api_mode: mode }, freeze: true, freeze_message: __("Testing connection..."),
 				callback: (r) => {
+					const $step2_result = $content.find(".step-result");
 					if (r.message.status === "success") {
 						state.api_mode = mode;
-						$content.find(".step-result").html(
-							`<div class="alert alert-success">${r.message.message}</div>`
-						);
+						$step2_result.empty();
+						$("<div></div>", { class: "alert alert-success", text: r.message.message }).appendTo($step2_result);
 						setTimeout(() => { current_step++; render_step(); }, 1000);
 					} else {
-						$content.find(".step-result").html(
-							`<div class="alert alert-danger">${r.message.message}</div>`
-						);
+						$step2_result.empty();
+						$("<div></div>", { class: "alert alert-danger", text: r.message.message }).appendTo($step2_result);
 					}
 				},
 			});
@@ -184,16 +183,15 @@ frappe.pages["etims-setup-wizard"].on_page_load = function (wrapper) {
 						serial_number: serial, api_mode: state.api_mode || "Sandbox" },
 				freeze: true, freeze_message: __("Initializing device with KRA..."),
 				callback: (r) => {
+					const $step3_result = $content.find(".step-result");
 					if (r.message.status === "success") {
 						state.branch_id = branch;
-						$content.find(".step-result").html(
-							`<div class="alert alert-success">${r.message.message}</div>`
-						);
+						$step3_result.empty();
+						$("<div></div>", { class: "alert alert-success", text: r.message.message }).appendTo($step3_result);
 						setTimeout(() => { current_step = 5; render_step(); }, 1000);
 					} else {
-						$content.find(".step-result").html(
-							`<div class="alert alert-danger">${r.message.message}</div>`
-						);
+						$step3_result.empty();
+						$("<div></div>", { class: "alert alert-danger", text: r.message.message }).appendTo($step3_result);
 					}
 				},
 			});
@@ -223,17 +221,16 @@ frappe.pages["etims-setup-wizard"].on_page_load = function (wrapper) {
 				method: "kenya_etims_compliance.custom_methods.setup_wizard.step5_fetch_classifications",
 				freeze: true, freeze_message: __("Fetching from KRA..."),
 				callback: (r) => {
+					const $step5_result = $content.find(".step-result");
 					if (r.message.status === "success") {
-						$content.find(".step-result").html(
-							`<div class="alert alert-success">
-								${__("Created {0} classifications. Total: {1}", [r.message.created, r.message.total])}
-							</div>`
-						);
+						$step5_result.empty();
+						$("<div></div>", { class: "alert alert-success",
+							text: __("Created {0} classifications. Total: {1}", [r.message.created, r.message.total])
+						}).appendTo($step5_result);
 						setTimeout(() => { current_step++; render_step(); }, 1500);
 					} else {
-						$content.find(".step-result").html(
-							`<div class="alert alert-danger">${r.message.message}</div>`
-						);
+						$step5_result.empty();
+						$("<div></div>", { class: "alert alert-danger", text: r.message.message }).appendTo($step5_result);
 					}
 				},
 			});
@@ -253,10 +250,12 @@ frappe.pages["etims-setup-wizard"].on_page_load = function (wrapper) {
 				method: "kenya_etims_compliance.custom_methods.setup_wizard.step6_create_tax_templates",
 				args: { company: state.company }, freeze: true,
 				callback: (r) => {
+					const $step6_result = $content.find(".step-result");
 					if (r.message.status === "success") {
-						$content.find(".step-result").html(
-							`<div class="alert alert-success">${__("Created {0} tax templates.", [r.message.created])}</div>`
-						);
+						$step6_result.empty();
+						$("<div></div>", { class: "alert alert-success",
+							text: __("Created {0} tax templates.", [r.message.created])
+						}).appendTo($step6_result);
 						setTimeout(() => { current_step++; render_step(); }, 1000);
 					}
 				},
@@ -280,11 +279,11 @@ frappe.pages["etims-setup-wizard"].on_page_load = function (wrapper) {
 				callback: (r) => {
 					if (r.message) {
 						const m = r.message;
-						$content.find(".step-result").html(
-							`<div class="alert alert-${m.failed ? 'warning' : 'success'}">
-								${__("{0} of {1} items registered. {2} failed.", [m.success || 0, m.total || 0, m.failed || 0])}
-							</div>`
-						);
+						const $step7_result = $content.find(".step-result");
+						$step7_result.empty();
+						$("<div></div>", { class: `alert alert-${m.failed ? "warning" : "success"}`,
+							text: __("{0} of {1} items registered. {2} failed.", [m.success || 0, m.total || 0, m.failed || 0])
+						}).appendTo($step7_result);
 						setTimeout(() => { current_step++; render_step(); }, 1500);
 					}
 				},
@@ -318,28 +317,24 @@ frappe.pages["etims-setup-wizard"].on_page_load = function (wrapper) {
 				if (r.message) {
 					const $list = $content.find(".wizard-checks-list");
 					r.message.checks.forEach((c) => {
-						const icon = c.passed ? "&#10003;" : "&#10007;";
+						const icon = c.passed ? "✓" : "✗";
 						const icon_class = c.passed ? "passed" : "failed";
-						$list.append(
-							`<div class="wizard-check">
-								<span class="wizard-check-icon ${icon_class}">${icon}</span>
-								<span>${c.check}</span>
-							</div>`
-						);
+						const $row = $("<div></div>", { class: "wizard-check" }).appendTo($list);
+						$("<span></span>", { class: `wizard-check-icon ${icon_class}`, text: icon }).appendTo($row);
+						$("<span></span>", { text: c.check }).appendTo($row);
 					});
 
+					const $step8_result = $content.find(".step-result");
+					$step8_result.empty();
 					if (r.message.all_passed) {
-						$content.find(".step-result").html(
-							`<div class="alert alert-success">
-								<b>${__("Setup Complete!")}</b> ${__("Your eTIMS integration is ready.")}
-							</div>`
-						);
+						const $alert = $("<div></div>", { class: "alert alert-success" }).appendTo($step8_result);
+						$("<b></b>", { text: __("Setup Complete!") }).appendTo($alert);
+						$alert.append(" ");
+						$("<span></span>", { text: __("Your eTIMS integration is ready.") }).appendTo($alert);
 					} else {
-						$content.find(".step-result").html(
-							`<div class="alert alert-warning">
-								${__("Some checks failed. Review and fix the issues above.")}
-							</div>`
-						);
+						$("<div></div>", { class: "alert alert-warning",
+							text: __("Some checks failed. Review and fix the issues above.")
+						}).appendTo($step8_result);
 					}
 
 					// Done button

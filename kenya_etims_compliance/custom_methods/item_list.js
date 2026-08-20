@@ -50,7 +50,9 @@ frappe.listview_settings["Item"].onload = function (listview) {
 	listview.page.body.on("change", ".list-row-checkbox", function () {
 		const checked = listview.get_checked_items().length;
 		if (checked > 0) {
-			listview.page.btn_primary || listview.page.set_primary_action(
+			// Update the label every time so it reflects the current count;
+			// the old `||` short-circuit never re-set the label after the first selection.
+			listview.page.set_primary_action(
 				__("Register {0} Item(s)", [checked]),
 				function () {
 					const items = listview.get_checked_items().map(i => i.name);
@@ -75,8 +77,8 @@ function _validateAndBulkRegister(item_names, listview) {
 			if (invalid.length > 0) {
 				let error_html = invalid.map(function (i) {
 					return `<tr>
-						<td><strong>${i.item}</strong></td>
-						<td><ul>${i.errors.map(e => `<li>${e}</li>`).join('')}</ul></td>
+						<td><strong>${frappe.utils.escape_html(i.item)}</strong></td>
+						<td><ul>${(i.errors || []).map(e => `<li>${frappe.utils.escape_html(e)}</li>`).join('')}</ul></td>
 					</tr>`;
 				}).join('');
 
@@ -120,7 +122,21 @@ function _validateAndBulkRegister(item_names, listview) {
 						});
 						listview.refresh();
 					}
+				},
+				error: function (r2) {
+					frappe.msgprint({
+						title: __('Bulk Registration Failed'),
+						indicator: 'red',
+						message: __('Could not register items: {0}', [frappe.utils.escape_html(String((r2 && r2.message) || ''))])
+					});
 				}
+			});
+		},
+		error: function (r) {
+			frappe.msgprint({
+				title: __('Validation Failed'),
+				indicator: 'red',
+				message: __('Could not validate items: {0}', [frappe.utils.escape_html(String((r && r.message) || ''))])
 			});
 		}
 	});
@@ -154,6 +170,14 @@ function _bulkUpdateAndRegister(item_names, listview) {
 			});
 			listview.clear_checked_items && listview.clear_checked_items();
 			listview.refresh();
+		},
+		error: function (r) {
+			frappe.msgprint({
+				title: __('Update & Register Failed'),
+				indicator: 'red',
+				message: __('Could not update/register items: {0}', [frappe.utils.escape_html(String((r && r.message) || ''))])
+			});
+		}
 		},
 	});
 }

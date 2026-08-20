@@ -1,6 +1,6 @@
 {
  "actions": [],
- "autoname": "format:{receipt_number}",
+ "autoname": "format:{reference}-{receipt_number}",
  "creation": "2024-03-23 06:51:35.405432",
  "default_view": "List",
  "doctype": "DocType",
@@ -21,31 +21,41 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Receipt Number"
+   "label": "Receipt Number",
+   "read_only": 1,
+   "no_copy": 1
   },
   {
    "fieldname": "total_receipt_number",
    "fieldtype": "Data",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Total Receipt Number"
+   "label": "Total Receipt Number",
+   "read_only": 1,
+   "no_copy": 1
   },
   {
    "fieldname": "internal_data",
    "fieldtype": "Data",
-   "label": "Internal Data"
+   "label": "Internal Data",
+   "read_only": 1,
+   "no_copy": 1
   },
   {
    "fieldname": "receipt_signature",
    "fieldtype": "Data",
-   "label": "Receipt Signature"
+   "label": "Receipt Signature",
+   "read_only": 1,
+   "no_copy": 1
   },
   {
    "fieldname": "control_unit_date_time",
    "fieldtype": "Datetime",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Control Unit Date Time"
+   "label": "Control Unit Date Time",
+   "read_only": 1,
+   "no_copy": 1
   },
   {
    "default": "Sales Invoice",
@@ -81,17 +91,6 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
-   "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Sales User",
    "share": 1,
    "write": 1
   },

@@ -56,9 +56,11 @@ frappe.ui.form.on("eTIMS Settings", {
 						freeze: true,
 						freeze_message: __("Re-queuing failed entries..."),
 						callback: function (r) {
-							if (r.message) {
+							// bulk_retry_failed() hands off to a background job,
+							// so no synchronous count is available.
+							if (r.message && r.message.scheduled) {
 								frappe.show_alert({
-									message: __("{0} entries re-queued for processing", [r.message.enqueued]),
+									message: __("Retry scheduled - eligible failed entries are being re-queued"),
 									indicator: "green",
 								});
 								frm.trigger("refresh");

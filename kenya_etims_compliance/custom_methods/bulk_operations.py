@@ -2,6 +2,9 @@
 
 import frappe
 from frappe import _
+from frappe.utils import flt
+
+from kenya_etims_compliance.utils.permissions import require
 
 
 @frappe.whitelist()
@@ -65,7 +68,6 @@ def bulk_update_and_register_items(items=None):
 			frappe.db.rollback(save_point="etims_bulk_item")
 			invalid.append({"item": name, "errors": [str(e)]})
 
-	frappe.db.commit()
 	return {
 		"total": total,
 		"success": success,
@@ -136,7 +138,6 @@ def bulk_register_items(items=None):
 		else:
 			failed += 1
 
-	frappe.db.commit()
 	return {
 		"total": len(items),
 		"success": success,
@@ -147,7 +148,16 @@ def bulk_register_items(items=None):
 
 @frappe.whitelist()
 def bulk_submit_invoices(doctype, from_date=None, to_date=None):
-	"""Submit unsubmitted invoices to eTIMS in batch."""
+	"""Submit unsubmitted invoices to eTIMS in batch.
+
+	CRITICAL 7: the old version wrote raw KRA wire names (``saveTrnsSalesOsdc``)
+	into ``api_endpoint`` where the dispatcher expects the logical names
+	``save_sales`` / ``insert_purchase``, and wrote no ``payload`` / ``branch_id``
+	— so ``json.loads(None)`` blew up at queue_processor.py:99 and the
+	``process_queue_entry`` job was never enqueued. Fix: build entries via
+	the working single-invoice ``enqueue_invoice`` path so the dispatcher and
+	processor can actually consume them.
+	"""
 	frappe.has_permission("eTIMS Invoice Queue", "create", throw=True)
 	flag_field = (
 		"custom_update_invoice_in_tims" if doctype == "Sales Invoice" else "custom_update_purchase_in_tims"
@@ -163,30 +173,143 @@ def bulk_submit_invoices(doctype, from_date=None, to_date=None):
 
 	invoices = frappe.get_all(doctype, filters=filters, fields=["name"], limit=100)
 
+	from kenya_etims_compliance.custom_methods.queue_processor import enqueue_invoice
+
 	total = len(invoices)
 	queued = 0
+	failed = []
 
 	for inv in invoices:
-		frappe.get_doc(
-			{
-				"doctype": "eTIMS Invoice Queue",
-				"reference_doctype": doctype,
-				"reference_name": inv.name,
-				"api_endpoint": "saveTrnsSalesOsdc" if doctype == "Sales Invoice" else "insertTrnsPurchase",
-				"status": "Queued",
-			}
-		).insert(ignore_permissions=True)
-		queued += 1
+		try:
+			doc = frappe.get_doc(doctype, inv.name)
+			payload, branch_id = _build_invoice_payload(doc)
+			api_endpoint = "save_sales" if doctype == "Sales Invoice" else "insert_purchase"
+			enqueue_invoice(
+				doc=doc,
+				payload=payload,
+				api_endpoint=api_endpoint,
+				branch_id=branch_id,
+			)
+			queued += 1
+		except Exception as e:
+			failed.append({"invoice": inv.name, "error": str(e)[:500]})
 
-	frappe.db.commit()
-	return {"total": total, "queued": queued}
+	return {"total": total, "queued": queued, "failed": failed}
+
+
+def _build_invoice_payload(doc):
+	"""Build the KRA payload and resolve branch_id for ``bulk_submit_invoices``.
+
+	Sales Invoices reuse the standalone ``build_sales_payload``. Purchase
+	Invoices have no equivalent helper (the payload is inline in the
+	``trnsPurchaseSaveReq`` hook owned by InvoiceLifecycle), so we inline the
+	same dict here, reusing the existing ``etims_pur_item_list`` /
+	``get_supplier_details`` / ``apply_tax_bands`` / ``purchase_return_information``
+	helpers. ``abs(flt(...))`` is mandatory — ``custom_total_taxable_amount``
+	is None until ERPNext's validate step runs (CRITICAL 18 None-arithmetic).
+	"""
+	if doc.doctype == "Sales Invoice":
+		from kenya_etims_compliance.custom_methods.sales_invoice import build_sales_payload
+
+		payload = build_sales_payload(doc)
+		branch_id = None
+		try:
+			from kenya_etims_compliance.utils.kra_client import KRAClient
+
+			branch_id = KRAClient()._get_user_branch_id()
+		except Exception:
+			frappe.log_error(
+				title=f"eTIMS: bulk_submit branch lookup failed: {doc.name}"[:140],
+				message=frappe.get_traceback(),
+			)
+		return payload, branch_id
+
+	# Purchase Invoice path
+	from datetime import datetime
+
+	from kenya_etims_compliance.custom_methods.purchase_invoice import (
+		etims_pur_item_list,
+		get_supplier_details,
+		get_tax_account_rate,
+		purchase_return_information,
+	)
+	from kenya_etims_compliance.utils.etims_utils import apply_tax_bands, eTIMS
+
+	supplier_details = get_supplier_details(doc.supplier)
+	date_str = eTIMS.strf_date_object(doc.posting_date)
+	date_time_str = datetime.now().strftime("%Y%m%d%H%M%S")
+	conc_datetime_str = eTIMS.strf_datetime_format(doc.modified)
+
+	count = len(doc.items or [])
+	payload = {
+		"invcNo": doc.custom_invoice_number,
+		"orgInvcNo": doc.custom_original_invoice_number,
+		"spplrTin": supplier_details.get("supp_pin"),
+		"spplrBhfId": supplier_details.get("supp_bhid"),
+		"spplrNm": doc.supplier,
+		"spplrInvcNo": doc.bill_no,
+		"regTyCd": doc.custom_registration_type_code,
+		"pchsTyCd": doc.custom_purchase_type_code,
+		"rcptTyCd": doc.custom_receipt_type_code,
+		"pmtTyCd": doc.custom_payment_type_code,
+		"pchsSttsCd": doc.custom_purchase_status_code,
+		"cfmDt": date_time_str,
+		"pchsDt": date_str,
+		"totItemCnt": count,
+		"totTaxblAmt": abs(flt(doc.custom_total_taxable_amount)),
+		"totTaxAmt": abs(flt(doc.base_total_taxes_and_charges)),
+		"totAmt": abs(flt(doc.grand_total)),
+		"remark": doc.remarks,
+		"regrId": doc.owner,
+		"regrNm": doc.owner,
+		"modrId": doc.modified_by,
+		"modrNm": doc.modified_by,
+		"itemList": etims_pur_item_list(doc),
+	}
+	apply_tax_bands(payload, doc.taxes, get_tax_account_rate)
+
+	if getattr(doc, "is_return", 0) == 1:
+		return_status = purchase_return_information(doc)
+		if return_status == "partial":
+			payload["rfdDt"] = conc_datetime_str
+		elif return_status == "full":
+			payload["wrhsDt"] = date_time_str
+			payload["cnclReqDt"] = conc_datetime_str
+			payload["cnclDt"] = conc_datetime_str
+
+	branch_id = None
+	try:
+		from kenya_etims_compliance.utils.kra_client import KRAClient
+
+		branch_id = KRAClient()._get_user_branch_id()
+	except Exception:
+		frappe.log_error(
+			title=f"eTIMS: bulk_submit branch lookup failed: {doc.name}"[:140],
+			message=frappe.get_traceback(),
+		)
+	return payload, branch_id
 
 
 @frappe.whitelist()
 def bulk_verify_purchase_invoices(from_date=None, to_date=None):
 	"""Verify unverified Purchase Invoices with KRA in batch."""
-	frappe.has_permission("Purchase Invoice", "write", throw=True)
-	from kenya_etims_compliance.custom_methods.invoice_checker import check_invoice_validity
+	# CRITICAL 9 — bulk verification writes custom_invoice_verified=1 and the
+	# payment-eligibility check (check_payment_eligibility) trusts that bit.
+	# require() gives us the base write grant; we narrow further so a plain
+	# Purchase Clerk cannot drive unlimited KRA traffic and trip the
+	# site-global 5-failure circuit breaker (HIGH API/permissions finding).
+	require("Purchase Invoice", "write")
+	from kenya_etims_compliance.utils.permissions import is_etims_admin, is_etims_manager
+
+	if not (is_etims_admin() or is_etims_manager()):
+		frappe.throw(
+			_("Bulk verification requires eTIMS Manager or Administrator role."),
+			frappe.PermissionError,
+		)
+
+	# Bound the batch — HIGH finding noted that bulk endpoints can otherwise
+	# fan-out to unlimited KRA calls.
+	MAX_BATCH = 50
 
 	filters = {
 		"docstatus": 1,
@@ -199,8 +322,10 @@ def bulk_verify_purchase_invoices(from_date=None, to_date=None):
 		"Purchase Invoice",
 		filters=filters,
 		fields=["name", "custom_invoice_number", "custom_supplier_pin", "posting_date", "base_grand_total"],
-		limit=100,
+		limit=MAX_BATCH,
 	)
+
+	from kenya_etims_compliance.custom_methods.invoice_checker import check_invoice_validity
 
 	total = len(invoices)
 	verified = 0
@@ -228,6 +353,10 @@ def bulk_verify_purchase_invoices(from_date=None, to_date=None):
 		)
 
 		if result and result.get("verified"):
+			# NOTE: drop update_modified=False so a tabVersion row is written
+			# (audit trail). The C-4 commit is also dropped — Frappe commits
+			# at end-of-request automatically; explicit commits inside a
+			# whitelisted endpoint bypass the framework's rollback guarantee.
 			frappe.db.set_value(
 				"Purchase Invoice",
 				inv.name,
@@ -235,11 +364,9 @@ def bulk_verify_purchase_invoices(from_date=None, to_date=None):
 					"custom_invoice_verified": 1,
 					"custom_verification_date": frappe.utils.now_datetime(),
 				},
-				update_modified=False,
 			)
 			verified += 1
 		else:
 			failed += 1
 
-	frappe.db.commit()
-	return {"total": total, "verified": verified, "failed": failed}
+	return {"total": total, "verified": verified, "failed": failed, "limit": MAX_BATCH}

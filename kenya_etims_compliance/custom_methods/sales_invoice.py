@@ -2,6 +2,8 @@ import traceback  # pyqrcode
 from datetime import datetime, time, timedelta
 
 import frappe
+
+from kenya_etims_compliance.utils.permissions import require
 import requests
 import segno
 from frappe import _
@@ -26,6 +28,10 @@ from kenya_etims_compliance.utils.kra_client import KRAClient
 @frappe.whitelist()
 def searchSalesTrnsReq(invoice_no=None, last_req_dt=None):
 	"""Search sales transactions in eTIMS"""
+	# Proxies a KRA lookup on the company's credentials, so it must not be
+	# reachable by any authenticated session.
+	require("Sales Invoice", "read")
+
 	response = eTIMS.searchTrns(invoice_no, last_req_dt, "sales")
 
 	for key, value in response.items():
@@ -38,6 +44,10 @@ def searchSalesTrnsReq(invoice_no=None, last_req_dt=None):
 @frappe.whitelist()
 def selectSalesTrnsInfoReq(invoice_no):
 	"""Get sales transaction details from eTIMS"""
+	# Proxies a KRA lookup on the company's credentials, so it must not be
+	# reachable by any authenticated session.
+	require("Sales Invoice", "read")
+
 	response = eTIMS.selectTrnsSalesInfo(invoice_no)
 
 	for key, value in response.items():
@@ -57,7 +67,34 @@ def show_etims_queued_message(doc, method):
 	if frappe.flags.get("_etims_show_queued_msg"):
 		frappe.msgprint(_("Sales invoice queued for eTIMS submission"), indicator="blue")
 		frappe.flags._etims_show_queued_msg = False
+def on_cancel(doc, method):
+	"""on_cancel hook — stop any pending eTIMS submission and warn when a
+	signed invoice is cancelled (KRA's API does not expose a sales-cancel
+	endpoint in this app, so the fiscal receipt stays live until the operator
+	files a credit note / refund with KRA directly).
+	"""
+	if not doc.custom_update_invoice_in_tims:
+		return
 
+	# Cancel any in-flight queue entries so process_queue_entry's docstatus
+	# guard short-circuits before KRA submission.
+	if doc.custom_etims_queue_entry:
+		frappe.db.set_value(
+			"eTIMS Invoice Queue",
+			doc.custom_etims_queue_entry,
+			{"status": "Cancelled", "last_error": "Source invoice cancelled."},
+			update_modified=False,
+		)
+
+	if doc.custom_update_sales_to_etims:
+		frappe.log_error(
+			title=f"eTIMS: cancelled Sales Invoice already signed to KRA: {doc.name}"[:140],
+			message=(
+				f"Sales Invoice {doc.name} was cancelled after being signed to KRA. "
+				"The fiscal receipt remains live at KRA. File a credit note / refund "
+				"with KRA to reconcile."
+			),
+		)
 
 def validate(doc, method):
 	"""
@@ -253,9 +290,9 @@ def fetch_total_vat(doc):
 	if doc.taxes:
 		for item in doc.taxes:
 			if item.get("base_tax_amount_after_discount_amount") > 0:
-				taxable_amount += item.get("custom_total_taxable_amount")
+				taxable_amount += flt(item.get("custom_total_taxable_amount"))
 			if item.get("base_tax_amount_after_discount_amount") < 0 and doc.is_return:
-				taxable_amount += item.get("custom_total_taxable_amount")
+				taxable_amount += flt(item.get("custom_total_taxable_amount"))
 
 	return taxable_amount
 
@@ -265,7 +302,7 @@ def fetch_total_non_vat(doc):
 	if doc.taxes:
 		for item in doc.taxes:
 			if item.get("base_tax_amount_after_discount_amount") == 0:
-				taxable_non_vat_amount += item.get("custom_total_taxable_amount")
+				taxable_non_vat_amount += flt(item.get("custom_total_taxable_amount"))
 
 	return taxable_non_vat_amount
 
@@ -276,6 +313,19 @@ def trnsSalesSaveWrReq(doc, method):
 	Called during before_submit — assigns invoice number first, then sends to eTIMS.
 	"""
 	if doc.custom_update_invoice_in_tims:
+		# Per HIGH review finding (hook-stage inversion): insert_invoice_number
+		# runs at on_update and writes the totals, but frm.savesubmit() collapses
+		# edit + submit into one request — so the totals seen by
+		# build_sales_payload (before_submit) must be recomputed HERE, in the
+		# same hook, against the in-memory doc that has the freshly-edited
+		# amounts. Otherwise totTaxblAmt reads a stale value while totAmt is
+		# fresh and the fiscal receipt ends up internally inconsistent.
+		insert_tax_amounts(doc)
+		total_vat = flt(fetch_total_vat(doc))
+		total_non_vat = flt(fetch_total_non_vat(doc))
+		doc.custom_total_taxable_amount = total_vat
+		doc.custom_total_nontaxable_amount = total_non_vat
+
 		# Build the KRA payload via the shared builder (it also applies the tax
 		# bands, return fields, training-mode override and receipt label).
 		payload = build_sales_payload(doc)
@@ -427,24 +477,43 @@ def get_last_inv_number(doc, branch_id):
 	last_inv_no = 0
 
 	if doc.custom_update_invoice_in_tims:
+		# Per HIGH review finding: the FOR UPDATE lock is a no-op when branch_id
+		# is None or no TIS Device Initialization row matches — silently
+		# allocating the same number twice creates duplicate invcNo, which KRA
+		# rejects forever. Throw a clear configuration error instead.
+		if not branch_id:
+			frappe.throw(
+				_(
+					"Cannot allocate an eTIMS sales invoice number: no Tax Branch Office is "
+					"configured for the current user. Set 'Tax Branch Office' on the eTIMS Branch User "
+					"and try again."
+				)
+			)
+
 		# Serialize per-branch number allocation. Lock the branch's device row
 		# with FOR UPDATE so two concurrent submits cannot read the same max and
 		# assign a DUPLICATE eTIMS invoice number (KRA rejects duplicate invcNo).
 		# The lock is held until the allocating transaction commits — and there
 		# is NO intermediate commit between here and the set_value that writes
 		# the number — so the next allocator always sees the committed number.
-		if branch_id:
-			frappe.db.sql(
-				"SELECT name FROM `tabTIS Device Initialization` WHERE branch_id = %s FOR UPDATE",
-				branch_id,
-			)
+		frappe.db.sql(
+			"SELECT name FROM `tabTIS Device Initialization` WHERE branch_id = %s FOR UPDATE",
+			branch_id,
+		)
 
 		settings_docs = frappe.db.get_all(
 			"TIS Device Initialization", filters={"branch_id": branch_id}, fields=["*"]
 		)
 
-		if settings_docs:
-			last_inv_no = settings_docs[0].get("last_sales_invoice_number") or 0
+		if not settings_docs:
+			frappe.throw(
+				_(
+					"Cannot allocate an eTIMS sales invoice number: no TIS Device Initialization "
+					"row matches branch '{0}'. Create / activate the device and try again."
+				).format(branch_id)
+			)
+
+		last_inv_no = settings_docs[0].get("last_sales_invoice_number") or 0
 
 		try:
 			last_inv = frappe.db.get_all(
@@ -505,7 +574,10 @@ def etims_sale_item_list_sales(doc):
 			frappe.throw(f"Item {item.get('item_code')} not found or is disabled")
 
 		item_cd = item_detail[0].get("custom_item_code")
-		dc_amt = abs(round((item.get("custom_discount_amount_kes") * item.get("qty")), 2))
+		# custom_discount_amount_kes is a custom column: init_valid_columns leaves
+		# it None when absent and, unlike ERPNext's own fields, nothing
+		# repopulates it during validate. flt() keeps the multiply from crashing.
+		dc_amt = abs(round((flt(item.get("custom_discount_amount_kes")) * flt(item.get("qty"))), 2))
 		row = {
 			"itemCd": item_cd,
 			"itemClsCd": item_detail[0].get("custom_item_classification_code"),
@@ -583,8 +655,8 @@ def etims_sale_item_list_stock(doc):
 				"prc": abs(item.get("base_rate")),
 				"splyAmt": abs(item.get("base_amount")),
 				"dcRt": abs(item.get("discount_percentage")),
-				"dcAmt": abs(round((item.get("custom_discount_amount_kes") * item.get("qty")), 2)),
-				"totDcAmt": abs(round((item.get("custom_discount_amount_kes") * item.get("qty")), 2)),
+				"dcAmt": abs(round((flt(item.get("custom_discount_amount_kes")) * flt(item.get("qty"))), 2)),
+				"totDcAmt": abs(round((flt(item.get("custom_discount_amount_kes")) * flt(item.get("qty"))), 2)),
 				"taxTyCd": item_tax_code,
 				"taxblAmt": abs(round(item.get("base_net_amount"), 2)),
 				"taxAmt": abs(round((item.get("base_amount") - item.get("base_net_amount")), 2)),
@@ -594,17 +666,11 @@ def etims_sale_item_list_stock(doc):
 			if item_etims_data not in stock_item_list:
 				stock_item_list.append(item_etims_data)
 
-	return stock_item_list
-
-
 def get_tax_template_details(template_name):
-	tax_doc = frappe.get_doc("Item Tax Template", template_name)
-	if tax_doc:
-		tax_code = tax_doc.custom_code
-
-		return tax_code
-	else:
+	if not template_name:
 		return "D"
+	tax_code = frappe.db.get_value("Item Tax Template", template_name, "custom_code")
+	return tax_code or "D"
 
 
 def get_tax_account_rate(account_head):
