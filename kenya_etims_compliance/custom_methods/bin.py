@@ -56,7 +56,7 @@ def resolve_stores_warehouse(tax_branch=None):
 
 	Resolution order:
 	  1. Warehouse with warehouse_type=Stores, is_group=0, custom_tax_branch_office=branch
-	  2. TIS Device Initialization's `default_stores_warehouse` (if it's a Stores leaf)
+	  2. TIS Device Initialization's `default_stores_warehouse` (any non-group warehouse)
 	  3. Any Stores leaf warehouse globally (with a warning to configure properly)
 	  4. Fall through → caller throws a configuration-fix message
 	"""
@@ -72,7 +72,10 @@ def resolve_stores_warehouse(tax_branch=None):
 		if wh:
 			return wh[0].name
 
-	# Tier 2: TIS Device's configured default
+	# Tier 2: the branch device's explicitly configured default. An admin who filled
+	# this field meant it, so honour it even when the warehouse carries no
+	# `warehouse_type` — ERPNext leaves that unset on the stock warehouses it creates
+	# for a new company, and ships "Transit" as the only Warehouse Type record.
 	if tax_branch:
 		devices = frappe.db.get_all(
 			"TIS Device Initialization",
@@ -81,8 +84,7 @@ def resolve_stores_warehouse(tax_branch=None):
 		)
 		if devices and devices[0].default_stores_warehouse:
 			wh_name = devices[0].default_stores_warehouse
-			meta = frappe.db.get_value("Warehouse", wh_name, ["warehouse_type", "is_group"], as_dict=True)
-			if meta and meta.warehouse_type == "Stores" and not meta.is_group:
+			if frappe.db.get_value("Warehouse", wh_name, "is_group") == 0:
 				return wh_name
 
 	# Tier 3: any Stores leaf warehouse (with one-time notice per request)
@@ -105,14 +107,20 @@ def resolve_stores_warehouse(tax_branch=None):
 	return None
 
 
-def get_bin_qty(item_code):
-	tax_branch = eTIMS.get_user_branch_id()
+def get_bin_qty(item_code, warehouse=None):
+	"""On-hand qty for `item_code`, in the warehouse the stock actually moved in.
 
-	warehouse_name = resolve_stores_warehouse(tax_branch)
+	`warehouse` comes from the document row being submitted and is the accurate
+	source for KRA's rsdQty on multi-warehouse sites. Branch-level resolution is
+	only a fallback for rows that carry no warehouse.
+	"""
+	warehouse_name = warehouse or resolve_stores_warehouse()
 	if not warehouse_name:
 		frappe.throw(
 			_("No Stores warehouse exists in the system. "
-			  "Create a Warehouse with Type=Stores (not a group) — and ideally link it to Tax Branch Office '{0}' via the 'Tax Branch Office' field.").format(tax_branch or "(your branch)")
+			  "Create a Warehouse with Type=Stores (not a group) — and ideally link it to Tax Branch Office '{0}' via the 'Tax Branch Office' field.").format(
+				eTIMS.get_user_branch_id() or "(your branch)"
+			)
 		)
 
 	bin_docs = frappe.db.get_all(
@@ -130,7 +138,7 @@ def get_bin_qty(item_code):
 def stockMasterSaveReq(item, doc, regName, modName):
 	item_code = frappe.db.get_value("Item", item.get("item_code"), "custom_item_code")
 
-	quantity = get_bin_qty(item.get("item_code"))
+	quantity = get_bin_qty(item.get("item_code"), item.get("warehouse"))
 
 	payload = {
 		"itemCd": item_code,

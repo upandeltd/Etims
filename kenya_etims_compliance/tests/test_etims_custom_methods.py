@@ -4,8 +4,13 @@ Comprehensive test suite for Kenya eTims Compliance core custom_methods.
 
 from unittest.mock import MagicMock, patch
 
+import frappe
 from frappe.tests.utils import FrappeTestCase
 
+from kenya_etims_compliance.custom_methods.bin import (
+	get_bin_qty,
+	resolve_stores_warehouse,
+)
 from kenya_etims_compliance.custom_methods.invoice_checker import (
 	check_invoice_validity,
 )
@@ -603,6 +608,45 @@ class TestQueueProcessorCustomMethods(FrappeTestCase):
 		self.assertEqual(result["total"], 18)
 
 
+class TestBinCustomMethods(FrappeTestCase):
+	"""Tests for kenya_etims_compliance.custom_methods.bin"""
+
+	@patch("kenya_etims_compliance.custom_methods.bin.frappe.db.get_value")
+	@patch("kenya_etims_compliance.custom_methods.bin.frappe.db.get_all")
+	def test_resolve_stores_warehouse_honours_device_default_without_warehouse_type(
+		self, mock_get_all, mock_get_value
+	):
+		# Tier 1 (warehouse_type=Stores) finds nothing: ERPNext ships only the
+		# "Transit" Warehouse Type, so sites routinely leave warehouse_type unset.
+		# The device's explicitly configured default must still win.
+		mock_get_all.side_effect = [
+			[],
+			[frappe._dict(default_stores_warehouse="Finished Goods - TA")],
+		]
+		mock_get_value.return_value = 0  # is_group
+
+		self.assertEqual(resolve_stores_warehouse("02"), "Finished Goods - TA")
+
+	@patch("kenya_etims_compliance.custom_methods.bin.frappe.db.get_all")
+	@patch("kenya_etims_compliance.custom_methods.bin.resolve_stores_warehouse")
+	def test_get_bin_qty_prefers_row_warehouse(self, mock_resolve, mock_get_all):
+		mock_get_all.return_value = [{"actual_qty": 3.0}]
+
+		self.assertEqual(get_bin_qty("ITEM-1", "Stores - TA"), 3.0)
+		mock_resolve.assert_not_called()
+		self.assertEqual(
+			mock_get_all.call_args.kwargs["filters"],
+			{"item_code": "ITEM-1", "warehouse": "Stores - TA"},
+		)
+
+	@patch("kenya_etims_compliance.custom_methods.bin.resolve_stores_warehouse")
+	def test_get_bin_qty_throws_only_when_nothing_resolves(self, mock_resolve):
+		mock_resolve.return_value = None
+
+		with self.assertRaises(frappe.ValidationError):
+			get_bin_qty("ITEM-1")
+
+
 if __name__ == "__main__":
 	import unittest
 
@@ -615,6 +659,7 @@ if __name__ == "__main__":
 	suite.addTests(loader.loadTestsFromTestCase(TestPaymentEntryCustomMethods))
 	suite.addTests(loader.loadTestsFromTestCase(TestInvoiceCheckerCustomMethods))
 	suite.addTests(loader.loadTestsFromTestCase(TestQueueProcessorCustomMethods))
+	suite.addTests(loader.loadTestsFromTestCase(TestBinCustomMethods))
 	runner = unittest.TextTestRunner(verbosity=2)
 	result = runner.run(suite)
 	exit(0 if result.wasSuccessful() else 1)
