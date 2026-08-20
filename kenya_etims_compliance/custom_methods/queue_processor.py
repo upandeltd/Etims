@@ -510,8 +510,12 @@ def cleanup_terminal_queue_entries():
 	}
 
 
-def _update_source_status(queue_entry, status, error_msg=None):
-	"""Update the source document's eTIMS queue status fields."""
+def _update_source_status(queue_entry, status, error_msg=None, commit=True):
+	"""Update the source document's eTIMS queue status fields.
+
+	``commit=False`` leaves the write in the caller's transaction so it can be
+	made atomic with related work.
+	"""
 	update_dict = {"custom_etims_queue_status": status}
 	if error_msg:
 		update_dict["custom_etims_last_error"] = error_msg[:2000]
@@ -522,22 +526,28 @@ def _update_source_status(queue_entry, status, error_msg=None):
 		update_dict,
 		update_modified=False,
 	)
-	frappe.db.commit()
+	if commit:
+		frappe.db.commit()
 
 
 def _handle_success(queue_entry, result):
 	"""Update the source document with KRA response data after successful API call.
 
-	Mark status as "Sent" FIRST — KRA already accepted the submission, so the
-	queue status must reflect that even if downstream work (QR/attachments/stock
-	IO) fails. Wrap the supplementary work so a failure there does not leave the
-	queue entry stuck on "Processing".
-	"""
-	_update_source_status(queue_entry, "Sent")
+	KRA has already accepted the submission, so "Sent" must survive whatever
+	happens below — re-transmitting would create a duplicate fiscal receipt.
 
+	The status write is deliberately left uncommitted so it lands in the SAME
+	transaction as the signature/QR its sub-handler writes. Committing "Sent"
+	first opened a window in which a poller could read a Sent row whose invoice
+	still had no signature. If the supplementary work fails we roll its partial
+	writes back, persist "Sent" alone, and leave the rest to
+	``repair_sent_without_signature``.
+	"""
 	data = result.get("Success") or {}
 	doctype = queue_entry.reference_doctype
 	docname = queue_entry.reference_name
+
+	_update_source_status(queue_entry, "Sent", commit=False)
 
 	try:
 		if doctype == "Sales Invoice":
@@ -546,7 +556,12 @@ def _handle_success(queue_entry, result):
 			_handle_purchase_invoice_success(docname, data, queue_entry)
 		elif doctype == "Stock Entry":
 			_handle_stock_entry_success(docname, data, queue_entry)
+		else:
+			# No sub-handler for this doctype — nothing else will commit.
+			frappe.db.commit()
 	except Exception:
+		frappe.db.rollback()
+		_update_source_status(queue_entry, "Sent")
 		frappe.log_error(
 			title=f"eTIMS post-success processing failed: {docname}"[:140],
 			message=traceback.format_exc(),

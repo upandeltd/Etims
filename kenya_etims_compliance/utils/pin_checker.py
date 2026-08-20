@@ -15,6 +15,7 @@ import base64
 import re
 
 import frappe
+from frappe import _
 import requests
 
 CACHE_KEY = "kra_pin_checker_token"

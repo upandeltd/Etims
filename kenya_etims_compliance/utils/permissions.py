@@ -302,6 +302,18 @@ def check_permission(perm_type="read", doctype=None):
 	return decorator
 
 
+# Every fieldname a Tax Branch Office can arrive under. App-owned doctypes
+# declare the bare name; the same field added to a core doctype (Sales /
+# Purchase Invoice, Stock Entry) is a Custom Field and so carries the
+# `custom_` prefix. A Stock Entry spans two branches and exposes both.
+BRANCH_FIELDNAMES = (
+	"tax_branch_office",
+	"custom_tax_branch_office",
+	"custom_source_tax_branch_office",
+	"custom_target_tax_branch_office",
+)
+
+
 def validate_branch_access(doc):
 	"""Validate that user has access to the document's branch.
 
@@ -361,12 +373,14 @@ def validate_branch_access(doc):
 			"Please contact your administrator."
 		)
 
-	# Check if document has a branch field
-	if hasattr(doc, "tax_branch_office") and doc.tax_branch_office:
-		doc_branch = doc.tax_branch_office
-
-		# Other roles can only access their assigned branch
-		if doc_branch != user_branch:
+	# Resolve the branch off whichever field this doctype actually carries.
+	# App-owned doctypes use the bare `tax_branch_office`; core doctypes get
+	# the same field as a Custom Field, so it arrives prefixed. Checking only
+	# the bare name made this a silent no-op on Sales / Purchase Invoice.
+	# A Stock Entry moves between two branches and must clear both.
+	for fieldname in BRANCH_FIELDNAMES:
+		doc_branch = getattr(doc, fieldname, None)
+		if doc_branch and doc_branch != user_branch:
 			frappe.throw(
 				f"Permission Denied: You do not have access to branch {doc_branch}. "
 				f"Your assigned branch is {user_branch}."

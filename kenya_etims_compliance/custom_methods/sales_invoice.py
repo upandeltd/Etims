@@ -3,7 +3,12 @@ from datetime import datetime, time, timedelta
 
 import frappe
 
-from kenya_etims_compliance.utils.permissions import require
+from kenya_etims_compliance.utils.permissions import (
+	is_etims_admin,
+	is_etims_manager,
+	require,
+	validate_branch_access,
+)
 import requests
 import segno
 from frappe import _
@@ -25,12 +30,59 @@ from kenya_etims_compliance.utils.etims_utils import (
 from kenya_etims_compliance.utils.kra_client import KRAClient
 
 
+def _guard_kra_sales_lookup(invoice_no):
+	"""Gate the two KRA sales-lookup proxies.
+
+	``require("Sales Invoice", "read")`` alone is company-wide: in a
+	multi-branch setup any cashier could read another branch's KRA fiscal
+	status. Scope it:
+
+	* named invoice that exists locally -> enforce that branch on the caller
+	* named invoice with no local record, or a bare date sweep -> the result
+	  spans the whole company, so restrict it to managers/admins
+	"""
+	require("Sales Invoice", "read")
+
+	local = None
+	if invoice_no:
+		local = frappe.db.get_value(
+			"Sales Invoice",
+			{"custom_invoice_number": invoice_no},
+			["name", "custom_tax_branch_office"],
+			as_dict=True,
+		) or frappe.db.get_value(
+			"Sales Invoice",
+			{"name": invoice_no},
+			["name", "custom_tax_branch_office"],
+			as_dict=True,
+		)
+
+	if local:
+		validate_branch_access(local)
+		return
+
+	if not (
+		is_etims_admin()
+		or is_etims_manager()
+		or "System Manager" in frappe.get_roles()
+		or frappe.session.user == "Administrator"
+	):
+		frappe.throw(
+			_(
+				"Permission Denied: a company-wide KRA lookup requires the "
+				"eTIMS Manager or eTIMS Administrator role."
+			),
+			frappe.PermissionError,
+		)
+
+
 @frappe.whitelist()
 def searchSalesTrnsReq(invoice_no=None, last_req_dt=None):
 	"""Search sales transactions in eTIMS"""
 	# Proxies a KRA lookup on the company's credentials, so it must not be
-	# reachable by any authenticated session.
-	require("Sales Invoice", "read")
+	# reachable by any authenticated session, nor leak another branch's
+	# fiscal status.
+	_guard_kra_sales_lookup(invoice_no)
 
 	response = eTIMS.searchTrns(invoice_no, last_req_dt, "sales")
 
@@ -45,8 +97,9 @@ def searchSalesTrnsReq(invoice_no=None, last_req_dt=None):
 def selectSalesTrnsInfoReq(invoice_no):
 	"""Get sales transaction details from eTIMS"""
 	# Proxies a KRA lookup on the company's credentials, so it must not be
-	# reachable by any authenticated session.
-	require("Sales Invoice", "read")
+	# reachable by any authenticated session, nor leak another branch's
+	# fiscal status.
+	_guard_kra_sales_lookup(invoice_no)
 
 	response = eTIMS.selectTrnsSalesInfo(invoice_no)
 

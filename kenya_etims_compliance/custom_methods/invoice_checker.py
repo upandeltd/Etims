@@ -8,6 +8,7 @@ All expenses and purchases must be eTIMS compliant to be tax-deductible.
 """
 
 import frappe
+from frappe import _
 import requests
 
 from kenya_etims_compliance.utils.etims_utils import eTIMS

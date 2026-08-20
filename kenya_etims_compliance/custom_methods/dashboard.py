@@ -60,6 +60,9 @@ def get_dashboard_data():
 	require("Sales Invoice", "read")
 
 	today = getdate()
+	# Five filters below window on the current month. Without this the whole
+	# method raised NameError, so the dashboard returned nothing at all.
+	month_start = today.replace(day=1)
 
 	# Sales transmitted this month
 	sales_transmitted = frappe.db.count(
