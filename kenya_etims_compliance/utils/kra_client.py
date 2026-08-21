@@ -243,10 +243,26 @@ class KRAClient:
 		if not header_names:
 			return {}
 		device = frappe.get_doc("TIS Device Initialization", header_names[0])
+
+		# Prefer the centralized TIS Communication Key record if it exists.
+		# Device-record keys can become stale when the key is re-issued or
+		# updated outside the device record, leaving API calls rejected with
+		# "It is not valid device" (KRA result code 901).
+		ck = device.get_password("communication_key", raise_exception=False)
+		ck_doc_name = frappe.db.get_value(
+			"TIS Communication Key", {"branch_id": self.branch_id}, "name"
+		)
+		if ck_doc_name:
+			ck_from_record = frappe.get_doc(
+				"TIS Communication Key", ck_doc_name
+			).get_password("communication_key", raise_exception=False)
+			if ck_from_record:
+				ck = ck_from_record
+
 		return {
 			"tin": device.get_password("pin", raise_exception=False),
 			"bhfId": device.branch_id,
-			"cmcKey": device.get_password("communication_key", raise_exception=False),
+			"cmcKey": ck,
 		}
 
 	def _get_base_url(self):

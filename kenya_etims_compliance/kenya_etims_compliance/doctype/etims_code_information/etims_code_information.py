@@ -200,28 +200,30 @@ def process_code_information(response_result):
 	    response_result (_dict_): result from CodeSearchReq
 	"""
 	data = response_result.get("data")
-	if data.get("clsList"):
-		for item in data.get("clsList"):
-			code_exists = check_if_doc_exists("eTIMS Code Classification", "code_class", item.get("cdCls"))
-			if not code_exists:
-				new_doc = frappe.new_doc("eTIMS Code Classification")
-				new_doc.code_class = item.get("cdCls")
-				new_doc.code_class_name = item.get("cdClsNm")
-				new_doc.code_description = item.get("cdClsDesc")
-				new_doc.user_define_code_1 = item.get("userDfnNm1")
-				new_doc.user_define_code_2 = item.get("userDfnNm2")
-				new_doc.user_define_code_3 = item.get("userDfnNm3")
-				new_doc.use_yes_or_no = item.get("useYn")
-				new_doc.insert()
+	if not data:
+		return
 
-				for code_detail in item.get("dtlList"):
-					code_dict = assign_code_dict(code_detail)
-					new_doc.append("items", code_dict)
-
-				new_doc.save()
-
-	else:
+	if not data.get("clsList"):
 		frappe.throw(_("No code data found for this period please try an earlier date!"))
+
+	for item in data.get("clsList"):
+		code_exists = check_if_doc_exists("eTIMS Code Classification", "code_class", item.get("cdCls"))
+		if not code_exists:
+			new_doc = frappe.new_doc("eTIMS Code Classification")
+			new_doc.code_class = item.get("cdCls")
+			new_doc.code_class_name = item.get("cdClsNm")
+			new_doc.code_description = item.get("cdClsDesc")
+			new_doc.user_define_code_1 = item.get("userDfnNm1")
+			new_doc.user_define_code_2 = item.get("userDfnNm2")
+			new_doc.user_define_code_3 = item.get("userDfnNm3")
+			new_doc.use_yes_or_no = item.get("useYn")
+			new_doc.insert()
+
+			for code_detail in item.get("dtlList"):
+				code_dict = assign_code_dict(code_detail)
+				new_doc.append("items", code_dict)
+
+			new_doc.save()
 
 
 def check_customer_exists(cust_pin):
@@ -279,62 +281,68 @@ def assign_code_dict(code_detail):
 
 def create_packing_units(response_result):
 	data = response_result.get("data")
-	if data.get("clsList"):
-		for item in data.get("clsList"):
-			if item.get("cdClsNm") == "Packing Unit":
-				for code_item in item.get("dtlList"):
-					code_exists = check_if_doc_exists(
-						"eTIMS Packing Unit", "etims_code_name", code_item.get("cdNm")
-					)
-					if not code_exists:
-						new_doc = frappe.new_doc("eTIMS Packing Unit")
-						new_doc.etims_code = code_item.get("cd")
-						new_doc.etims_code_name = code_item.get("cdNm")
-						new_doc.code_description = code_item.get("cdDesc")
-						new_doc.sort_order = code_item.get("srtOrd")
-						new_doc.user_define_code_1 = code_item.get("userDfnCd1")
-						new_doc.user_define_code_2 = code_item.get("userDfnCd2")
-						new_doc.user_define_code_3 = code_item.get("userDfnCd3")
-						new_doc.use_yes_or_no = code_item.get("useYn")
-						new_doc.insert()
+	if not data or not data.get("clsList"):
+		return
+
+	for item in data.get("clsList"):
+		if item.get("cdClsNm") == "Packing Unit":
+			for code_item in item.get("dtlList"):
+				code_exists = check_if_doc_exists(
+					"eTIMS Packing Unit", "etims_code_name", code_item.get("cdNm")
+				)
+				if not code_exists:
+					new_doc = frappe.new_doc("eTIMS Packing Unit")
+					new_doc.etims_code = code_item.get("cd")
+					new_doc.etims_code_name = code_item.get("cdNm")
+					new_doc.code_description = code_item.get("cdDesc")
+					new_doc.sort_order = code_item.get("srtOrd")
+					new_doc.user_define_code_1 = code_item.get("userDfnCd1")
+					new_doc.user_define_code_2 = code_item.get("userDfnCd2")
+					new_doc.user_define_code_3 = code_item.get("userDfnCd3")
+					new_doc.use_yes_or_no = code_item.get("useYn")
+					new_doc.insert()
 
 
 def create_quantity_units(response_result):
 	data = response_result.get("data")
-	if data.get("clsList"):
-		for item in data.get("clsList"):
-			if item.get("cdClsNm") == "Quantity Unit":
-				for code_item in item.get("dtlList"):
-					code_exists = check_if_doc_exists(
-						"eTIMS Quantity Unit", "etims_code_name", code_item.get("cdNm")
-					)
-					if not code_exists:
-						new_doc = frappe.new_doc("eTIMS Quantity Unit")
-						new_doc.etims_code = code_item.get("cd")
-						new_doc.etims_code_name = code_item.get("cdNm")
-						new_doc.code_description = code_item.get("cdDesc")
-						new_doc.sort_order = code_item.get("srtOrd")
-						new_doc.user_define_code_1 = code_item.get("userDfnCd1")
-						new_doc.user_define_code_2 = code_item.get("userDfnCd2")
-						new_doc.user_define_code_3 = code_item.get("userDfnCd3")
-						new_doc.use_yes_or_no = code_item.get("useYn")
-						new_doc.insert()
+	if not data or not data.get("clsList"):
+		return
+
+	for item in data.get("clsList"):
+		if item.get("cdClsNm") == "Quantity Unit":
+			for code_item in item.get("dtlList"):
+				code_exists = check_if_doc_exists(
+					"eTIMS Quantity Unit", "etims_code_name", code_item.get("cdNm")
+				)
+				if not code_exists:
+					new_doc = frappe.new_doc("eTIMS Quantity Unit")
+					new_doc.etims_code = code_item.get("cd")
+					new_doc.etims_code_name = code_item.get("cdNm")
+					new_doc.code_description = code_item.get("cdDesc")
+					new_doc.sort_order = code_item.get("srtOrd")
+					new_doc.user_define_code_1 = code_item.get("userDfnCd1")
+					new_doc.user_define_code_2 = code_item.get("userDfnCd2")
+					new_doc.user_define_code_3 = code_item.get("userDfnCd3")
+					new_doc.use_yes_or_no = code_item.get("useYn")
+					new_doc.insert()
 
 
 # method to create etims country codes and contry names, to keep consistency
 def create_country_code(response_result):
 	data = response_result.get("data")
-	if data.get("clsList"):
-		for item in data.get("clsList"):
-			if item.get("cdClsNm") == "Country":
-				for code_item in item.get("dtlList"):
-					code_exists = check_if_doc_exists("eTIMS Country", "code_name", code_item.get("cd"))
-					if not code_exists:
-						new_doc = frappe.new_doc("eTIMS Country")
-						new_doc.country_name = code_item.get("cdNm")
-						new_doc.code_name = code_item.get("cd")
+	if not data or not data.get("clsList"):
+		return
 
-						new_doc.insert()
+	for item in data.get("clsList"):
+		if item.get("cdClsNm") == "Country":
+			for code_item in item.get("dtlList"):
+				code_exists = check_if_doc_exists("eTIMS Country", "code_name", code_item.get("cd"))
+				if not code_exists:
+					new_doc = frappe.new_doc("eTIMS Country")
+					new_doc.country_name = code_item.get("cdNm")
+					new_doc.code_name = code_item.get("cd")
+
+					new_doc.insert()
 
 
 def check_if_doc_exists(doc, doc_filter, doc_value):
