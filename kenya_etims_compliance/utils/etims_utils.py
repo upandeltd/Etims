@@ -40,28 +40,19 @@ class eTIMS:
 
 	@staticmethod
 	def strf_datetime_object(datetime_data):
-		datetime_object = datetime.strptime(datetime_data, "%Y-%m-%d %H:%M:%S")
-		date_time_str = datetime_object.strftime("%Y%m%d%H%M%S")
-
-		return date_time_str
+		"""Format a datetime as YYYYMMDDHHMMSS. Supports ISO strings and datetime objects."""
+		return eTIMS.strf_datetime_format(datetime_data)
 
 	@staticmethod
 	def strf_datetime_format(datetime_data):
-		date_time_str = ""
-		if isinstance(datetime_data, str):
-			try:
-				datetime_object = datetime.strptime(datetime_data, "%Y-%m-%d %H:%M:%S.%f")
-				date_time_str = datetime_object.strftime("%Y%m%d%H%M%S")
-
-			except ValueError as e:
-				frappe.log_error(title="eTIMS: Datetime format error", message=str(e))
-				datetime_object = datetime.strptime(datetime_data, "%Y-%m-%d %H:%M:%S")
-				date_time_str = datetime_object.strftime("%Y%m%d%H%M%S")
-
-		else:
-			date_time_str = datetime_data.strftime("%Y%m%d%H%M%S")
-
-		return date_time_str
+		"""Format a datetime as YYYYMMDDHHMMSS. Supports ISO strings and datetime objects."""
+		if not datetime_data:
+			return ""
+		try:
+			return frappe.utils.get_datetime(datetime_data).strftime("%Y%m%d%H%M%S")
+		except Exception as e:
+			frappe.log_error(title="eTIMS: Datetime format error", message=str(e))
+			raise
 
 	@staticmethod
 	def strf_date_object(date_data):

@@ -18,7 +18,10 @@ class eTIMSBranchInformation(Document):
 		self.save()
 
 		request_datetime = self.data_from_datetime
-		date_time_str = eTIMS.strf_datetime_object(request_datetime)
+		if not request_datetime:
+			frappe.throw(_("Set 'From Date and Time' before searching."), frappe.ValidationError)
+
+		date_time_str = frappe.utils.get_datetime(request_datetime).strftime("%Y%m%d%H%M%S")
 
 		payload = {"tin": self.tin, "lastReqDt": date_time_str}
 

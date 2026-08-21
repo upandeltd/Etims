@@ -5,6 +5,7 @@ import traceback
 from datetime import datetime
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
 
 from kenya_etims_compliance.utils.etims_utils import eTIMS
@@ -15,7 +16,10 @@ class eTIMSImportItemInformation(Document):
 	@frappe.whitelist()
 	def importItemSearchReq(self):
 		request_datetime = self.data_from_datetime
-		date_time_str = eTIMS.strf_datetime_object(request_datetime)
+		if not request_datetime:
+			frappe.throw(_("Set 'From Date and Time' before searching."), frappe.ValidationError)
+
+		date_time_str = frappe.utils.get_datetime(request_datetime).strftime("%Y%m%d%H%M%S")
 
 		payload = {
 			"lastReqDt": date_time_str,
