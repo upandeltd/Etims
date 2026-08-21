@@ -101,7 +101,6 @@ def run_reconciliation(period=None, branch=None):
 			"total_variance": total_variance,
 		}
 	).insert(ignore_permissions=True)
-	frappe.db.commit()
 
 	return {
 		"period": period,
@@ -274,7 +273,6 @@ def accept_variance(entry_name, reason):
 			"variance_reason": reason,
 		},
 	)
-	frappe.db.commit()
 	return {"status": "success"}
 
 

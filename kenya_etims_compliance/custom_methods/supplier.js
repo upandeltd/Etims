@@ -57,6 +57,12 @@ frappe.ui.form.on('Supplier', {
                             frappe.show_alert({message: (r.message && r.message.message) || 'Failed', indicator: 'red'});
                         }
                         frm.reload_doc();
+                    },
+                    error: function(r) {
+                        frappe.show_alert({
+                            message: __('Could not reach eTIMS: {0}', [frappe.utils.escape_html(String((r && r.message) || ''))]),
+                            indicator: 'red'
+                        });
                     }
                 });
             }, __('eTIMS'));
@@ -135,15 +141,24 @@ function test_etims_supplier_connection(frm) {
         freeze: true,
         freeze_message: __('Testing eTIMS connection...'),
         callback: function(r) {
-            // This will likely fail for a test invoice, but we can check
-            // if the connection was successful (not a network error)
+            // Connection test: a test invoice is expected to fail validation, but
+            // a real network/API failure surfaces here. If we got a structured
+            // response back, the connection is up.
+            const connected = r && r.message;
+            const server_msg = connected ? Object.values(r.message).join(' ') : '';
             frappe.msgprint({
                 title: __('Connection Test'),
-                message: __(
-                    'eTIMS API connection test completed. ' +
-                    'Check results for details.'
-                ),
-                indicator: r.message ? 'green' : 'yellow'
+                message: connected
+                    ? __('eTIMS API is reachable. Server response: {0}', [frappe.utils.escape_html(server_msg)])
+                    : __('eTIMS API did not respond. Check settings and network.'),
+                indicator: connected ? 'green' : 'red'
+            });
+        },
+        error: function(r) {
+            frappe.msgprint({
+                title: __('Connection Test'),
+                message: __('eTIMS API is unreachable: {0}', [frappe.utils.escape_html(String((r && r.message) || ''))]),
+                indicator: 'red'
             });
         }
     });

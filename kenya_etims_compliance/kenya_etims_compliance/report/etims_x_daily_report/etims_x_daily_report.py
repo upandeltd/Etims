@@ -101,13 +101,13 @@ def get_data(filters):
 
 	data.append({"category": "", "description": "", "count": None, "amount": None})
 
-	# Receipt type breakdown
+	# Receipt type breakdown — sign-correct (credit notes are negative in ERPNext)
 	receipt_data = frappe.db.sql(
 		"""
         SELECT
             COALESCE(si.custom_receipt_label, 'NS') AS label,
             COUNT(*) AS cnt,
-            SUM(ABS(si.base_grand_total)) AS total
+            SUM(si.base_grand_total) AS total
         FROM `tabSales Invoice` si
         WHERE {where}
         GROUP BY COALESCE(si.custom_receipt_label, 'NS')
@@ -141,13 +141,13 @@ def get_data(filters):
 	data.append({"category": "  TOTAL", "description": "", "count": total_count, "amount": total_amount})
 	data.append({"category": "", "description": "", "count": None, "amount": None})
 
-	# Tax breakdown
+	# Tax breakdown — sign-correct (credit notes are negative)
 	tax_data = frappe.db.sql(
 		"""
         SELECT
             stc.custom_code AS tax_code,
-            SUM(ABS(stc.custom_total_taxable_amount)) AS taxable_amount,
-            SUM(ABS(stc.base_tax_amount_after_discount_amount)) AS tax_amount
+            SUM(stc.custom_total_taxable_amount) AS taxable_amount,
+            SUM(stc.base_tax_amount_after_discount_amount) AS tax_amount
         FROM `tabSales Taxes and Charges` stc
         INNER JOIN `tabSales Invoice` si ON si.name = stc.parent
         WHERE {where}
@@ -186,26 +186,25 @@ def get_data(filters):
 	data.append({"category": "  Total Taxable", "description": "", "count": None, "amount": total_taxable})
 	data.append({"category": "  Total Tax", "description": "", "count": None, "amount": total_tax})
 	data.append({"category": "", "description": "", "count": None, "amount": None})
-
-	# Payment breakdown
+	# Payment breakdown — sign-correct; drop the AND sip.amount > 0 clause that
+	# was hiding refund payment legs
 	payment_data = frappe.db.sql(
 		"""
         SELECT
             sip.mode_of_payment,
             COUNT(DISTINCT si.name) AS cnt,
-            SUM(ABS(sip.amount)) AS total
+            SUM(sip.amount) AS total
         FROM `tabSales Invoice Payment` sip
         INNER JOIN `tabSales Invoice` si ON si.name = sip.parent
         WHERE {where}
-            AND sip.amount > 0
         GROUP BY sip.mode_of_payment
         ORDER BY total DESC
         """.format(where=where),
 		params,
 		as_dict=True,
 	)
-
 	data.append({"category": "PAYMENT METHOD BREAKDOWN", "description": "", "count": None, "amount": None})
+
 	for row in payment_data:
 		data.append(
 			{"category": f"  {row.mode_of_payment}", "description": "", "count": row.cnt, "amount": row.total}

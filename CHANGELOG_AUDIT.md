@@ -18,6 +18,9 @@
 8. [Scheduled Tasks](#8-scheduled-tasks)
 9. [Reports](#9-reports)
 10. [Breaking Changes](#10-breaking-changes)
+11. [Post-Audit Fixes (2026-07-29)](#11-post-audit-fixes-2026-07-29)
+12. [Workspace Sidebar & Desk Icon Fix (2026-07-29)](#12-workspace-sidebar--desk-icon-fix-2026-07-29)
+13. [Role Profiles (2026-07-29)](#13-role-profiles-2026-07-29)
 
 ---
 
@@ -556,6 +559,81 @@ The modified app expects the following custom fields to exist (created by `insta
 ### 10.5 Settings Dependency
 
 The new `eTIMS Settings` Single DocType must exist for many features to work. The `after_install` hook creates it automatically, but manual installations need to create it.
+
+---
+
+## 11. Post-Audit Fixes (2026-07-29)
+
+Roles/permissions audit and full non-destructive smoke test on production site `mbaguya` (frappe/erpnext v16). Findings remediated:
+
+### 11.1 eTIMS Code Information -- missing role permissions (Medium)
+
+`eTIMS Code Information` shipped with permissions for only `Sales User` and `System Manager`. The intended eTIMS-role grants lived in `installation/etims_roles.py::add_etims_role_permissions()`, which runs in `before_install` (before the app's own DocTypes exist, so every `frappe.db.exists("DocType", ...)` check is False) and is never re-run on migrate -- the grants therefore never applied. Added all seven eTIMS roles directly to `etims_code_information.json` (the durable source of truth): Administrator/Manager full CRUD; Operator/Sales Clerk/Purchase Clerk/Store Keeper create+write, no delete; Auditor read-only.
+
+### 11.2 Removed dead install code (Low)
+
+Deleted the no-op `update_existing_doctype_permissions()` and `add_etims_role_permissions()` from `installation/etims_roles.py`. Both targeted app DocTypes that do not exist at `before_install` time and were never called on migrate. `before_install()` now only calls `create_etims_roles()`. DocType JSON is the single source of truth for permissions.
+
+### 11.3 Dashboard Number Card duplication on migrate (Low/Medium)
+
+`setup_dashboard.py` inserted the "Sales Success Rate" card with `name="Sales Success Rate"` but `label="Sales Success Rate (%)"`. Number Cards autoname from their label, so the idempotency check `frappe.db.exists("Number Card", "Sales Success Rate")` never matched and a duplicate card was created on every `bench migrate`. Set the card `name` to `"Sales Success Rate (%)"` (matching label) and removed the accumulated duplicate on production.
+
+### 11.4 Role fixture never exported (Low)
+
+`hooks.py` declared a `Role` fixture for the seven eTIMS roles, but no `fixtures/role.json` existed, so `bench migrate` could not recreate roles if deleted (they were created only once at `before_install`). Added `fixtures/role.json` with the seven roles.
+
+### 11.5 Verification
+
+- `bench --site mbaguya migrate` runs clean (after_migrate hooks + patches, no errors).
+- Live DB: eTIMS Code Information now carries 9 permission rows (including all 7 eTIMS roles); all 7 roles present; no dangling permission-to-role references; single `Sales Success Rate (%)` card.
+- Full smoke test: 40/40 DocTypes instantiate, 9/9 Script Reports execute, 12/12 Number Cards + dashboard API compute, 5/6 charts (the 6th is an empty-state -- 0 matching rows, framework behaviour, not a defect), workspace + sidebar load, utility functions pass.
+
+**Files changed:** `kenya_etims_compliance/kenya_etims_compliance/doctype/etims_code_information/etims_code_information.json`, `kenya_etims_compliance/installation/etims_roles.py`, `kenya_etims_compliance/setup_dashboard.py`, `kenya_etims_compliance/fixtures/role.json` (new).
+
+---
+
+## 12. Workspace Sidebar & Desk Icon Fix (2026-07-29)
+
+Two production issues on `mbaguya`: the eTIMS workspace sidebar did not render, and the desk showed two "eTIMS" icons. Root causes were a workspace/sidebar name mismatch plus non-standard file structure; fixed by aligning to Frappe v16 conventions.
+
+### 12.1 Root cause
+
+- **Sidebar not rendering:** the desk resolves a workspace's `Workspace Sidebar` by matching the sidebar record's name to the workspace name (`frappe.boot.workspace_sidebar_item[<workspace>.toLowerCase()]`, see `frappe/public/js/frappe/ui/sidebar/sidebar.js` + `frappe/boot.py::get_sidebar_items`). The sidebar was named `eTIMS` but the workspace was `eTIMS Compliance` (route `/app/etims-compliance`), so no boot key matched and the custom sidebar never loaded.
+- **Two desk icons:** `create_desktop_icons_from_workspace` (`frappe/desk/doctype/desktop_icon/desktop_icon.py`) hides the workspace-derived Link icon only when the workspace name equals `app_title`. `app_title` is `eTIMS` but the workspace was `eTIMS Compliance`, so the Link icon ("eTIMS Compliance") showed alongside the app's App icon -> duplicate.
+
+### 12.2 Fix -- rename workspace to `eTIMS` and align structure
+
+- Renamed the Workspace `eTIMS Compliance` -> `eTIMS` (name = `app_title` = sidebar name). Route is now `/app/etims`. This makes the sidebar resolve by direct name match AND makes Frappe auto-hide the duplicate workspace icon.
+- Moved the Workspace to the standard folder-per-record path `kenya_etims_compliance/workspace/etims/etims.json` (synced via `IMPORTABLE_DOCTYPES`).
+- Moved the Workspace Sidebar to the standard app-level path `workspace_sidebar/etims.json` (synced via the `app_level_folders` list in `frappe/model/sync.py`); removed the non-standard duplicates: `fixtures/workspace_sidebar.json`, the flat module-dir copy, and the `Workspace`/`Workspace Sidebar` fixture entries + v16 append block in `hooks.py`.
+- Removed the legacy `desktop_icon/*.json` files (both copies); the app tile now comes solely from the standard v16 `add_to_apps_screen` hook (route updated to `/app/etims`).
+- Removed the now-redundant `after_install.setup_workspace_sidebar` (and its `after_migrate` entry) -- the sidebar is synced by the standard mechanism.
+- Updated the setup-wizard redirect + button to `/app/etims` / "Go to eTIMS".
+
+### 12.3 Production remediation + verification
+
+- Renamed the live Workspace doc `eTIMS Compliance` -> `eTIMS`; deleted the two stale Desktop Icons; ran `bench --site mbaguya migrate` (clean); regenerated icons via `create_desktop_icons()`.
+- Live DB after fix: Workspace `eTIMS` present (old name gone), Workspace Sidebar `eTIMS` present (48 items, Home -> `eTIMS`), boot sidebar key `etims` present, exactly one visible desk icon `eTIMS` (-> `/app/etims`).
+- Browser-verified on the running site: opening `/app/etims` renders the full custom sidebar (Getting Started, Daily Operations, Reconciliation, Reports, Monitoring) and shows a single `eTIMS` app icon.
+
+**Files changed:** `hooks.py`, `installation/after_install.py`, `kenya_etims_compliance/page/etims_setup_wizard/etims_setup_wizard.js`, workspace moved to `kenya_etims_compliance/workspace/etims/etims.json`, sidebar at `workspace_sidebar/etims.json`; removed `fixtures/workspace_sidebar.json`, both `desktop_icon/kenya_etims_compliance.json`, and the flat `kenya_etims_compliance/workspace_sidebar/etims_compliance.json`.
+
+---
+
+## 13. Role Profiles (2026-07-29)
+
+Added per-persona **Role Profiles** so an admin can grant eTIMS access in one field on the User form (`role_profile_name`) instead of assigning individual roles. Neither the `matoro` nor `alidav16` copy previously shipped any Role Profile.
+
+### 13.1 What was added
+
+- Seven Role Profiles, one per eTIMS role (least-privilege, eTIMS roles only -- no standard ERPNext roles bundled): `eTIMS Administrator`, `eTIMS Manager`, `eTIMS Operator`, `eTIMS Auditor`, `eTIMS Sales Clerk`, `eTIMS Purchase Clerk`, `eTIMS Store Keeper`. Each profile contains exactly its matching eTIMS role.
+- Shipped as `fixtures/role_profile.json` and registered in `hooks.py` `fixtures` (filtered to the seven names), so they sync on install/migrate like `role.json`.
+
+### 13.2 Note on migrate + background worker
+
+`Role Profile.on_update` enqueues `update_all_users` on the `long` queue (it only runs synchronously under `in_install`/`in_test`) and locks the doc until the job runs. On a normal production server (workers running) this drains automatically. On a worker-less box, the queued action leaves a stale file lock in `sites/<site>/locks/` that blocks the next migrate with `DocumentLockedError` -- clear the locks and run a `bench worker` (long queue) to drain. Verified clean on `mbaguya` with a worker running: migrate succeeds, all seven profiles present with their roles, no residual locks.
+
+**Files changed:** `hooks.py` (Role Profile fixture entry), `kenya_etims_compliance/fixtures/role_profile.json` (new).
 
 ---
 

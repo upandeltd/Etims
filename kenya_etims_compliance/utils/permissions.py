@@ -36,6 +36,9 @@ CRITICAL_DOCTYPES = [
 	"Tax Branch Office",
 	"TIS Communication Key",
 	"eTIMS Settings",
+	# Hold KRA device/user credentials, so deletion is Admin/Manager-only.
+	"eTIMS Branch User",
+	"eTIMS Branch Information",
 ]
 
 # Doctypes that can be modified by operators
@@ -112,89 +115,107 @@ def is_store_keeper():
 	return ETIMS_STORE_KEEPER in frappe.get_roles()
 
 
+def is_privileged():
+	"""True when the caller outranks the subtractive eTIMS role rules.
+
+	Frappe grants the ``Administrator`` user *every* role on the site, so a
+	naive ``is_etims_auditor()`` test matches Administrator and every
+	dual-role user. Narrowing rules must therefore skip anyone who holds a
+	role that outranks the restriction being applied, otherwise a user gains
+	*less* access by being given an extra role.
+	"""
+	if frappe.session.user == "Administrator":
+		return True
+	roles = frappe.get_roles()
+	return bool({"System Manager", ETIMS_ADMIN, ETIMS_MANAGER} & set(roles))
+
+
 def has_etims_role(role_name):
 	"""Check if current user has specific eTIMS role"""
 	return role_name in frappe.get_roles()
 
 
-def can_modify_doctype(doctype, perm_type="write"):
-	"""Check if user can modify a specific doctype
+def can_modify_doctype(doctype, perm_type="write", doc=None):
+	"""Check if user can modify a specific doctype.
+
+	`frappe.has_permission` is the base grant. eTIMS role checks may only
+	NARROW the result (auditor read-only; manager-or-admin-only delete on
+	critical doctypes). Never widen past what Frappe itself grants.
 
 	Args:
-		doctype: Doctype name to check
+		doctype: DocType name to check
 		perm_type: Permission type (read, write, create, delete)
+		doc: Optional document instance; forwarded to frappe.has_permission
+			for User Permission / share checks.
 
 	Returns:
 		bool: True if user has permission
 	"""
-	# Administrators can do everything
-	if is_etims_admin():
-		return True
+	# Auditor is read-only — but only when auditor is the caller's highest
+	# standing. Administrator holds every role on a Frappe site, so this must
+	# never fire for a privileged user (see is_privileged).
+	if is_etims_auditor() and perm_type != "read" and not is_privileged():
+		return False
 
-	# Auditors can only read
-	if is_etims_auditor():
-		return perm_type == "read"
+	# Only Admin / Manager may delete from the listed critical doctypes.
+	if perm_type == "delete" and doctype in CRITICAL_DOCTYPES:
+		if not is_etims_admin() and not is_etims_manager():
+			return False
 
-	# Check doctype-specific permissions
-	if perm_type == "delete":
-		# Only Admin and Manager can delete from critical doctypes
-		if doctype in CRITICAL_DOCTYPES:
-			return is_etims_manager()
-
-	# Operators can write to operator doctypes
-	if is_etims_operator() and perm_type in ["read", "write", "create"]:
-		if doctype in OPERATOR_WRITE_DOCTYPES:
-			return True
-
-	# Clerks have limited access
-	if is_sales_clerk() and doctype in SALES_CLERK_DOCTYPES:
-		if perm_type != "delete":
-			return True
-
-	if is_purchase_clerk() and doctype in PURCHASE_CLERK_DOCTYPES:
-		if perm_type != "delete":
-			return True
-
-	if is_store_keeper() and doctype in STORE_KEEPER_DOCTYPES:
-		if perm_type != "delete":
-			return True
-
-	# Managers have broad access
-	if is_etims_manager():
-		return True
-
-	# Default: check standard Frappe permissions
-	return frappe.has_permission(doctype, perm_type)
+	# Delegate the base grant to Frappe — user roles, user permissions, shares.
+	return frappe.has_permission(doctype, perm_type, doc=doc)
 
 
-def can_delete_doctype(doctype):
-	"""Check if user can delete from doctype
+def can_delete_doctype(doctype, doc=None):
+	"""Check if user can delete from doctype.
 
 	Args:
-		doctype: Doctype name to check
+		doctype: DocType name to check
+		doc: Optional document instance
 
 	Returns:
 		bool: True if user has delete permission
 	"""
-	return can_modify_doctype(doctype, "delete")
+	return can_modify_doctype(doctype, "delete", doc=doc)
 
 
-def can_sync_to_etims(doctype):
-	"""Check if user can sync documents to eTIMS
+def can_sync_to_etims(doctype, doc=None):
+	"""Check if user can sync documents to eTIMS.
 
-	Only Admin, Manager, and Operators can sync.
+	Mirrors the legacy role policy (Admin / Manager / Operator only) but
+	USES its `doctype` argument: the base grant comes from
+	`frappe.has_permission(doctype, "write", doc=doc)`. A user without
+	write permission on the doctype can never sync, regardless of role.
+
+	Args:
+		doctype: DocType the sync targets. MUST be a real doctype name —
+			passing None is a programming error and will be rejected.
+		doc: Optional document instance to scope the check.
+
+	Returns:
+		bool: True if user can sync
 	"""
-	if is_etims_admin():
-		return True
+	if not doctype or not isinstance(doctype, str):
+		frappe.throw(
+			_("can_sync_to_etims() requires a doctype name; got {0}").format(repr(doctype)),
+			title=_("Internal: permission check missing target"),
+		)
 
-	if is_etims_manager():
-		return True
+	# Base grant: write permission on the target doctype, resolved through
+	# can_modify_doctype so the auditor read-only rule composes here too
+	# (an auditor must never be able to push data to KRA).
+	if not can_modify_doctype(doctype, "write", doc=doc):
+		return False
 
-	if is_etims_operator():
+	# Legacy role restriction: clerks cannot trigger syncs even if they
+	# somehow hold Frappe write on the doctype. Skipped for privileged
+	# callers, who hold every role on a Frappe site.
+	if is_privileged():
 		return True
+	if is_sales_clerk() or is_purchase_clerk() or is_store_keeper():
+		return False
 
-	# Clerks cannot sync
-	return False
+	return True
 
 
 def can_view_sensitive_fields(doctype):
@@ -281,8 +302,25 @@ def check_permission(perm_type="read", doctype=None):
 	return decorator
 
 
+# Every fieldname a Tax Branch Office can arrive under. App-owned doctypes
+# declare the bare name; the same field added to a core doctype (Sales /
+# Purchase Invoice, Stock Entry) is a Custom Field and so carries the
+# `custom_` prefix. A Stock Entry spans two branches and exposes both.
+BRANCH_FIELDNAMES = (
+	"tax_branch_office",
+	"custom_tax_branch_office",
+	"custom_source_tax_branch_office",
+	"custom_target_tax_branch_office",
+)
+
+
 def validate_branch_access(doc):
-	"""Validate that user has access to the document's branch
+	"""Validate that user has access to the document's branch.
+
+	Reads ``is_branch_isolation_enforced()`` to decide whether branch
+	scoping is on at all (no-op when disabled). Honours
+	``is_cross_branch_allowed()`` so Managers/Admins get the documented
+	cross-branch view only when the setting is explicitly on.
 
 	Args:
 		doc: Document object with tax_branch_office field
@@ -290,10 +328,26 @@ def validate_branch_access(doc):
 	Throws:
 		PermissionError if user doesn't have access to the branch
 	"""
-	# Admin/System Manager/eTIMS Manager bypass — they can access all branches
+	# Imported lazily: settings helpers live in the doctype module to avoid
+	# an import cycle (etims_settings imports nothing from us today, but
+	# keeping it local also avoids the cost when permissions is loaded
+	# purely for a role check that doesn't touch branch logic).
+	from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import (
+		is_branch_isolation_enforced,
+		is_cross_branch_allowed,
+	)
+
+	# Branch isolation off → everyone is allowed across branches.
+	if not is_branch_isolation_enforced():
+		return
+
+	# Cross-branch explicitly enabled for managers/admins → bypass for them.
+	cross_branch = is_cross_branch_allowed() and (
+		is_etims_admin() or is_etims_manager() or "System Manager" in frappe.get_roles()
+	)
 	if (
 		frappe.session.user == "Administrator"
-		or "System Manager" in frappe.get_roles()
+		or cross_branch
 		or is_etims_admin()
 		or is_etims_manager()
 	):
@@ -319,16 +373,14 @@ def validate_branch_access(doc):
 			"Please contact your administrator."
 		)
 
-	# Check if document has a branch field
-	if hasattr(doc, "tax_branch_office") and doc.tax_branch_office:
-		doc_branch = doc.tax_branch_office
-
-		# Admin and Manager can access all branches (for oversight)
-		if is_etims_admin() or is_etims_manager():
-			return
-
-		# Other roles can only access their assigned branch
-		if doc_branch != user_branch:
+	# Resolve the branch off whichever field this doctype actually carries.
+	# App-owned doctypes use the bare `tax_branch_office`; core doctypes get
+	# the same field as a Custom Field, so it arrives prefixed. Checking only
+	# the bare name made this a silent no-op on Sales / Purchase Invoice.
+	# A Stock Entry moves between two branches and must clear both.
+	for fieldname in BRANCH_FIELDNAMES:
+		doc_branch = getattr(doc, fieldname, None)
+		if doc_branch and doc_branch != user_branch:
 			frappe.throw(
 				f"Permission Denied: You do not have access to branch {doc_branch}. "
 				f"Your assigned branch is {user_branch}."
@@ -415,20 +467,35 @@ def require_manager():
 
 	return decorator
 
+def require(doctype, ptype="write", doc=None):
+	"""Throw ``frappe.PermissionError`` unless the caller has the given perm.
 
-def require_sync_permission():
-	"""Decorator to require permission to sync to eTIMS"""
+	This is the entry point every state-changing whitelisted endpoint should
+	call first. It delegates to ``frappe.has_permission(..., throw=True)``,
+	which respects user roles, user permissions, and shares. eTIMS role
+	rules (``can_modify_doctype``) only ever narrow that base grant.
 
-	def decorator(func):
-		@wraps(func)
-		def wrapper(*args, **kwargs):
-			if not can_sync_to_etims(None):
-				frappe.throw(
-					"Permission Denied: You do not have permission to sync to eTIMS. "
-					"This action requires eTIMS Administrator, Manager, or Operator role."
-				)
-			return func(*args, **kwargs)
+	Args:
+		doctype: DocType name the action targets.
+		ptype: Permission type (read, write, create, delete, submit, cancel,
+			amend). Default ``"write"``.
+		doc: Optional document instance; forwarded so the framework can
+			apply User Permission / share checks against it.
 
-		return wrapper
-
-	return decorator
+	Returns:
+		None on success; raises ``frappe.PermissionError`` otherwise.
+	"""
+	if not doctype or not isinstance(doctype, str):
+		frappe.throw(
+			_("require() needs a doctype name; got {0}").format(repr(doctype)),
+			frappe.PermissionError,
+		)
+	# Two-layer check so the eTIMS-narrowed rule still applies, but the base
+	# grant is the framework's own permission resolver.
+	if not can_modify_doctype(doctype, ptype, doc=doc):
+		frappe.throw(
+			_("Permission Denied: {0} ({1}) is not permitted for {2}.").format(
+				_(ptype), frappe.session.user, _(doctype)
+			),
+			frappe.PermissionError,
+		)

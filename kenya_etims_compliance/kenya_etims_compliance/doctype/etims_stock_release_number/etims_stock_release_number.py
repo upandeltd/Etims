@@ -28,21 +28,22 @@ class eTIMSStockReleaseNumber(Document):
 			get_sar_type_for_doctype,
 			is_rbac_enabled,
 		)
-		from kenya_etims_compliance.utils.permissions import log_permission_check, require_sync_permission
+		from kenya_etims_compliance.utils.permissions import (
+			log_permission_check,
+			require,
+		)
 
 		# Check if RBAC is enabled and user has sync permission
 		if is_rbac_enabled():
-			# Check permission before syncing
-			log_permission_check("eTIMS Stock Release Number", "sync", True)
-			require_sync_permission(lambda: None)()  # Decorator check
-			# Re-check programmatically
-			from kenya_etims_compliance.utils.permissions import can_sync_to_etims
-
-			if not can_sync_to_etims(None):
+			# Audit-trail the decision (allowed or denied)
+			allowed = frappe.has_permission("eTIMS Stock Release Number", "submit")
+			log_permission_check("eTIMS Stock Release Number", "sync", allowed)
+			if not allowed:
 				frappe.throw(
-					"Permission Denied: You do not have permission to sync to eTIMS. "
-					"This action requires eTIMS Administrator, Manager, or Operator role."
+					_("Permission Denied: You do not have submit permission on eTIMS Stock Release Number.")
 				)
+			# Enforce the eTIMS-narrowed sync rule (Admin/Manager/Operator only).
+			require("eTIMS Stock Release Number", "write")
 
 		# Check if auto sync is enabled
 		settings = get_etims_settings()

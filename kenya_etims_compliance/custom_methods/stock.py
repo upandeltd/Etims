@@ -2,6 +2,8 @@ import traceback
 from datetime import datetime
 
 import frappe
+
+from kenya_etims_compliance.utils.permissions import require
 import requests
 from frappe import _
 
@@ -12,6 +14,10 @@ from kenya_etims_compliance.utils.kra_client import KRAClient
 @frappe.whitelist()
 def searchStockMoveReq(sar_no=None, last_req_dt=None):
 	"""Search stock movements in eTIMS"""
+	# Proxies a KRA lookup on the company's credentials, so it must not be
+	# reachable by any authenticated session.
+	require("eTIMS Stock Movement", "read")
+
 	response = eTIMS.searchStockMove(sar_no, last_req_dt)
 
 	for key, value in response.items():

@@ -4,8 +4,13 @@ Comprehensive test suite for Kenya eTims Compliance core custom_methods.
 
 from unittest.mock import MagicMock, patch
 
+import frappe
 from frappe.tests.utils import FrappeTestCase
 
+from kenya_etims_compliance.custom_methods.bin import (
+	get_bin_qty,
+	resolve_stores_warehouse,
+)
 from kenya_etims_compliance.custom_methods.invoice_checker import (
 	check_invoice_validity,
 )
@@ -29,6 +34,8 @@ from kenya_etims_compliance.custom_methods.queue_processor import (
 	should_use_queue,
 )
 from kenya_etims_compliance.custom_methods.sales_invoice import (
+	build_sales_payload,
+	etims_sale_item_list_sales,
 	get_total_discount,
 	insert_tax_amounts,
 	validate_inv_number,
@@ -253,26 +260,229 @@ class TestSalesInvoiceCustomMethods(FrappeTestCase):
 		)
 		self.assertEqual(mock_set_value.call_count, 2)
 
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.get_tax_template_details")
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.frappe.db.get_all")
+	def test_etims_sale_item_list_sales_merges_same_item_code(self, mock_get_all, mock_tax_template):
+		mock_get_all.side_effect = lambda doctype, filters=None, fields=None: [
+			{
+				"custom_item_code": f"KE{filters['item_code']}",
+				"custom_item_classification_code": "5059690800",
+				"custom_item_name": filters["item_code"],
+				"custom_packaging_unit_code": "NT",
+				"custom_quantity_unit_code": "U",
+			}
+		]
+		mock_tax_template.return_value = "B"
+
+		item1 = MockRow(
+			item_code="RAW-MEAT", item_tax_template="VAT-16",
+			idx=1, qty=2, base_rate=100.0, base_amount=200.0,
+			discount_percentage=0, custom_discount_amount_kes=0,
+			base_net_amount=172.41,
+		)
+		item2 = MockRow(
+			item_code="RAW-MEAT", item_tax_template="VAT-16",
+			idx=2, qty=3, base_rate=100.0, base_amount=300.0,
+			discount_percentage=0, custom_discount_amount_kes=0,
+			base_net_amount=258.62,
+		)
+		doc = MagicMock()
+		doc.items = [item1, item2]
+
+		# KRA rejects an itemList with the same item code split across rows
+		# ("Supply/Taxable amount is incorrect for item X") - they must merge
+		# into a single summed entry.
+		result = etims_sale_item_list_sales(doc)
+
+		self.assertEqual(len(result), 1)
+		row = result[0]
+		self.assertEqual(row["itemCd"], "KERAW-MEAT")
+		self.assertEqual(row["itemSeq"], 1)
+		self.assertEqual(row["qty"], 5)
+		self.assertEqual(row["pkg"], 5)
+		self.assertEqual(row["splyAmt"], 500.0)
+		self.assertEqual(row["taxblAmt"], round(172.41 + 258.62, 2))
+
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.get_tax_template_details")
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.frappe.db.get_all")
+	def test_etims_sale_item_list_sales_keeps_separate_when_tax_code_differs(
+		self, mock_get_all, mock_tax_template
+	):
+		mock_get_all.return_value = [
+			{
+				"custom_item_code": "KERAW-MEAT",
+				"custom_item_classification_code": "5059690800",
+				"custom_item_name": "Raw Meat",
+				"custom_packaging_unit_code": "NT",
+				"custom_quantity_unit_code": "U",
+			}
+		]
+		mock_tax_template.side_effect = ["B", "D"]
+
+		item1 = MockRow(
+			item_code="RAW-MEAT", item_tax_template="VAT-16",
+			idx=1, qty=2, base_rate=100.0, base_amount=200.0,
+			discount_percentage=0, custom_discount_amount_kes=0,
+			base_net_amount=172.41,
+		)
+		item2 = MockRow(
+			item_code="RAW-MEAT", item_tax_template="VAT-EXEMPT",
+			idx=2, qty=3, base_rate=100.0, base_amount=300.0,
+			discount_percentage=0, custom_discount_amount_kes=0,
+			base_net_amount=300.0,
+		)
+		doc = MagicMock()
+		doc.items = [item1, item2]
+
+		# A genuine tax-code split on the same item code must NOT be merged.
+		result = etims_sale_item_list_sales(doc)
+
+		self.assertEqual(len(result), 2)
+		self.assertEqual({r["taxTyCd"] for r in result}, {"B", "D"})
+		self.assertEqual([r["itemSeq"] for r in result], [1, 2])
+
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.frappe.db.set_value")
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.get_receipt_label")
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.get_etims_settings")
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.apply_tax_bands")
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.etims_sale_item_list_sales")
+	def test_build_sales_payload_tot_taxbl_amt_includes_nontaxable(
+		self, mock_item_list, mock_apply_bands, mock_get_settings, mock_get_label, mock_set_value
+	):
+		# Regression test for ACC-SINV-2026-00020: a wholly zero-rated/exempt
+		# invoice has custom_total_taxable_amount == 0 and the whole amount in
+		# custom_total_nontaxable_amount. totTaxblAmt must reflect both, or KRA
+		# rejects with "totTaxblAmt (0) must match the sum of itemList taxblAmt".
+		mock_item_list.return_value = []
+		mock_get_settings.return_value = {"vat_obligation": "Registered", "training_mode": 0}
+		mock_get_label.return_value = "RCPT-1"
+
+		doc = MagicMock()
+		doc.modified = "2026-08-11 16:00:00.000000"
+		doc.posting_date = "2026-08-11"
+		doc.custom_item_count = 1
+		doc.items = []
+		doc.name = "ACC-SINV-2026-00020"
+		doc.custom_invoice_number = 17
+		doc.custom_original_invoice_number = 0
+		doc.tax_id = "P000000000A"
+		doc.customer = "Mama Mboga Stores Ltd"
+		doc.custom_sales_type_code = "N"
+		doc.custom_receipt_type_code = "S"
+		doc.custom_payment_type_code = "01"
+		doc.custom_invoice_status_code = "02"
+		doc.custom_total_taxable_amount = 0
+		doc.custom_total_nontaxable_amount = 50300.0
+		doc.base_total_taxes_and_charges = 0
+		doc.base_grand_total = 50300.0
+		doc.remarks = ""
+		doc.owner = "Administrator"
+		doc.modified_by = "Administrator"
+		doc.is_return = 0
+		doc.taxes = []
+
+		payload = build_sales_payload(doc)
+
+		self.assertEqual(payload["totTaxblAmt"], 50300.0)
+
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.frappe.db.set_value")
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.get_receipt_label")
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.get_etims_settings")
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.apply_tax_bands")
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.etims_sale_item_list_sales")
+	def test_build_sales_payload_tot_item_cnt_matches_item_list_length(
+		self, mock_item_list, mock_apply_bands, mock_get_settings, mock_get_label, mock_set_value
+	):
+		# Regression test for ACC-SINV-2026-00020 (2nd failure): two Sales Invoice
+		# Item rows sharing an item code merge into ONE KRA itemList line
+		# (etims_sale_item_list_sales dedup), but custom_item_count is stamped
+		# once at submit time from the RAW row count. totItemCnt must reflect
+		# the actual itemList sent, or KRA rejects with "Item Count error".
+		mock_item_list.return_value = [{"itemSeq": 1}]  # 2 raw rows merged to 1
+		mock_get_settings.return_value = {"vat_obligation": "Registered", "training_mode": 0}
+		mock_get_label.return_value = "RCPT-1"
+
+		doc = MagicMock()
+		doc.modified = "2026-08-11 16:00:00.000000"
+		doc.posting_date = "2026-08-11"
+		doc.custom_item_count = 2  # stale: stamped from raw doc.items count pre-dedup
+		doc.items = [MagicMock(), MagicMock()]
+		doc.name = "ACC-SINV-2026-00020"
+		doc.custom_invoice_number = 17
+		doc.custom_original_invoice_number = 0
+		doc.tax_id = "P000000000A"
+		doc.customer = "Mama Mboga Stores Ltd"
+		doc.custom_sales_type_code = "N"
+		doc.custom_receipt_type_code = "S"
+		doc.custom_payment_type_code = "01"
+		doc.custom_invoice_status_code = "02"
+		doc.custom_total_taxable_amount = 0
+		doc.custom_total_nontaxable_amount = 50300.0
+		doc.base_total_taxes_and_charges = 0
+		doc.base_grand_total = 50300.0
+		doc.remarks = ""
+		doc.owner = "Administrator"
+		doc.modified_by = "Administrator"
+		doc.is_return = 0
+		doc.taxes = []
+
+		payload = build_sales_payload(doc)
+
+		self.assertEqual(payload["totItemCnt"], 1)
+		self.assertEqual(payload["totItemCnt"], len(payload["itemList"]))
+		self.assertNotEqual(payload["totItemCnt"], doc.custom_item_count)
+
 
 class TestPurchaseInvoiceCustomMethods(FrappeTestCase):
 	"""Tests for kenya_etims_compliance.custom_methods.purchase_invoice"""
 
-	@patch("kenya_etims_compliance.custom_methods.purchase_invoice.insert_invoice_number")
 	@patch("kenya_etims_compliance.custom_methods.purchase_invoice.validate_inv_number")
 	@patch("kenya_etims_compliance.custom_methods.purchase_invoice.frappe.db.exists")
-	def test_validate(self, mock_exists, mock_validate_inv_number, mock_insert_invoice_number):
+	def test_validate_throws_on_invoice_number_collision(self, mock_exists, mock_validate_inv_number):
+		"""A colliding custom_invoice_number must block the save, not be silently
+		reallocated — the column also holds free-text supplier references."""
 		mock_exists.return_value = True
 		mock_validate_inv_number.return_value = [10, 20, 30]
 
 		doc = MagicMock()
+		doc.custom_update_purchase_in_tims = 1
+		doc.custom_invoice_number = 20
+		doc.name = "PINV-001"
+
+		with self.assertRaises(frappe.ValidationError):
+			validate_purchase_invoice(doc, None)
+
+		mock_exists.assert_called_once_with("Purchase Invoice", {"name": "PINV-001"})
+		mock_validate_inv_number.assert_called_once_with(doc)
+
+	@patch("kenya_etims_compliance.custom_methods.purchase_invoice.validate_inv_number")
+	@patch("kenya_etims_compliance.custom_methods.purchase_invoice.frappe.db.exists")
+	def test_validate_passes_without_collision(self, mock_exists, mock_validate_inv_number):
+		mock_exists.return_value = True
+		mock_validate_inv_number.return_value = [10, 30]
+
+		doc = MagicMock()
+		doc.custom_update_purchase_in_tims = 1
 		doc.custom_invoice_number = 20
 		doc.name = "PINV-001"
 
 		validate_purchase_invoice(doc, None)
 
-		mock_exists.assert_called_once_with("Purchase Invoice", {"name": "PINV-001"})
 		mock_validate_inv_number.assert_called_once_with(doc)
-		mock_insert_invoice_number.assert_called_once_with(doc, None)
+
+	@patch("kenya_etims_compliance.custom_methods.purchase_invoice.validate_inv_number")
+	@patch("kenya_etims_compliance.custom_methods.purchase_invoice.frappe.db.exists")
+	def test_validate_skipped_when_etims_disabled(self, mock_exists, mock_validate_inv_number):
+		"""The whole check is gated on custom_update_purchase_in_tims."""
+		doc = MagicMock()
+		doc.custom_update_purchase_in_tims = 0
+		doc.custom_invoice_number = 20
+		doc.name = "PINV-001"
+
+		validate_purchase_invoice(doc, None)
+
+		mock_exists.assert_not_called()
+		mock_validate_inv_number.assert_not_called()
 
 	def test_get_total_discount_with_discount(self):
 		item1 = MockRow(discount_percentage=10, discount_amount=5, qty=2)
@@ -429,6 +639,45 @@ class TestQueueProcessorCustomMethods(FrappeTestCase):
 		self.assertEqual(result["total"], 18)
 
 
+class TestBinCustomMethods(FrappeTestCase):
+	"""Tests for kenya_etims_compliance.custom_methods.bin"""
+
+	@patch("kenya_etims_compliance.custom_methods.bin.frappe.db.get_value")
+	@patch("kenya_etims_compliance.custom_methods.bin.frappe.db.get_all")
+	def test_resolve_stores_warehouse_honours_device_default_without_warehouse_type(
+		self, mock_get_all, mock_get_value
+	):
+		# Tier 1 (warehouse_type=Stores) finds nothing: ERPNext ships only the
+		# "Transit" Warehouse Type, so sites routinely leave warehouse_type unset.
+		# The device's explicitly configured default must still win.
+		mock_get_all.side_effect = [
+			[],
+			[frappe._dict(default_stores_warehouse="Finished Goods - TA")],
+		]
+		mock_get_value.return_value = 0  # is_group
+
+		self.assertEqual(resolve_stores_warehouse("02"), "Finished Goods - TA")
+
+	@patch("kenya_etims_compliance.custom_methods.bin.frappe.db.get_all")
+	@patch("kenya_etims_compliance.custom_methods.bin.resolve_stores_warehouse")
+	def test_get_bin_qty_prefers_row_warehouse(self, mock_resolve, mock_get_all):
+		mock_get_all.return_value = [{"actual_qty": 3.0}]
+
+		self.assertEqual(get_bin_qty("ITEM-1", "Stores - TA"), 3.0)
+		mock_resolve.assert_not_called()
+		self.assertEqual(
+			mock_get_all.call_args.kwargs["filters"],
+			{"item_code": "ITEM-1", "warehouse": "Stores - TA"},
+		)
+
+	@patch("kenya_etims_compliance.custom_methods.bin.resolve_stores_warehouse")
+	def test_get_bin_qty_throws_only_when_nothing_resolves(self, mock_resolve):
+		mock_resolve.return_value = None
+
+		with self.assertRaises(frappe.ValidationError):
+			get_bin_qty("ITEM-1")
+
+
 if __name__ == "__main__":
 	import unittest
 
@@ -441,6 +690,7 @@ if __name__ == "__main__":
 	suite.addTests(loader.loadTestsFromTestCase(TestPaymentEntryCustomMethods))
 	suite.addTests(loader.loadTestsFromTestCase(TestInvoiceCheckerCustomMethods))
 	suite.addTests(loader.loadTestsFromTestCase(TestQueueProcessorCustomMethods))
+	suite.addTests(loader.loadTestsFromTestCase(TestBinCustomMethods))
 	runner = unittest.TextTestRunner(verbosity=2)
 	result = runner.run(suite)
 	exit(0 if result.wasSuccessful() else 1)

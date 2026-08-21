@@ -1,6 +1,30 @@
+# Copyright (c) 2026, Upande Ltd and contributors
+# For license information, please see license.txt
+"""VAT Return Preview.
+
+Aggregates Output VAT (sales transmitted to eTIMS) and Input VAT (KRA-matched
+purchase invoices) by the KRA A-E tax bands using the same
+``custom_total_taxable_amount`` / ``base_tax_amount_after_discount_amount``
+fields that ``apply_tax_bands`` writes into every KRA payload.
+
+This is what reconciles with what was sent to KRA — the previous implementation
+hardcoded ``tax_rate = 16`` on every row and read
+``base_total_taxes_and_charges`` (which sums freight, service charges and
+every non-VAT row), so the totals could never agree with the transmitted
+payloads.
+
+Sign convention: credit notes (is_return=1) carry negative tax amounts in
+ERPNext; we SUM with the natural sign so a refund lowers the day's VAT, just
+as in the Z/X reports.
+"""
+
 import frappe
 from frappe import _
-from frappe.utils import add_months, flt, getdate
+from frappe.utils import flt
+
+from kenya_etims_compliance.kenya_etims_compliance.utils.etims_utils import (
+	KRA_TAX_BANDS,
+)
 
 
 def execute(filters=None):
@@ -32,104 +56,86 @@ def get_data(filters):
 	if not from_date or not to_date:
 		return []
 
+	# A-E band totals. Each value is the SUM of every tax row belonging to
+	# that band, with the natural sign so credit notes reduce the totals.
+	output_bands = _aggregate_sales_bands(from_date, to_date, company)
+	supported_input_bands = _aggregate_purchase_bands(
+		from_date, to_date, company, match_status="Matched"
+	)
+	at_risk_input_bands = _aggregate_purchase_bands(
+		from_date, to_date, company, match_status="not matched"
+	)
+
+	# Counts for the summary columns.
+	si_transmitted_count = _count_sales_transmitted(from_date, to_date, company)
+	pi_matched_count = _count_purchase_with_status(from_date, to_date, company, "Matched")
+	pi_unmatched_count = _count_purchase_with_status(
+		from_date, to_date, company, ["not in", ["Matched", ""]]
+	)
+
 	data = []
-	company_filter = {"company": company} if company else {}
 
-	# OUTPUT VAT — Sales Invoices transmitted to eTIMS
-	si_filters = {
-		"docstatus": 1,
-		"posting_date": ["between", [from_date, to_date]],
-		"custom_update_invoice_in_tims": 1,
-		**company_filter,
-	}
-	sales_invoices = frappe.get_all(
-		"Sales Invoice",
-		filters=si_filters,
-		fields=["name", "base_grand_total", "base_total_taxes_and_charges", "custom_update_sales_to_etims"],
-		limit_page_length=0,
-	)
+	for code in KRA_TAX_BANDS:
+		b = output_bands.get(code)
+		if not b or (not b["taxable_amount"] and not b["tax_amount"]):
+			continue
+		data.append(
+			{
+				"category": "OUTPUT VAT (Sales)",
+				"tax_code": code,
+				"taxable_amount": b["taxable_amount"],
+				"tax_rate": b["tax_rate"],
+				"tax_amount": b["tax_amount"],
+				"status": "Transmitted",
+				"count": si_transmitted_count,
+			}
+		)
 
-	si_transmitted = [s for s in sales_invoices if s.custom_update_sales_to_etims]
-	si_pending = [s for s in sales_invoices if not s.custom_update_sales_to_etims]
+	for code in KRA_TAX_BANDS:
+		b = supported_input_bands.get(code)
+		if not b or (not b["taxable_amount"] and not b["tax_amount"]):
+			continue
+		data.append(
+			{
+				"category": "INPUT VAT (Supported)",
+				"tax_code": code,
+				"taxable_amount": b["taxable_amount"],
+				"tax_rate": b["tax_rate"],
+				"tax_amount": b["tax_amount"],
+				"status": "KRA Matched",
+				"count": pi_matched_count,
+			}
+		)
 
-	output_taxable = sum(
-		flt(s.base_grand_total) - flt(s.base_total_taxes_and_charges) for s in si_transmitted
-	)
-	output_tax = sum(flt(s.base_total_taxes_and_charges) for s in si_transmitted)
+	for code in KRA_TAX_BANDS:
+		b = at_risk_input_bands.get(code)
+		if not b or (not b["taxable_amount"] and not b["tax_amount"]):
+			continue
+		data.append(
+			{
+				"category": "INPUT VAT (At Risk)",
+				"tax_code": code,
+				"taxable_amount": b["taxable_amount"],
+				"tax_rate": b["tax_rate"],
+				"tax_amount": b["tax_amount"],
+				"status": "Not matched — may be rejected",
+				"count": pi_unmatched_count,
+			}
+		)
 
-	data.append(
-		{
-			"category": "OUTPUT VAT (Sales)",
-			"tax_code": "",
-			"taxable_amount": output_taxable,
-			"tax_rate": 16,
-			"tax_amount": output_tax,
-			"status": "Transmitted" if not si_pending else f"{len(si_pending)} pending",
-			"count": len(si_transmitted),
-		}
-	)
+	output_tax = sum(flt(d["tax_amount"]) for d in data if d["category"] == "OUTPUT VAT (Sales)")
+	supported_tax = sum(flt(d["tax_amount"]) for d in data if d["category"] == "INPUT VAT (Supported)")
+	net_vat = output_tax - supported_tax
 
-	# INPUT VAT — Purchase Invoices
-	pi_filters = {
-		"docstatus": 1,
-		"posting_date": ["between", [from_date, to_date]],
-		**company_filter,
-	}
-	purchase_invoices = frappe.get_all(
-		"Purchase Invoice",
-		filters=pi_filters,
-		fields=[
-			"name",
-			"base_grand_total",
-			"base_total_taxes_and_charges",
-			"custom_kra_match_status",
-			"custom_update_purchase_in_tims",
-		],
-		limit_page_length=0,
-	)
-
-	pi_matched = [p for p in purchase_invoices if p.custom_kra_match_status == "Matched"]
-	pi_unmatched = [p for p in purchase_invoices if p.custom_kra_match_status != "Matched"]
-
-	supported_input_taxable = sum(
-		flt(p.base_grand_total) - flt(p.base_total_taxes_and_charges) for p in pi_matched
-	)
-	supported_input_tax = sum(flt(p.base_total_taxes_and_charges) for p in pi_matched)
-
-	at_risk_taxable = sum(flt(p.base_grand_total) - flt(p.base_total_taxes_and_charges) for p in pi_unmatched)
-	at_risk_tax = sum(flt(p.base_total_taxes_and_charges) for p in pi_unmatched)
-
-	data.append(
-		{
-			"category": "INPUT VAT (Supported)",
-			"tax_code": "",
-			"taxable_amount": supported_input_taxable,
-			"tax_rate": 16,
-			"tax_amount": supported_input_tax,
-			"status": "KRA Matched",
-			"count": len(pi_matched),
-		}
-	)
-
-	data.append(
-		{
-			"category": "INPUT VAT (At Risk)",
-			"tax_code": "",
-			"taxable_amount": at_risk_taxable,
-			"tax_rate": 16,
-			"tax_amount": at_risk_tax,
-			"status": "Not matched — may be rejected",
-			"count": len(pi_unmatched),
-		}
-	)
-
-	# NET VAT
-	net_vat = output_tax - supported_input_tax
 	data.append(
 		{
 			"category": "NET VAT PAYABLE",
 			"tax_code": "",
-			"taxable_amount": output_taxable - supported_input_taxable,
+			"taxable_amount": sum(
+				flt(d["taxable_amount"])
+				for d in data
+				if d["category"] in ("OUTPUT VAT (Sales)", "INPUT VAT (Supported)")
+			),
 			"tax_rate": "",
 			"tax_amount": net_vat,
 			"status": "Due by 20th",
@@ -140,28 +146,146 @@ def get_data(filters):
 	return data
 
 
+def _aggregate_sales_bands(from_date, to_date, company):
+	"""Aggregate Sales Taxes and Charges rows by KRA A-E band.
+
+	Sums the same fields ``apply_tax_bands`` sums in the KRA payload
+	(``custom_total_taxable_amount`` / ``base_tax_amount_after_discount_amount``)
+	with the natural sign so credit notes reduce the totals. The rate is
+	taken from the linked Account row at query time, not hardcoded.
+	"""
+	company_clause = "AND par.company = %(company)s" if company else ""
+
+	rows = frappe.db.sql(
+		f"""
+        SELECT
+            child.custom_code AS tax_code,
+            SUM(child.custom_total_taxable_amount) AS taxable_amount,
+            SUM(child.base_tax_amount_after_discount_amount) AS tax_amount,
+            acc.tax_rate AS tax_rate
+        FROM `tabSales Taxes and Charges` child
+        INNER JOIN `tabSales Invoice` par ON par.name = child.parent
+        LEFT JOIN `tabAccount` acc ON acc.name = child.account_head
+        WHERE child.custom_code IN %(codes)s
+            AND par.docstatus = 1
+            AND par.custom_update_invoice_in_tims = 1
+            AND par.posting_date BETWEEN %(from_date)s AND %(to_date)s
+            {company_clause}
+        GROUP BY child.custom_code, acc.tax_rate
+        """,
+		{
+			"codes": list(KRA_TAX_BANDS),
+			"from_date": from_date,
+			"to_date": to_date,
+			"company": company,
+		},
+		as_dict=True,
+	)
+
+	return _collect_bands(rows)
+
+
+def _aggregate_purchase_bands(from_date, to_date, company, match_status):
+	"""Aggregate Purchase Taxes and Charges rows by KRA A-E band."""
+	company_clause = "AND par.company = %(company)s" if company else ""
+
+	if match_status == "Matched":
+		match_clause = "AND par.custom_kra_match_status = 'Matched'"
+	elif match_status == "not matched":
+		match_clause = (
+			"AND (par.custom_kra_match_status IS NULL "
+			"OR par.custom_kra_match_status = '' "
+			"OR par.custom_kra_match_status NOT IN ('Matched', 'Matched'))"
+		)
+	else:
+		match_clause = ""
+
+	rows = frappe.db.sql(
+		f"""
+        SELECT
+            child.custom_code AS tax_code,
+            SUM(child.custom_total_taxable_amount) AS taxable_amount,
+            SUM(child.base_tax_amount_after_discount_amount) AS tax_amount,
+            acc.tax_rate AS tax_rate
+        FROM `tabPurchase Taxes and Charges` child
+        INNER JOIN `tabPurchase Invoice` par ON par.name = child.parent
+        LEFT JOIN `tabAccount` acc ON acc.name = child.account_head
+        WHERE child.custom_code IN %(codes)s
+            AND par.docstatus = 1
+            AND par.posting_date BETWEEN %(from_date)s AND %(to_date)s
+            {company_clause}
+            {match_clause}
+        GROUP BY child.custom_code, acc.tax_rate
+        """,
+		{
+			"codes": list(KRA_TAX_BANDS),
+			"from_date": from_date,
+			"to_date": to_date,
+			"company": company,
+		},
+		as_dict=True,
+	)
+
+	return _collect_bands(rows)
+
+
+def _collect_bands(rows):
+	"""Collapse per-rate rows into a single band entry; last rate wins."""
+	bands = {}
+	for row in rows:
+		code = row.tax_code
+		if code not in KRA_TAX_BANDS:
+			continue
+		acc = bands.setdefault(code, {"taxable_amount": 0.0, "tax_amount": 0.0, "tax_rate": 0.0})
+		acc["taxable_amount"] += flt(row.taxable_amount)
+		acc["tax_amount"] += flt(row.tax_amount)
+		acc["tax_rate"] = flt(row.tax_rate)
+	return bands
+
+
+def _count_sales_transmitted(from_date, to_date, company):
+	filters = {
+		"docstatus": 1,
+		"posting_date": ["between", [from_date, to_date]],
+		"custom_update_invoice_in_tims": 1,
+	}
+	if company:
+		filters["company"] = company
+	return frappe.db.count("Sales Invoice", filters=filters) or 0
+
+
+def _count_purchase_with_status(from_date, to_date, company, status):
+	filters = {
+		"docstatus": 1,
+		"posting_date": ["between", [from_date, to_date]],
+		"custom_kra_match_status": status,
+	}
+	if company:
+		filters["company"] = company
+	return frappe.db.count("Purchase Invoice", filters=filters) or 0
+
+
 def get_summary(data):
-	output_row = next((d for d in data if d["category"] == "OUTPUT VAT (Sales)"), {})
-	supported_row = next((d for d in data if d["category"] == "INPUT VAT (Supported)"), {})
-	at_risk_row = next((d for d in data if d["category"] == "INPUT VAT (At Risk)"), {})
-	net_row = next((d for d in data if d["category"] == "NET VAT PAYABLE"), {})
+	output_tax = sum(flt(d["tax_amount"]) for d in data if d["category"] == "OUTPUT VAT (Sales)")
+	supported_tax = sum(flt(d["tax_amount"]) for d in data if d["category"] == "INPUT VAT (Supported)")
+	at_risk_tax = sum(flt(d["tax_amount"]) for d in data if d["category"] == "INPUT VAT (At Risk)")
 
 	return [
-		{"value": output_row.get("tax_amount", 0), "label": _("Output VAT"), "datatype": "Currency"},
+		{"value": output_tax, "label": _("Output VAT"), "datatype": "Currency"},
 		{
-			"value": supported_row.get("tax_amount", 0),
+			"value": supported_tax,
 			"label": _("Supported Input VAT"),
 			"datatype": "Currency",
 			"indicator": "green",
 		},
 		{
-			"value": at_risk_row.get("tax_amount", 0),
+			"value": at_risk_tax,
 			"label": _("At-Risk Input VAT"),
 			"datatype": "Currency",
 			"indicator": "red",
 		},
 		{
-			"value": net_row.get("tax_amount", 0),
+			"value": output_tax - supported_tax,
 			"label": _("Net VAT Payable"),
 			"datatype": "Currency",
 			"indicator": "blue",
@@ -170,23 +294,15 @@ def get_summary(data):
 
 
 def get_chart(data):
-	output = next((d for d in data if d["category"] == "OUTPUT VAT (Sales)"), {})
-	supported = next((d for d in data if d["category"] == "INPUT VAT (Supported)"), {})
-	at_risk = next((d for d in data if d["category"] == "INPUT VAT (At Risk)"), {})
+	output_tax = sum(flt(d["tax_amount"]) for d in data if d["category"] == "OUTPUT VAT (Sales)")
+	supported_tax = sum(flt(d["tax_amount"]) for d in data if d["category"] == "INPUT VAT (Supported)")
+	at_risk_tax = sum(flt(d["tax_amount"]) for d in data if d["category"] == "INPUT VAT (At Risk)")
 
 	return {
 		"data": {
 			"labels": [_("Output VAT"), _("Supported Input"), _("At-Risk Input")],
-			"datasets": [
-				{
-					"values": [
-						output.get("tax_amount", 0),
-						supported.get("tax_amount", 0),
-						at_risk.get("tax_amount", 0),
-					]
-				}
-			],
+			"datasets": [{"values": [output_tax, supported_tax, at_risk_tax]}],
 		},
 		"type": "bar",
-		"colors": ["#3498db", "#2ecc71", "#e74c3c"],
+		"colors": ["#2490ef", "#2ecc71", "#e74c3c"],
 	}

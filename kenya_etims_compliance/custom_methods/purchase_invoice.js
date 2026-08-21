@@ -127,12 +127,20 @@ frappe.ui.form.on("Purchase Invoice",{
             },
             freeze: true,
             callback: function(r) {
+                if (!r || !r.message || !Object.keys(r.message).length) return;
                 let keys = Object.keys(r.message)
                 let values = Object.values(r.message)
                 frappe.msgprint({
                     title: __(keys[0]),
                     indicator: keys[0] === 'Success' ? 'green' : 'red',
-                    message: __(JSON.stringify(values[0], null, 2))
+                    message: __('{0}', [frappe.utils.escape_html(JSON.stringify(values[0] ?? '', null, 2))])
+                });
+            },
+            error: function(r) {
+                frappe.msgprint({
+                    title: __('Connection Error'),
+                    indicator: 'red',
+                    message: __('Could not reach eTIMS: {0}', [frappe.utils.escape_html(String((r && r.message) || ''))])
                 });
             }
         })
@@ -215,11 +223,11 @@ function show_qr_code(frm) {
                     <div class="card card-body text-center">
                         <p class="mb-3">This invoice has been verified with KRA eTIMS.</p>
                         <div class="border rounded p-4 d-inline-block">
-                            <code class="etims-qr-code">${qr_code}</code>
+                            <code class="etims-qr-code">${frappe.utils.escape_html(qr_code)}</code>
                         </div>
                         <p class="text-muted text-xs mt-3">
-                            Verification Date: ${frm.doc.custom_verification_date || 'N/A'}<br>
-                            KRA Invoice Number: ${frm.doc.custom_kra_invoice_number || 'N/A'}
+                            Verification Date: ${frappe.utils.escape_html(frm.doc.custom_verification_date || 'N/A')}<br>
+                            KRA Invoice Number: ${frappe.utils.escape_html(frm.doc.custom_kra_invoice_number || 'N/A')}
                         </p>
                     </div>
                 `

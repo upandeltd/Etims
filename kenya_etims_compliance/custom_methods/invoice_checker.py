@@ -8,9 +8,16 @@ All expenses and purchases must be eTIMS compliant to be tax-deductible.
 """
 
 import frappe
+from frappe import _
 import requests
 
 from kenya_etims_compliance.utils.etims_utils import eTIMS
+from kenya_etims_compliance.utils.permissions import require
+
+
+# Bound per-request batches so a single user cannot fan-out enough KRA calls
+# to trip the 5-failure / 5-minute circuit breaker used by the real queue.
+MAX_BATCH_SIZE = 50
 
 
 @frappe.whitelist()
@@ -37,7 +44,10 @@ def check_invoice_validity(invoice_no, supplier_pin, invoice_date, total_amount)
 	        "message": "..."
 	    }
 	"""
-	frappe.has_permission("Purchase Invoice", "read", throw=True)
+	# HIGH — was gated on read, but this fires a real KRA call and writes
+	# custom_invoice_verified. Any Accounts User could drive unlimited KRA
+	# traffic from here and trip the 5-failure circuit breaker.
+	require("Purchase Invoice", "write")
 	try:
 		# Validate inputs
 		if not invoice_no:
@@ -135,7 +145,19 @@ def bulk_verify_invoices(invoice_list):
 	        }
 	    }
 	"""
-	frappe.has_permission("Purchase Invoice", "read", throw=True)
+	# HIGH — was gated on read; this fires N KRA calls per request. Bound the
+	# batch and require write so a plain Accounts User cannot exhaust quota.
+	require("Purchase Invoice", "write")
+
+	if not isinstance(invoice_list, (list, tuple)):
+		frappe.throw(_("invoice_list must be a list"))
+	if len(invoice_list) > MAX_BATCH_SIZE:
+		frappe.throw(
+			_("Bulk verification is limited to {0} invoices per request.").format(MAX_BATCH_SIZE)
+		)
+	if not invoice_list:
+		return {"results": [], "summary": {"total": 0, "verified": 0, "failed": 0}, "limit": MAX_BATCH_SIZE}
+
 	results = []
 	verified_count = 0
 	failed_count = 0
@@ -158,6 +180,7 @@ def bulk_verify_invoices(invoice_list):
 	return {
 		"results": results,
 		"summary": {"total": len(invoice_list), "verified": verified_count, "failed": failed_count},
+		"limit": MAX_BATCH_SIZE,
 	}
 
 

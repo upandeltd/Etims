@@ -35,7 +35,8 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Supplier PIN",
-   "reqd": 1
+   "reqd": 1,
+   "search_index": 1
   },
   {
    "fieldname": "supplier_name",
@@ -55,7 +56,8 @@
    "fieldtype": "Int",
    "in_list_view": 1,
    "label": "KRA Invoice Number",
-   "reqd": 1
+   "reqd": 1,
+   "search_index": 1
   },
   {
    "fieldname": "column_break_1",

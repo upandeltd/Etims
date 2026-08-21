@@ -6,13 +6,18 @@ from frappe import _
 
 from kenya_etims_compliance.utils.etims_utils import eTIMS
 from kenya_etims_compliance.utils.kra_client import KRAClient
+from kenya_etims_compliance.utils.permissions import require
 
 
 @frappe.whitelist()
 def itemSaveComposition(doc_name):
+	# HIGH — gate FIRST. The original code did `frappe.get_doc("BOM", doc_name)`
+	# and POSTed each item composition to KRA before any permission check.
+	# That means a denied caller still triggered an outbound disclosure.
+	require("BOM", "write")
+
 	bom_item_list = get_bom_items(doc_name)
 	doc = frappe.get_doc("BOM", doc_name)
-
 	for payload in bom_item_list:
 		post_item_compostion(payload, doc)
 	check_if_all_items_sent(doc)

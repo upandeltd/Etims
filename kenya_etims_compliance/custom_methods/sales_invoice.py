@@ -2,6 +2,13 @@ import traceback  # pyqrcode
 from datetime import datetime, time, timedelta
 
 import frappe
+
+from kenya_etims_compliance.utils.permissions import (
+	is_etims_admin,
+	is_etims_manager,
+	require,
+	validate_branch_access,
+)
 import requests
 import segno
 from frappe import _
@@ -23,9 +30,60 @@ from kenya_etims_compliance.utils.etims_utils import (
 from kenya_etims_compliance.utils.kra_client import KRAClient
 
 
+def _guard_kra_sales_lookup(invoice_no):
+	"""Gate the two KRA sales-lookup proxies.
+
+	``require("Sales Invoice", "read")`` alone is company-wide: in a
+	multi-branch setup any cashier could read another branch's KRA fiscal
+	status. Scope it:
+
+	* named invoice that exists locally -> enforce that branch on the caller
+	* named invoice with no local record, or a bare date sweep -> the result
+	  spans the whole company, so restrict it to managers/admins
+	"""
+	require("Sales Invoice", "read")
+
+	local = None
+	if invoice_no:
+		local = frappe.db.get_value(
+			"Sales Invoice",
+			{"custom_invoice_number": invoice_no},
+			["name", "custom_tax_branch_office"],
+			as_dict=True,
+		) or frappe.db.get_value(
+			"Sales Invoice",
+			{"name": invoice_no},
+			["name", "custom_tax_branch_office"],
+			as_dict=True,
+		)
+
+	if local:
+		validate_branch_access(local)
+		return
+
+	if not (
+		is_etims_admin()
+		or is_etims_manager()
+		or "System Manager" in frappe.get_roles()
+		or frappe.session.user == "Administrator"
+	):
+		frappe.throw(
+			_(
+				"Permission Denied: a company-wide KRA lookup requires the "
+				"eTIMS Manager or eTIMS Administrator role."
+			),
+			frappe.PermissionError,
+		)
+
+
 @frappe.whitelist()
 def searchSalesTrnsReq(invoice_no=None, last_req_dt=None):
 	"""Search sales transactions in eTIMS"""
+	# Proxies a KRA lookup on the company's credentials, so it must not be
+	# reachable by any authenticated session, nor leak another branch's
+	# fiscal status.
+	_guard_kra_sales_lookup(invoice_no)
+
 	response = eTIMS.searchTrns(invoice_no, last_req_dt, "sales")
 
 	for key, value in response.items():
@@ -38,6 +96,11 @@ def searchSalesTrnsReq(invoice_no=None, last_req_dt=None):
 @frappe.whitelist()
 def selectSalesTrnsInfoReq(invoice_no):
 	"""Get sales transaction details from eTIMS"""
+	# Proxies a KRA lookup on the company's credentials, so it must not be
+	# reachable by any authenticated session, nor leak another branch's
+	# fiscal status.
+	_guard_kra_sales_lookup(invoice_no)
+
 	response = eTIMS.selectTrnsSalesInfo(invoice_no)
 
 	for key, value in response.items():
@@ -57,7 +120,34 @@ def show_etims_queued_message(doc, method):
 	if frappe.flags.get("_etims_show_queued_msg"):
 		frappe.msgprint(_("Sales invoice queued for eTIMS submission"), indicator="blue")
 		frappe.flags._etims_show_queued_msg = False
+def on_cancel(doc, method):
+	"""on_cancel hook — stop any pending eTIMS submission and warn when a
+	signed invoice is cancelled (KRA's API does not expose a sales-cancel
+	endpoint in this app, so the fiscal receipt stays live until the operator
+	files a credit note / refund with KRA directly).
+	"""
+	if not doc.custom_update_invoice_in_tims:
+		return
 
+	# Cancel any in-flight queue entries so process_queue_entry's docstatus
+	# guard short-circuits before KRA submission.
+	if doc.custom_etims_queue_entry:
+		frappe.db.set_value(
+			"eTIMS Invoice Queue",
+			doc.custom_etims_queue_entry,
+			{"status": "Cancelled", "last_error": "Source invoice cancelled."},
+			update_modified=False,
+		)
+
+	if doc.custom_update_sales_to_etims:
+		frappe.log_error(
+			title=f"eTIMS: cancelled Sales Invoice already signed to KRA: {doc.name}"[:140],
+			message=(
+				f"Sales Invoice {doc.name} was cancelled after being signed to KRA. "
+				"The fiscal receipt remains live at KRA. File a credit note / refund "
+				"with KRA to reconcile."
+			),
+		)
 
 def validate(doc, method):
 	"""
@@ -253,9 +343,9 @@ def fetch_total_vat(doc):
 	if doc.taxes:
 		for item in doc.taxes:
 			if item.get("base_tax_amount_after_discount_amount") > 0:
-				taxable_amount += item.get("custom_total_taxable_amount")
+				taxable_amount += flt(item.get("custom_total_taxable_amount"))
 			if item.get("base_tax_amount_after_discount_amount") < 0 and doc.is_return:
-				taxable_amount += item.get("custom_total_taxable_amount")
+				taxable_amount += flt(item.get("custom_total_taxable_amount"))
 
 	return taxable_amount
 
@@ -265,9 +355,56 @@ def fetch_total_non_vat(doc):
 	if doc.taxes:
 		for item in doc.taxes:
 			if item.get("base_tax_amount_after_discount_amount") == 0:
-				taxable_non_vat_amount += item.get("custom_total_taxable_amount")
+				taxable_non_vat_amount += flt(item.get("custom_total_taxable_amount"))
 
 	return taxable_non_vat_amount
+
+
+def _payload_consistency_problems(payload):
+	"""Ways the assembled KRA payload contradicts itself.
+
+	The header totals, the A-E band breakdown and the item lines are each
+	assembled from a different source, so a half-configured site can produce a
+	payload where they disagree. Every check below compares the payload
+	against itself -- no site configuration is assumed.
+	"""
+	problems = []
+	items = payload.get("itemList") or []
+
+	line_taxbl = round(sum(flt(li.get("taxblAmt")) for li in items), 2)
+	line_tax = round(sum(flt(li.get("taxAmt")) for li in items), 2)
+	head_taxbl = flt(payload.get("totTaxblAmt"))
+	head_tax = flt(payload.get("totTaxAmt"))
+
+	if abs(head_taxbl - line_taxbl) > 0.05:
+		problems.append(
+			_("Header taxable amount {0} does not match the {1} on the item lines.").format(
+				head_taxbl, line_taxbl
+			)
+		)
+	if abs(head_tax - line_tax) > 0.05:
+		problems.append(
+			_("Header tax amount {0} does not match the {1} on the item lines.").format(head_tax, line_tax)
+		)
+
+	band_taxbl = round(sum(flt(payload.get(f"taxblAmt{code}")) for code in KRA_TAX_BANDS), 2)
+	band_tax = round(sum(flt(payload.get(f"taxAmt{code}")) for code in KRA_TAX_BANDS), 2)
+	if abs(band_taxbl - line_taxbl) > 0.05 or abs(band_tax - line_tax) > 0.05:
+		problems.append(
+			_(
+				"Tax bands A-E total {0} taxable / {1} tax but the item lines total {2} / {3}. "
+				"Set the KRA code on the Sales Taxes and Charges rows."
+			).format(band_taxbl, band_tax, line_taxbl, line_tax)
+		)
+
+	if flt(payload.get("totItemCnt")) != len(items):
+		problems.append(
+			_("Item count {0} does not match the {1} lines actually sent.").format(
+				payload.get("totItemCnt"), len(items)
+			)
+		)
+
+	return problems
 
 
 def trnsSalesSaveWrReq(doc, method):
@@ -276,9 +413,65 @@ def trnsSalesSaveWrReq(doc, method):
 	Called during before_submit — assigns invoice number first, then sends to eTIMS.
 	"""
 	if doc.custom_update_invoice_in_tims:
+		# An invoice whose items are not yet registered with KRA cannot be
+		# declared honestly (see kra_transmission_problems). Blocking the
+		# submit would stop the till; transmitting anyway would file a false
+		# return. So park it: the sale completes, the invoice is flagged
+		# Failed with the exact reason, and the retry paths pick it up once
+		# the item masters are fixed.
+		problems = kra_transmission_problems(doc)
+		if problems:
+			reason = "\n".join(problems)
+			doc.custom_etims_queue_status = "Failed"
+			frappe.log_error(
+				title=f"eTIMS: {doc.name} held back from KRA",
+				message=reason,
+			)
+			frappe.msgprint(
+				_("This sale was NOT sent to KRA:<br>{0}").format("<br>".join(problems)),
+				title=_("eTIMS transmission held"),
+				indicator="red",
+			)
+			return
+
+		# Per HIGH review finding (hook-stage inversion): insert_invoice_number
+		# runs at on_update and writes the totals, but frm.savesubmit() collapses
+		# edit + submit into one request — so the totals seen by
+		# build_sales_payload (before_submit) must be recomputed HERE, in the
+		# same hook, against the in-memory doc that has the freshly-edited
+		# amounts. Otherwise totTaxblAmt reads a stale value while totAmt is
+		# fresh and the fiscal receipt ends up internally inconsistent.
+		insert_tax_amounts(doc)
+		total_vat = flt(fetch_total_vat(doc))
+		total_non_vat = flt(fetch_total_non_vat(doc))
+		doc.custom_total_taxable_amount = total_vat
+		doc.custom_total_nontaxable_amount = total_non_vat
+
 		# Build the KRA payload via the shared builder (it also applies the tax
 		# bands, return fields, training-mode override and receipt label).
 		payload = build_sales_payload(doc)
+
+		# The header totals and the A-E bands are assembled from different
+		# sources than the item lines (Sales Taxes and Charges `custom_code`
+		# vs Item Tax Template `custom_code`), so a half-configured site
+		# produced a payload that contradicted itself -- totTaxAmt 1.38
+		# against totTaxblAmt 0, with every band at zero. KRA accepts that;
+		# the return is then simply wrong. Hold it back the same way.
+		payload_problems = _payload_consistency_problems(payload)
+		if payload_problems:
+			reason = "\n".join(payload_problems)
+			doc.custom_etims_queue_status = "Failed"
+			frappe.log_error(
+				title=f"eTIMS: {doc.name} payload inconsistent, held back",
+				message=reason,
+			)
+			frappe.msgprint(
+				_("This sale was NOT sent to KRA:<br>{0}").format("<br>".join(payload_problems)),
+				title=_("eTIMS transmission held"),
+				indicator="red",
+			)
+			return
+
 		settings = get_etims_settings()
 
 		if settings.get("enable_queue", 1):
@@ -427,24 +620,43 @@ def get_last_inv_number(doc, branch_id):
 	last_inv_no = 0
 
 	if doc.custom_update_invoice_in_tims:
+		# Per HIGH review finding: the FOR UPDATE lock is a no-op when branch_id
+		# is None or no TIS Device Initialization row matches — silently
+		# allocating the same number twice creates duplicate invcNo, which KRA
+		# rejects forever. Throw a clear configuration error instead.
+		if not branch_id:
+			frappe.throw(
+				_(
+					"Cannot allocate an eTIMS sales invoice number: no Tax Branch Office is "
+					"configured for the current user. Set 'Tax Branch Office' on the eTIMS Branch User "
+					"and try again."
+				)
+			)
+
 		# Serialize per-branch number allocation. Lock the branch's device row
 		# with FOR UPDATE so two concurrent submits cannot read the same max and
 		# assign a DUPLICATE eTIMS invoice number (KRA rejects duplicate invcNo).
 		# The lock is held until the allocating transaction commits — and there
 		# is NO intermediate commit between here and the set_value that writes
 		# the number — so the next allocator always sees the committed number.
-		if branch_id:
-			frappe.db.sql(
-				"SELECT name FROM `tabTIS Device Initialization` WHERE branch_id = %s FOR UPDATE",
-				branch_id,
-			)
+		frappe.db.sql(
+			"SELECT name FROM `tabTIS Device Initialization` WHERE branch_id = %s FOR UPDATE",
+			branch_id,
+		)
 
 		settings_docs = frappe.db.get_all(
 			"TIS Device Initialization", filters={"branch_id": branch_id}, fields=["*"]
 		)
 
-		if settings_docs:
-			last_inv_no = settings_docs[0].get("last_sales_invoice_number") or 0
+		if not settings_docs:
+			frappe.throw(
+				_(
+					"Cannot allocate an eTIMS sales invoice number: no TIS Device Initialization "
+					"row matches branch '{0}'. Create / activate the device and try again."
+				).format(branch_id)
+			)
+
+		last_inv_no = settings_docs[0].get("last_sales_invoice_number") or 0
 
 		try:
 			last_inv = frappe.db.get_all(
@@ -486,8 +698,89 @@ def validate_inv_number(doc):
 	return invoice_numbers
 
 
+def _kra_line_problems(item, item_tax_code, row):
+	"""Reasons this invoice line cannot be honestly declared to KRA.
+
+	A payload that declares one thing and charges another is a false return,
+	not a rejected one -- KRA accepts it and the books are then wrong. Two ways
+	that used to happen silently:
+
+	  * ``get_tax_template_details`` falls back to "D" (non-VAT) whenever the
+	    Item Tax Template carries no ``custom_code``, so a line taxed at 16%
+	    was transmitted as exempt.
+	  * ``custom_item_code`` / ``custom_item_classification_code`` stay unset
+	    until the eTIMS code-sync and item-registration steps have run, so
+	    lines went out with null KRA identifiers.
+
+	Returns a list of human-readable problems; empty means the line is safe to
+	transmit.
+	"""
+	problems = []
+
+	if row["taxAmt"] > 0 and item_tax_code == NON_VAT_CODE:
+		problems.append(
+			_(
+				"Item {0} charges tax of {1} but its Item Tax Template {2} maps to KRA tax type "
+				"'{3}' (non-VAT). Set the KRA tax band on the Item Tax Template."
+			).format(
+				item.get("item_code"),
+				row["taxAmt"],
+				item.get("item_tax_template") or _("(none)"),
+				NON_VAT_CODE,
+			)
+		)
+
+	missing = [
+		label
+		for label, value in (
+			(_("KRA item code"), row["itemCd"]),
+			(_("item classification code"), row["itemClsCd"]),
+			(_("packaging unit code"), row["pkgUnitCd"]),
+			(_("quantity unit code"), row["qtyUnitCd"]),
+		)
+		if not value
+	]
+	if missing:
+		problems.append(
+			_("Item {0} is missing its {1}. Register the item with KRA first.").format(
+				item.get("item_code"), ", ".join(missing)
+			)
+		)
+
+	return problems
+
+
+def kra_transmission_problems(doc):
+	"""Every reason ``doc`` cannot be honestly transmitted to KRA, across all lines."""
+	problems = []
+	for item in doc.items:
+		item_tax_code = get_tax_template_details(item.get("item_tax_template"))
+		detail = frappe.db.get_all(
+			"Item",
+			filters={"disabled": 0, "item_code": item.get("item_code")},
+			fields=[
+				"custom_item_code",
+				"custom_item_classification_code",
+				"custom_packaging_unit_code",
+				"custom_quantity_unit_code",
+			],
+		)
+		if not detail:
+			problems.append(_("Item {0} not found or is disabled").format(item.get("item_code")))
+			continue
+		row = {
+			"itemCd": detail[0].get("custom_item_code"),
+			"itemClsCd": detail[0].get("custom_item_classification_code"),
+			"pkgUnitCd": detail[0].get("custom_packaging_unit_code"),
+			"qtyUnitCd": detail[0].get("custom_quantity_unit_code"),
+			"taxAmt": abs(round((flt(item.get("base_amount")) - flt(item.get("base_net_amount"))), 2)),
+		}
+		problems.extend(_kra_line_problems(item, item_tax_code, row))
+	return problems
+
+
 def etims_sale_item_list_sales(doc):
-	sales_item_list = []
+	merged_items = {}
 	for item in doc.items:
 		item_tax_code = get_tax_template_details(item.get("item_tax_template"))
 		item_detail = frappe.db.get_all(
@@ -503,9 +796,14 @@ def etims_sale_item_list_sales(doc):
 		)
 		if not item_detail:
 			frappe.throw(f"Item {item.get('item_code')} not found or is disabled")
-		item_etims_data = {
-			"itemSeq": item.get("idx"),
-			"itemCd": item_detail[0].get("custom_item_code"),
+
+		item_cd = item_detail[0].get("custom_item_code")
+		# custom_discount_amount_kes is a custom column: init_valid_columns leaves
+		# it None when absent and, unlike ERPNext's own fields, nothing
+		# repopulates it during validate. flt() keeps the multiply from crashing.
+		dc_amt = abs(round((flt(item.get("custom_discount_amount_kes")) * flt(item.get("qty"))), 2))
+		row = {
+			"itemCd": item_cd,
 			"itemClsCd": item_detail[0].get("custom_item_classification_code"),
 			"itemNm": item_detail[0].get("custom_item_name"),
 			# "bcd":null,
@@ -513,23 +811,47 @@ def etims_sale_item_list_sales(doc):
 			"pkg": abs(item.get("qty")),
 			"qtyUnitCd": item_detail[0].get("custom_quantity_unit_code"),
 			"qty": abs(item.get("qty")),
-			"prc": abs(item.get("base_rate")),
 			"splyAmt": abs(item.get("base_amount")),
-			"dcRt": abs(item.get("discount_percentage")),
-			"dcAmt": abs(round((item.get("custom_discount_amount_kes") * item.get("qty")), 2)),
+			"dcAmt": dc_amt,
 			# "isrccCd":null,
 			# "isrccNm":null,
 			# "isrcRt":null,
 			# "isrcAmt":null,
-			"totDcAmt": abs(round((item.get("custom_discount_amount_kes") * item.get("qty")), 2)),
+			"totDcAmt": dc_amt,
 			"taxTyCd": item_tax_code,
 			"taxblAmt": abs(round(item.get("base_net_amount"), 2)),
 			"taxAmt": abs(round((item.get("base_amount") - item.get("base_net_amount")), 2)),
 			"totAmt": abs(item.get("base_amount")),
 		}
 
-		if item_etims_data not in sales_item_list:
-			sales_item_list.append(item_etims_data)
+		problems = _kra_line_problems(item, item_tax_code, row)
+		if problems:
+			frappe.throw(
+				"<br>".join(problems),
+				title=_("eTIMS: invoice cannot be transmitted"),
+			)
+
+		# KRA validates itemCd as a per-transaction key: the same item code split
+		# across multiple ERPNext rows (e.g. a return crediting several original
+		# sale lines, or a rate override mid-invoice) must collapse into ONE
+		# itemList entry with summed quantities/amounts, or KRA rejects the
+		# payload ("Supply/Taxable amount is incorrect for item X", "item code X
+		# appears more than once"). Only merge rows that also share a tax type -
+		# a genuine tax-code split on the same item must stay separate.
+		key = (item_cd, item_tax_code)
+		if key in merged_items:
+			existing = merged_items[key]
+			for field in ("pkg", "qty", "splyAmt", "dcAmt", "totDcAmt", "taxblAmt", "taxAmt", "totAmt"):
+				existing[field] = round(existing[field] + row[field], 2)
+		else:
+			merged_items[key] = row
+
+	sales_item_list = []
+	for idx, row in enumerate(merged_items.values(), start=1):
+		row["itemSeq"] = idx
+		row["prc"] = round(row["splyAmt"] / row["qty"], 2) if row["qty"] else 0
+		row["dcRt"] = round((row["dcAmt"] / row["splyAmt"]) * 100, 2) if row["splyAmt"] else 0
+		sales_item_list.append(row)
 
 	return sales_item_list
 
@@ -564,8 +886,8 @@ def etims_sale_item_list_stock(doc):
 				"prc": abs(item.get("base_rate")),
 				"splyAmt": abs(item.get("base_amount")),
 				"dcRt": abs(item.get("discount_percentage")),
-				"dcAmt": abs(round((item.get("custom_discount_amount_kes") * item.get("qty")), 2)),
-				"totDcAmt": abs(round((item.get("custom_discount_amount_kes") * item.get("qty")), 2)),
+				"dcAmt": abs(round((flt(item.get("custom_discount_amount_kes")) * flt(item.get("qty"))), 2)),
+				"totDcAmt": abs(round((flt(item.get("custom_discount_amount_kes")) * flt(item.get("qty"))), 2)),
 				"taxTyCd": item_tax_code,
 				"taxblAmt": abs(round(item.get("base_net_amount"), 2)),
 				"taxAmt": abs(round((item.get("base_amount") - item.get("base_net_amount")), 2)),
@@ -575,17 +897,11 @@ def etims_sale_item_list_stock(doc):
 			if item_etims_data not in stock_item_list:
 				stock_item_list.append(item_etims_data)
 
-	return stock_item_list
-
-
 def get_tax_template_details(template_name):
-	tax_doc = frappe.get_doc("Item Tax Template", template_name)
-	if tax_doc:
-		tax_code = tax_doc.custom_code
-
-		return tax_code
-	else:
+	if not template_name:
 		return "D"
+	tax_code = frappe.db.get_value("Item Tax Template", template_name, "custom_code")
+	return tax_code or "D"
 
 
 def get_tax_account_rate(account_head):
@@ -794,6 +1110,8 @@ def build_sales_payload(doc):
 	if count < 1:
 		frappe.throw(_("Sales Invoice must have at least one item to submit to eTIMS"))
 
+	item_list = etims_sale_item_list_sales(doc)
+
 	payload = {
 		"trdInvcNo": doc.name,
 		"invcNo": doc.custom_invoice_number,
@@ -807,8 +1125,8 @@ def build_sales_payload(doc):
 		"cfmDt": conc_datetime_str,
 		"salesDt": date_str,
 		"stockRlsDt": date_time_str,
-		"totItemCnt": count,
-		"totTaxblAmt": abs(doc.custom_total_taxable_amount or 0),
+		"totItemCnt": len(item_list),
+		"totTaxblAmt": abs((doc.custom_total_taxable_amount or 0) + (doc.custom_total_nontaxable_amount or 0)),
 		"totTaxAmt": abs(doc.base_total_taxes_and_charges or 0),
 		"totAmt": abs(doc.base_grand_total or 0),
 		"prchrAcptcYn": "N",
@@ -822,7 +1140,7 @@ def build_sales_payload(doc):
 			"rcptPbctDt": date_time_str,
 			"prchrAcptcYn": "N",
 		},
-		"itemList": etims_sale_item_list_sales(doc),
+		"itemList": item_list,
 	}
 
 	# KRA tax bands A-E (shared, summed-per-band, null-guarded helper)

@@ -4,4 +4,3 @@
 
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
-kenya_etims_compliance.patches.v15_repair_child_table_columns

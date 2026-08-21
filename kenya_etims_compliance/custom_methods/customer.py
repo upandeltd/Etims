@@ -3,6 +3,7 @@ import requests
 from frappe import _
 
 from kenya_etims_compliance.utils.kra_client import KRAClient
+from kenya_etims_compliance.utils.permissions import require
 
 
 @frappe.whitelist()
@@ -15,6 +16,25 @@ def check_pin_with_kra(pin):
 	    {"found": True, "data": {pin, name, type, status}}
 	    {"found": False, "message": "..."}
 	"""
+	# HIGH — this is a national taxpayer-registry oracle running on the
+	# company's OAuth credentials with no rate limit. Gate it and bound it.
+	require("Customer", "read")
+
+	pin = (pin or "").strip().upper()
+	if not pin:
+		return {"found": False, "message": _("PIN is required"), "code": "EMPTY_PIN"}
+
+	# Per-user rate limit: 30 calls / 5 minutes. The pin_checker service is
+	# itself a shared resource, so we bound per session, not globally.
+	cache_key = f"etims_pin_check:{frappe.session.user}"
+	hits = frappe.cache.get_value(cache_key) or 0
+	if int(hits) >= 30:
+		frappe.throw(
+			_("Too many PIN checks in the last 5 minutes. Please slow down."),
+			frappe.RateLimitExceededError,
+		)
+	frappe.cache.set_value(cache_key, int(hits) + 1, expires_in_sec=300)
+
 	from kenya_etims_compliance.utils.pin_checker import check_pin
 
 	result = check_pin(pin)
@@ -36,6 +56,11 @@ def check_pin_with_kra(pin):
 
 @frappe.whitelist()
 def bhfCustSaveReq(doc_name):
+	# HIGH — ungated, POSTs customer PII to KRA *before* the doc.save()
+	# permission check is reached. Gate first so a denied caller never
+	# triggers an outbound disclosure.
+	require("Customer", "write")
+
 	item = frappe.get_doc("Customer", doc_name)
 
 	customer = {

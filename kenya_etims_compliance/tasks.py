@@ -1,3 +1,5 @@
+from datetime import datetime, time
+
 import frappe
 
 from kenya_etims_compliance.utils.kra_client import KRAClient
@@ -35,8 +37,21 @@ def fetch_kra_notices():
 
 
 def verify_supplier_pins():
-	"""Weekly: Batch verify active supplier PINs."""
+	"""Weekly: Batch verify active supplier PINs.
+
+	HIGH (Jobs/scheduler): the old code made up to 100 sequential KRA calls in a
+	single transaction, with a single trailing commit. On the 300s short-queue
+	timeout ``execute_job`` rolled back the entire batch and the ``order_by``
+	re-picked the same 100 next week — no progress was ever made. Fix:
+	commit per supplier so the cursor (``custom_kra_pin_verified_date``) is
+	advanced even if we time out, and break the work into batches so a single
+	timeout can't erase progress on suppliers we already verified.
+	"""
 	from kenya_etims_compliance.utils.etims_utils import eTIMS
+
+	BATCH_SIZE = 25
+
+	TICK_BATCH = 100
 
 	suppliers = frappe.get_all(
 		"Supplier",
@@ -46,10 +61,16 @@ def verify_supplier_pins():
 		},
 		fields=["name", "custom_supplier_pin"],
 		order_by="custom_kra_pin_verified_date asc",
-		limit=100,
+		limit=TICK_BATCH,
 	)
 
-	for s in suppliers:
+	if not suppliers:
+		return
+
+	verified = 0
+	failed = 0
+
+	for i, s in enumerate(suppliers):
 		result = eTIMS.verify_supplier_pin(s.custom_supplier_pin)
 		frappe.db.set_value(
 			"Supplier",
@@ -60,8 +81,25 @@ def verify_supplier_pins():
 			},
 			update_modified=False,
 		)
+		if "Success" in result:
+			verified += 1
+		else:
+			failed += 1
+
+		# Commit every BATCH_SIZE suppliers so a job timeout (or crash) does
+		# not roll back suppliers we have already verified. The cursor is
+		# advanced on every row, but a per-row commit would issue ~100 commits
+		# per weekly tick — BATCH_SIZE keeps the DB load reasonable.
+		if (i + 1) % BATCH_SIZE == 0:
+			frappe.db.commit()
 
 	frappe.db.commit()
+	frappe.logger().info(
+		"eTIMS verify_supplier_pins: verified=%s failed=%s of %s",
+		verified,
+		failed,
+		len(suppliers),
+	)
 
 
 def fetch_purchase_transactions():
@@ -84,9 +122,25 @@ def fetch_purchase_transactions():
 	data = result["Success"]
 	invoices = data.get("saleList") if isinstance(data, dict) else []
 
+	inserted = 0
+	max_sale_date = None
+
 	for inv in invoices or []:
 		supplier_pin = inv.get("spplrTin", "")
 		kra_inv_no = inv.get("spplrInvcNo", 0)
+
+		sale_date = None
+		try:
+			sale_date = eTIMS.strp_date_object(inv.get("salesDt"))
+		except Exception as e:
+			frappe.log_error("eTIMS: Task error", str(e))
+
+		# Advance the watermark over every record the pull returned, not only
+		# the newly inserted ones. A window whose newest row is already stored
+		# would otherwise leave the watermark behind and be re-requested on
+		# every tick.
+		if sale_date and (max_sale_date is None or sale_date > max_sale_date):
+			max_sale_date = sale_date
 
 		if frappe.db.exists(
 			"eTIMS Purchase Register Entry",
@@ -96,13 +150,6 @@ def fetch_purchase_transactions():
 			},
 		):
 			continue
-
-		sale_date = None
-		try:
-			sale_date = eTIMS.strp_date_object(inv.get("salesDt"))
-		except Exception as e:
-			frappe.log_error("eTIMS: Task error", str(e))
-			pass
 
 		frappe.get_doc(
 			{
@@ -118,8 +165,27 @@ def fetch_purchase_transactions():
 				"match_status": "Pending",
 			}
 		).insert(ignore_permissions=True)
+		inserted += 1
 
 	frappe.db.commit()
+
+	if max_sale_date:
+		# `last_search_date_and_time` is a Datetime column, and the read at the
+		# top of this function feeds `strf_datetime_format`, which only parses
+		# "%Y-%m-%d %H:%M:%S[.%f]". KRA's `salesDt` is "%Y%m%d", so widen it to
+		# a datetime here. Midnight of the newest day seen re-requests that day
+		# on the next tick; the dedup check above absorbs the repeat.
+		frappe.db.set_single_value(
+			"eTIMS Purchase Information",
+			"last_search_date_and_time",
+			datetime.combine(max_sale_date, time.min).strftime("%Y-%m-%d %H:%M:%S"),
+		)
+		frappe.db.commit()
+		frappe.logger().info(
+			"eTIMS fetch_purchase_transactions: inserted %s, advanced watermark to %s",
+			inserted,
+			max_sale_date,
+		)
 
 
 def run_reconciliation_task():

@@ -8,9 +8,6 @@ Labels encode the receipt type and transaction type:
   PS = Proforma Sale
 """
 
-import frappe
-
-
 def get_receipt_label(doc):
 	"""Determine the receipt label for a Sales Invoice.
 

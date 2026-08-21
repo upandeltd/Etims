@@ -5,6 +5,8 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
+from kenya_etims_compliance.utils.permissions import require
+
 
 class eTIMSSettings(Document):
 	def validate(self):
@@ -39,7 +41,22 @@ class eTIMSSettings(Document):
 
 @frappe.whitelist()
 def get_etims_settings():
-	"""Get eTIMS settings with defaults"""
+	"""Get eTIMS settings with defaults.
+
+	Caller is authorised if they have any write on eTIMS Settings OR are an
+	eTIMS Admin/Manager. The full dict is returned to Admin/Manager; a
+	limited subset is returned to a write-only caller to keep compliance
+	and RBAC toggles out of every clerk's hands.
+	"""
+	from kenya_etims_compliance.utils.permissions import is_etims_admin, is_etims_manager
+
+	is_privileged = is_etims_admin() or is_etims_manager() or "System Manager" in frappe.get_roles()
+	if not is_privileged:
+		# Anyone else still needs to read settings — they may legitimately
+		# need api_timeout / sar types — but must not see compliance or RBAC
+		# toggles. require() is on read here.
+		require("eTIMS Settings", "read")
+
 	_defaults = {
 		"default_sar_type_sales": "11",
 		"default_sar_type_purchase": "02",
@@ -68,23 +85,43 @@ def get_etims_settings():
 		frappe.log_error(title="eTIMS: Settings load failed", message=str(e))
 		return _defaults
 
-	# Return ALL fields from the doctype, layered over defaults. This avoids the
-	# whitelist-bug where compliance/RBAC/training settings silently returned None
-	# because they weren't enumerated in this function.
+	# Build the full dict (Admin/Manager path) by overlaying the Single on
+	# defaults — same behaviour as before.
 	doc_dict = settings.as_dict()
 	result = dict(_defaults)
 	for k, v in doc_dict.items():
-		# Skip Frappe meta fields and only apply non-None values so defaults stick
 		if k.startswith("_") or k in ("name", "doctype", "owner", "creation", "modified", "modified_by", "docstatus", "idx"):
 			continue
 		if v is not None:
 			result[k] = v
-	# Ensure URL defaults if blank string
 	if not result.get("production_api_url"):
 		result["production_api_url"] = _defaults["production_api_url"]
 	if not result.get("sandbox_api_url"):
 		result["sandbox_api_url"] = _defaults["sandbox_api_url"]
-	return result
+
+	if is_privileged:
+		return result
+
+	# Non-Admin path: only keys needed for normal operation. RBAC, branch
+	# isolation, error logging, queue internals and compliance scoring all
+	# stay out.
+	limited_keys = (
+		"default_sar_type_sales",
+		"default_sar_type_purchase",
+		"default_sar_type_stock_entry",
+		"api_timeout",
+		"enable_retry_logic",
+		"max_retry_attempts",
+		"retry_delay",
+		"enable_queue",
+		"enable_auto_sync",
+		"wait_for_etims_before_print",
+		"etims_print_wait_seconds",
+		"vat_obligation",
+		"production_api_url",
+		"sandbox_api_url",
+	)
+	return {k: result[k] for k in limited_keys if k in result}
 
 
 def get_api_timeout():

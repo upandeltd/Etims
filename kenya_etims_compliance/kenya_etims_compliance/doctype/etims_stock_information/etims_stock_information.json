@@ -71,7 +71,6 @@
   }
  ],
  "index_web_pages_for_search": 1,
- "is_single": 1,
  "links": [],
  "modified": "2024-12-11 11:35:45.401822",
  "modified_by": "Administrator",
@@ -103,5 +102,6 @@
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
- "track_changes": 1
+ "track_changes": 1,
+ "issingle": 1
 }

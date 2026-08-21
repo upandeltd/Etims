@@ -91,7 +91,7 @@ def get_data(filters):
         SELECT
             COALESCE(si.custom_receipt_label, 'NS') AS label,
             COUNT(*) AS cnt,
-            SUM(ABS(si.base_grand_total)) AS total
+            SUM(si.base_grand_total) AS total
         FROM `tabSales Invoice` si
         WHERE {where}
         GROUP BY COALESCE(si.custom_receipt_label, 'NS')
@@ -125,12 +125,16 @@ def get_data(filters):
 	data.append({"category": "", "description": "", "count": None, "amount": None})
 
 	# --- Tax breakdown by rate (A-E) ---
+	# Sign-correct: credit notes carry negative base_tax_amount_after_discount_amount;
+	# SUM with the natural sign so a refund lowers Total Tax. Outer ABS would inflate.
+	# Per apply_tax_bands the KRA payload uses abs() per row — that is the right place
+	# to flip the sign, but the report must reflect the declared day's net.
 	tax_data = frappe.db.sql(
 		"""
         SELECT
             stc.custom_code AS tax_code,
-            SUM(ABS(stc.custom_total_taxable_amount)) AS taxable_amount,
-            SUM(ABS(stc.base_tax_amount_after_discount_amount)) AS tax_amount
+            SUM(stc.custom_total_taxable_amount) AS taxable_amount,
+            SUM(stc.base_tax_amount_after_discount_amount) AS tax_amount
         FROM `tabSales Taxes and Charges` stc
         INNER JOIN `tabSales Invoice` si ON si.name = stc.parent
         WHERE {where}
@@ -171,16 +175,16 @@ def get_data(filters):
 	data.append({"category": "", "description": "", "count": None, "amount": None})
 
 	# --- Payment method breakdown ---
+
 	payment_data = frappe.db.sql(
 		"""
         SELECT
             sip.mode_of_payment,
             COUNT(DISTINCT si.name) AS cnt,
-            SUM(ABS(sip.amount)) AS total
+            SUM(sip.amount) AS total
         FROM `tabSales Invoice Payment` sip
         INNER JOIN `tabSales Invoice` si ON si.name = sip.parent
         WHERE {where}
-            AND sip.amount > 0
         GROUP BY sip.mode_of_payment
         ORDER BY total DESC
         """.format(where=where),
@@ -201,10 +205,10 @@ def get_data(filters):
 		"""
         SELECT
             COUNT(*) AS cnt,
-            SUM(ABS(si.custom_total_discount_amount)) AS total_discount
+            SUM(si.custom_total_discount_amount) AS total_discount
         FROM `tabSales Invoice` si
         WHERE {where}
-            AND si.custom_total_discount_amount > 0
+            AND si.custom_total_discount_amount != 0
         """.format(where=where),
 		params,
 		as_dict=True,
@@ -261,5 +265,20 @@ def get_data(filters):
 			"type": "bar",
 			"colors": ["#2490ef"],
 		}
+
+# --- Stamp the Z-report watermark so the X report knows the lower bound ---
+# Without this write the X report silently aggregates all history while
+# printing "No previous Z Report" (it reads custom_last_z_report_date, which
+# nothing else in the app ever sets). Z is the end-of-day boundary that resets
+# X; the watermark belongs on the device initialization record.
+	if branch:
+		frappe.db.set_value(
+			"TIS Device Initialization",
+			{"branch_id": branch, "active": 1},
+			"custom_last_z_report_date",
+			now_datetime(),
+			update_modified=False,
+	)
+
 
 	return data, report_summary, chart

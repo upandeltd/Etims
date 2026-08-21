@@ -4,11 +4,64 @@ import frappe
 from frappe import _
 from frappe.utils import flt, getdate
 
+from kenya_etims_compliance.utils.permissions import require
+
+
+def _branch_scope_filter():
+	"""Return a branch-scoping filter to apply to monetary dashboard queries.
+
+	Branch isolation is a hard policy when ``enforce_branch_isolation`` is on:
+	non-Admin users must not see other branches' VAT exposure. We compute the
+	user's effective branch via the same logic as ``validate_branch_access``.
+	"""
+	from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import (
+		is_branch_isolation_enforced,
+		is_cross_branch_allowed,
+	)
+	from kenya_etims_compliance.utils.permissions import (
+		is_etims_admin,
+		is_etims_manager,
+	)
+
+	if not is_branch_isolation_enforced():
+		return None
+	if (
+		is_etims_admin()
+		or is_etims_manager()
+		or "System Manager" in frappe.get_roles()
+		or frappe.session.user == "Administrator"
+	):
+		if is_cross_branch_allowed():
+			return None
+		# Even when branch isolation is enforced, the manager sees ALL
+		# branches unless cross-branch is also explicitly disabled.
+		return None
+
+	branch = frappe.db.get_value(
+		"User Permission",
+		{"user": frappe.session.user, "allow": "Tax Branch Office", "is_default": 1},
+		"for_value",
+	)
+	if not branch:
+		devices = frappe.db.get_all(
+			"TIS Device Initialization", filters={"active": 1}, fields=["branch_id"], limit=2
+		)
+		if len(devices) == 1:
+			branch = devices[0].get("branch_id")
+	return branch
+
 
 @frappe.whitelist()
 def get_dashboard_data():
 	"""Get all dashboard metrics in a single call."""
+	# HIGH — was ungated. Read-only, but reads VAT-exposure totals across the
+	# whole company. Require at least read on Sales Invoice + Purchase Invoice
+	# so a portal user can't enumerate company-wide compliance state.
+	require("Sales Invoice", "read")
+
 	today = getdate()
+	# Five filters below window on the current month. Without this the whole
+	# method raised NameError, so the dashboard returned nothing at all.
 	month_start = today.replace(day=1)
 
 	# Sales transmitted this month
@@ -118,6 +171,7 @@ def get_dashboard_data():
 @frappe.whitelist()
 def get_sales_success_rate():
 	"""Return percentage of invoices marked for TIMS that were transmitted."""
+	require("Sales Invoice", "read")
 	month_start = getdate().replace(day=1)
 	total = frappe.db.count(
 		"Sales Invoice",
@@ -144,14 +198,27 @@ def get_sales_success_rate():
 @frappe.whitelist()
 def get_input_vat_at_risk():
 	"""Return sum of taxes on unmatched purchase invoices this month."""
+	# HIGH — monetary company-wide exposure. Force a write-on-Purchase-Invoice
+	# check (the data is sensitive) AND scope to the caller's branch when
+	# isolation is on so non-Admin users can't see other branches' VAT risk.
+	require("Purchase Invoice", "write")
+
 	month_start = getdate().replace(day=1)
+	filters = {
+		"docstatus": 1,
+		"posting_date": [">=", month_start],
+		"custom_kra_match_status": ["not in", ["Matched", ""]],
+	}
+
+	# When branch isolation is on and the caller is not a cross-branch
+	# exempt role, narrow the query to their branch.
+	branch = _branch_scope_filter()
+	if branch:
+		filters["custom_target_tax_branch_office"] = branch
+
 	at_risk_pis = frappe.get_all(
 		"Purchase Invoice",
-		filters={
-			"docstatus": 1,
-			"posting_date": [">=", month_start],
-			"custom_kra_match_status": ["not in", ["Matched", ""]],
-		},
+		filters=filters,
 		fields=["base_total_taxes_and_charges"],
 		limit_page_length=0,
 	)
@@ -161,6 +228,8 @@ def get_input_vat_at_risk():
 @frappe.whitelist()
 def get_compliance_score():
 	"""Return average of latest eTIMS compliance scores, or 0 if none."""
+	# HIGH — ungated. Compliance-score doctype is internal-only.
+	require("eTIMS Compliance Score", "read")
 	if not frappe.db.exists("DocType", "eTIMS Compliance Score"):
 		return 0
 
@@ -182,6 +251,8 @@ def get_compliance_score():
 @frappe.whitelist()
 def get_days_to_filing_deadline():
 	"""Return days remaining until the 20th of next month."""
+	# HIGH — ungated, but at least it leaks no PII. Gate it lightly.
+	require("Sales Invoice", "read")
 	import calendar
 
 	today = getdate()

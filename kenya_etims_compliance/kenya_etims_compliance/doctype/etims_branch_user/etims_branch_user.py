@@ -71,7 +71,7 @@ class eTIMSBranchUser(Document):
                 # fall back to user_id for older records, and trim to be safe.
                 "userId": _kra_user_id(user)[:KRA_ID_MAX_LEN],
                 "userNm": user.get("user_name"),
-                "pwd": user.get("password"),
+                "pwd": user.get_password("password", raise_exception=False),
                 "adrs": user.get("address"),
                 "cntc": user.get("contact"),
                 "authCd": user.get("authority_code"),
