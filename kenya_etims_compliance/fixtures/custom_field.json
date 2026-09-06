@@ -335,7 +335,7 @@
   "name": "Purchase Invoice-custom_kra_match_status",
   "no_copy": 0,
   "non_negative": 0,
-  "options": "Pending\nMatched\nMismatched\nNot in KRA",
+  "options": "Pending\nMatched\nMismatched\nNot in KRA\nAccepted",
   "permlevel": 0,
   "placeholder": null,
   "precision": "",

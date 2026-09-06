@@ -27,6 +27,9 @@ from kenya_etims_compliance.custom_methods.purchase_invoice import (
 	get_total_discount as get_purchase_total_discount,
 )
 from kenya_etims_compliance.custom_methods.purchase_invoice import (
+	purchase_return_information,
+)
+from kenya_etims_compliance.custom_methods.purchase_invoice import (
 	validate as validate_purchase_invoice,
 )
 from kenya_etims_compliance.custom_methods.queue_processor import (
@@ -38,6 +41,7 @@ from kenya_etims_compliance.custom_methods.sales_invoice import (
 	etims_sale_item_list_sales,
 	get_total_discount,
 	insert_tax_amounts,
+	sales_return_information,
 	validate_inv_number,
 )
 from kenya_etims_compliance.custom_methods.stock import (
@@ -432,6 +436,47 @@ class TestSalesInvoiceCustomMethods(FrappeTestCase):
 		self.assertEqual(payload["totItemCnt"], len(payload["itemList"]))
 		self.assertNotEqual(payload["totItemCnt"], doc.custom_item_count)
 
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.frappe.db.get_value")
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.frappe.get_doc")
+	def test_sales_return_information_full_after_multiple_partial_returns(self, mock_get_doc, mock_get_value):
+		"""Two partial credit notes that together equal the original total must
+		report 'full' on the second one, not 'partial' — this is the regression
+		test for the multi-tranche return bug: comparing against the ORIGINAL
+		total (ignoring prior returns already issued) mislabels a completed
+		reversal as still-partial, so KRA cancellation tags never fire."""
+		original = MagicMock()
+		original.grand_total = 1000
+		mock_get_doc.return_value = original
+		# A first return of -400 was already submitted against the same original.
+		mock_get_value.return_value = -400
+
+		doc = MagicMock()
+		doc.name = "SINV-RET-002"
+		doc.is_return = 1
+		doc.return_against = "SINV-0001"
+		# This second return of -600 completes the reversal: 1000 + (-400) + (-600) == 0
+		doc.grand_total = -600
+
+		result = sales_return_information(doc)
+		self.assertEqual(result, "full")
+
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.frappe.db.get_value")
+	@patch("kenya_etims_compliance.custom_methods.sales_invoice.frappe.get_doc")
+	def test_sales_return_information_partial_with_balance_remaining(self, mock_get_doc, mock_get_value):
+		original = MagicMock()
+		original.grand_total = 1000
+		mock_get_doc.return_value = original
+		mock_get_value.return_value = -400
+
+		doc = MagicMock()
+		doc.name = "SINV-RET-002"
+		doc.is_return = 1
+		doc.return_against = "SINV-0001"
+		doc.grand_total = -300  # 1000 - 400 - 300 = 300 still outstanding
+
+		result = sales_return_information(doc)
+		self.assertEqual(result, "partial")
+
 
 class TestPurchaseInvoiceCustomMethods(FrappeTestCase):
 	"""Tests for kenya_etims_compliance.custom_methods.purchase_invoice"""
@@ -499,80 +544,101 @@ class TestPurchaseInvoiceCustomMethods(FrappeTestCase):
 		result = get_purchase_total_discount(doc)
 		self.assertEqual(result, 0)
 
+	@patch("kenya_etims_compliance.custom_methods.purchase_invoice.frappe.db.get_value")
+	@patch("kenya_etims_compliance.custom_methods.purchase_invoice.frappe.get_doc")
+	def test_purchase_return_information_full_after_multiple_partial_returns(self, mock_get_doc, mock_get_value):
+		"""Mirrors the Sales Invoice regression test: a second debit note that
+		completes a 100% reversal must report 'full', not 'partial'."""
+		original = MagicMock()
+		original.grand_total = 1000
+		mock_get_doc.return_value = original
+		mock_get_value.return_value = -400
+
+		doc = MagicMock()
+		doc.name = "PINV-RET-002"
+		doc.is_return = 1
+		doc.return_against = "PINV-0001"
+		doc.grand_total = -600
+
+		result = purchase_return_information(doc)
+		self.assertEqual(result, "full")
+
 
 class TestPaymentEntryCustomMethods(FrappeTestCase):
 	"""Tests for kenya_etims_compliance.custom_methods.payment_entry"""
 
-	@patch("kenya_etims_compliance.custom_methods.payment_entry.get_etims_settings")
-	@patch("kenya_etims_compliance.custom_methods.payment_entry.frappe.get_doc")
-	@patch("kenya_etims_compliance.custom_methods.payment_entry.frappe.throw")
-	def test_validate_payment_unverified_blocks(self, mock_throw, mock_get_doc, mock_settings):
-		mock_settings.return_value = {"enforce_invoice_verification": 1, "allow_payment_unverified": 0}
-
-		inv = MagicMock()
-		inv.name = "PINV-001"
-		inv.supplier = "Supplier A"
-		inv.grand_total = 1000
-		inv.custom_invoice_verified = 0
-		inv.custom_kra_invoice_number = ""
-		inv.get = MagicMock(side_effect=lambda k, default=None: getattr(inv, k, default))
-		mock_get_doc.return_value = inv
-
-		ref = MockRow(reference_doctype="Purchase Invoice", reference_name="PINV-001", allocated_amount=500)
+	@staticmethod
+	def _payment_entry():
 		doc = MagicMock()
-		doc.references = [ref]
+		doc.name = "PE-001"
+		doc.references = [
+			MockRow(reference_doctype="Purchase Invoice", reference_name="PINV-001", allocated_amount=500)
+		]
+		return doc
 
-		validate_payment_for_etims_invoice(doc, None)
-
-		mock_throw.assert_called_once()
-		self.assertIn("Cannot make payment", str(mock_throw.call_args))
-
-	@patch("kenya_etims_compliance.custom_methods.payment_entry.get_etims_settings")
-	@patch("kenya_etims_compliance.custom_methods.payment_entry.frappe.get_doc")
-	def test_validate_payment_verified_passes(self, mock_get_doc, mock_settings):
-		mock_settings.return_value = {"enforce_invoice_verification": 1, "allow_payment_unverified": 0}
-
-		inv = MagicMock()
-		inv.name = "PINV-001"
-		inv.supplier = "Supplier A"
-		inv.grand_total = 1000
-		inv.custom_invoice_verified = 1
-		inv.custom_kra_invoice_number = "KRA-123"
-		inv.custom_verification_override_reason = ""
-		inv.get = MagicMock(side_effect=lambda k, default=None: getattr(inv, k, default))
-		mock_get_doc.return_value = inv
-
-		ref = MockRow(reference_doctype="Purchase Invoice", reference_name="PINV-001", allocated_amount=500)
-		doc = MagicMock()
-		doc.references = [ref]
-
-		# Should not raise
-		validate_payment_for_etims_invoice(doc, None)
-
-	@patch("kenya_etims_compliance.custom_methods.payment_entry.get_etims_settings")
-	@patch("kenya_etims_compliance.custom_methods.payment_entry.frappe.get_doc")
+	@patch("kenya_etims_compliance.custom_methods.payment_entry.eTIMS.log_errors")
+	@patch("kenya_etims_compliance.custom_methods.payment_entry.frappe.db.get_value")
 	@patch("kenya_etims_compliance.custom_methods.payment_entry.frappe.msgprint")
-	def test_validate_payment_manual_verified_notice(self, mock_msgprint, mock_get_doc, mock_settings):
-		mock_settings.return_value = {"enforce_invoice_verification": 1, "allow_payment_unverified": 0}
+	@patch("kenya_etims_compliance.custom_methods.payment_entry.frappe.throw")
+	def test_validate_payment_unconfirmed_warns_without_blocking(
+		self, mock_throw, mock_msgprint, mock_get_value, mock_log
+	):
+		"""KRA confirms a purchase only after the supplier files, so payment
+		must never be blocked on it — the warning has to name the invoice and
+		its match status instead."""
+		mock_get_value.return_value = frappe._dict(
+			supplier="Supplier A",
+			grand_total=1000,
+			custom_invoice_verified=0,
+			custom_kra_invoice_number="",
+			custom_kra_match_status="Not in KRA",
+			custom_verification_override_reason=None,
+		)
 
-		inv = MagicMock()
-		inv.name = "PINV-001"
-		inv.supplier = "Supplier A"
-		inv.grand_total = 1000
-		inv.custom_invoice_verified = 1
-		inv.custom_kra_invoice_number = "MANUAL_OVERRIDE"
-		inv.custom_verification_override_reason = "Override reason"
-		inv.get = MagicMock(side_effect=lambda k, default=None: getattr(inv, k, default))
-		mock_get_doc.return_value = inv
+		validate_payment_for_etims_invoice(self._payment_entry(), None)
 
-		ref = MockRow(reference_doctype="Purchase Invoice", reference_name="PINV-001", allocated_amount=500)
-		doc = MagicMock()
-		doc.references = [ref]
+		mock_throw.assert_not_called()
+		mock_msgprint.assert_called_once()
+		warning = str(mock_msgprint.call_args)
+		self.assertIn("PINV-001", warning)
+		self.assertIn("Not in KRA", warning)
+		mock_log.assert_called_once()
 
-		validate_payment_for_etims_invoice(doc, None)
+	@patch("kenya_etims_compliance.custom_methods.payment_entry.frappe.db.get_value")
+	@patch("kenya_etims_compliance.custom_methods.payment_entry.frappe.msgprint")
+	def test_validate_payment_confirmed_is_silent(self, mock_msgprint, mock_get_value):
+		mock_get_value.return_value = frappe._dict(
+			supplier="Supplier A",
+			grand_total=1000,
+			custom_invoice_verified=1,
+			custom_kra_invoice_number="KRA-123",
+			custom_kra_match_status="Matched",
+			custom_verification_override_reason=None,
+		)
+
+		validate_payment_for_etims_invoice(self._payment_entry(), None)
+
+		mock_msgprint.assert_not_called()
+
+	@patch("kenya_etims_compliance.custom_methods.payment_entry.eTIMS.log_errors")
+	@patch("kenya_etims_compliance.custom_methods.payment_entry.frappe.db.get_value")
+	@patch("kenya_etims_compliance.custom_methods.payment_entry.frappe.msgprint")
+	def test_validate_payment_manual_verified_notice(self, mock_msgprint, mock_get_value, mock_log):
+		"""A manual override is not KRA confirmation, so it still warns and
+		carries the stated reason."""
+		mock_get_value.return_value = frappe._dict(
+			supplier="Supplier A",
+			grand_total=1000,
+			custom_invoice_verified=1,
+			custom_kra_invoice_number="MANUAL_OVERRIDE",
+			custom_kra_match_status="Pending",
+			custom_verification_override_reason="Override reason",
+		)
+
+		validate_payment_for_etims_invoice(self._payment_entry(), None)
 
 		mock_msgprint.assert_called_once()
-		self.assertIn("manually verified", str(mock_msgprint.call_args).lower())
+		self.assertIn("Override reason", str(mock_msgprint.call_args))
 
 
 class TestInvoiceCheckerCustomMethods(FrappeTestCase):

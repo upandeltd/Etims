@@ -2,6 +2,7 @@
 
 import frappe
 from frappe import _
+from frappe.query_builder.functions import Avg
 from frappe.utils import flt, getdate
 
 from kenya_etims_compliance.utils.permissions import require
@@ -233,14 +234,10 @@ def get_compliance_score():
 	if not frappe.db.exists("DocType", "eTIMS Compliance Score"):
 		return 0
 
-	result = frappe.db.sql(
-		"""
-		SELECT AVG(overall_score) as avg_score
-		FROM `tabeTIMS Compliance Score`
-		WHERE docstatus < 2
-		""",
-		as_dict=True,
-	)
+	score = frappe.qb.DocType("eTIMS Compliance Score")
+	result = (
+		frappe.qb.from_(score).where(score.docstatus < 2).select(Avg(score.overall_score).as_("avg_score"))
+	).run(as_dict=True)
 	if not result:
 		return 0
 	row = result[0]

@@ -5,6 +5,8 @@ Handles item code mapping (KRA eTIMS code vs ERPNext item_code).
 """
 
 import frappe
+from frappe.query_builder import Case
+from frappe.query_builder.functions import Abs, Sum
 from frappe.utils import flt
 
 
@@ -141,8 +143,18 @@ def _get_kra_summary(from_date, to_date, branch=None):
 
 def _get_local_summary(from_date, to_date, branch=None):
 	"""Aggregate ERPNext Stock Ledger using SQL — avoids loading all rows."""
-	warehouse_filter = ""
-	params = {"from_date": from_date, "to_date": to_date}
+	sle = frappe.qb.DocType("Stock Ledger Entry")
+	query = (
+		frappe.qb.from_(sle)
+		.where(sle.posting_date.between(from_date, to_date))
+		.where(sle.is_cancelled == 0)
+		.groupby(sle.item_code)
+		.select(
+			sle.item_code,
+			Sum(Case().when(sle.actual_qty > 0, sle.actual_qty).else_(0)).as_("qty_in"),
+			Sum(Case().when(sle.actual_qty < 0, Abs(sle.actual_qty)).else_(0)).as_("qty_out"),
+		)
+	)
 
 	if branch:
 		# Get warehouses linked to this branch
@@ -160,25 +172,9 @@ def _get_local_summary(from_date, to_date, branch=None):
 				wh_list.add(w.default_stores_warehouse)
 
 		if wh_list:
-			warehouse_filter = "AND sle.warehouse IN %(warehouses)s"
-			params["warehouses"] = list(wh_list)
+			query = query.where(sle.warehouse.isin(list(wh_list)))
 
-	base_query = """
-		SELECT
-			sle.item_code,
-			SUM(CASE WHEN sle.actual_qty > 0 THEN sle.actual_qty ELSE 0 END) as qty_in,
-			SUM(CASE WHEN sle.actual_qty < 0 THEN ABS(sle.actual_qty) ELSE 0 END) as qty_out
-		FROM `tabStock Ledger Entry` sle
-		WHERE sle.posting_date BETWEEN %(from_date)s AND %(to_date)s
-		AND sle.is_cancelled = 0
-	"""
-
-	if warehouse_filter:
-		base_query += " AND sle.warehouse IN %(warehouses)s"
-
-	base_query += " GROUP BY sle.item_code"
-
-	result = frappe.db.sql(base_query, params, as_dict=True)
+	result = query.run(as_dict=True)
 
 	return {r.item_code: {"qty_in": flt(r.qty_in), "qty_out": flt(r.qty_out)} for r in result}
 

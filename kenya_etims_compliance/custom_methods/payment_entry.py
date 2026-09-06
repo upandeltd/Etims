@@ -1,11 +1,11 @@
-"""
-Payment Entry Validation Module for KRA eTIMS Compliance
+"""Payment-side eTIMS advisory for KRA compliance.
 
-This module validates that Purchase Invoices are verified with KRA eTIMS
-before allowing payments to be made - a critical requirement for 2026
-tax compliance.
-
-All expenses must be eTIMS compliant to be tax-deductible.
+Expenses are only deductible if the purchase is on KRA's records, so a Payment
+Entry that settles an invoice KRA has never confirmed carries real risk. That
+risk is reported here and enforced at the period close
+(`custom_methods.reconciliation.close_period`) - never by blocking the payment
+itself, because KRA's purchase register is only populated when the *supplier*
+files, routinely after payment falls due.
 """
 
 import frappe
@@ -15,144 +15,95 @@ from kenya_etims_compliance.utils.etims_utils import eTIMS
 from kenya_etims_compliance.utils.permissions import can_modify_doctype
 
 
+def _reference_status(doc):
+	"""eTIMS state of every Purchase Invoice this Payment Entry settles."""
+	rows = []
+
+	for reference in doc.references:
+		if reference.reference_doctype != "Purchase Invoice":
+			continue
+
+		invoice = frappe.db.get_value(
+			"Purchase Invoice",
+			reference.reference_name,
+			[
+				"supplier",
+				"grand_total",
+				"custom_invoice_verified",
+				"custom_kra_invoice_number",
+				"custom_kra_match_status",
+				"custom_verification_override_reason",
+			],
+			as_dict=True,
+		)
+		if not invoice:
+			continue
+
+		rows.append(
+			{
+				"invoice": reference.reference_name,
+				"supplier": invoice.supplier,
+				"amount": reference.allocated_amount or invoice.grand_total,
+				"verified": bool(invoice.custom_invoice_verified),
+				"manual": invoice.custom_kra_invoice_number == "MANUAL_OVERRIDE",
+				"match_status": invoice.custom_kra_match_status or _("Pending"),
+				"reason": invoice.custom_verification_override_reason,
+			}
+		)
+
+	return rows
+
+
 def validate_payment_for_etims_invoice(doc, method):
-	"""Validate that invoice is verified before allowing payment
+	"""Warn about invoices KRA has not confirmed. Never blocks the payment.
 
-	This is called from Payment Entry before submission.
-	It checks if all referenced Purchase Invoices have been verified
-	with KRA eTIMS system.
-
-	Args:
-	    doc: Payment Entry document
-	    method: The method being called (before_submit)
-
-	Raises:
-	    frappe.ValidationError: If any invoice is not verified
+	Named `validate_*` because `hooks.py` wires it to `before_submit`; it is an
+	advisory, so it names the invoices and their current KRA match status
+	instead of raising. Unresolved exceptions are what stop a period from
+	closing, and the close is what the filing depends on.
 	"""
-	from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import (
-		get_etims_settings,
-	)
-
-	# Get eTIMS settings
-	settings = get_etims_settings()
-
-	# If verification is not enforced, skip validation
-	if not settings.get("enforce_invoice_verification", 1):
+	rows = [row for row in _reference_status(doc) if not row["verified"] or row["manual"]]
+	if not rows:
 		return
 
-	# Check if manual override is allowed
-	allow_override = settings.get("allow_payment_unverified", 0)
-
-	# Track unverified invoices
-	unverified_invoices = []
-	manual_verified_invoices = []
-
-	# Check each referenced invoice
-	for reference in doc.references:
-		if reference.reference_doctype == "Purchase Invoice":
-			invoice = frappe.get_doc("Purchase Invoice", reference.reference_name)
-
-			# Check if verified
-			invoice_verified = invoice.get("custom_invoice_verified", 0)
-			kra_invoice_number = invoice.get("custom_kra_invoice_number", "")
-
-			# Track manually verified invoices
-			if invoice_verified and kra_invoice_number == "MANUAL_OVERRIDE":
-				manual_verified_invoices.append(
-					{
-						"invoice": invoice.name,
-						"supplier": invoice.supplier,
-						"amount": invoice.grand_total,
-						"reason": invoice.get("custom_verification_override_reason", "Not specified"),
-					}
-				)
-			elif not invoice_verified:
-				unverified_invoices.append(
-					{
-						"invoice": invoice.name,
-						"supplier": invoice.supplier,
-						"amount": reference.allocated_amount,
-					}
-				)
-
-	# Handle unverified invoices
-	if unverified_invoices:
-		if allow_override:
-			# Warning mode - allow payment with warning
-			invoice_list = "\n".join(
-				[f"  - {inv['invoice']} ({inv['supplier']}): {inv['amount']}" for inv in unverified_invoices]
-			)
-
-			frappe.msgprint(
-				_(
-					"<b>Warning:</b> The following invoices have not been verified with KRA eTIMS:\n{0}\n\n"
-					"Payment is allowed because manual override is enabled. "
-					"Please verify these invoices when possible."
-				).format(invoice_list),
-				indicator="orange",
-				alert=True,
-			)
-
-			# Log the override
-			eTIMS.log_errors(
-				f"Payment allowed for unverified invoices: {doc.name}",
-				f"Invoices: {[inv['invoice'] for inv in unverified_invoices]}, User: {frappe.session.user}",
-			)
-		else:
-			# Block payment
-			invoice_list = "\n".join(
-				[f"  - {inv['invoice']} ({inv['supplier']}): {inv['amount']}" for inv in unverified_invoices]
-			)
-
-			frappe.throw(
-				_(
-					"<b>Cannot make payment for unverified invoices.</b><br><br>"
-					"The following Purchase Invoices have not been verified with KRA eTIMS:<br>{0}<br><br>"
-					"Please verify each invoice before making payment.<br>"
-					"Go to Purchase Invoice > Click 'Verify Invoice with KRA' button.<br><br>"
-					"If you need to make an exception, please enable 'Allow Payment Without Verification' "
-					"in eTIMS Settings or mark the invoice as manually verified."
-				).format("<br>" + invoice_list)
-			)
-
-	# Warn about manually verified invoices
-	if manual_verified_invoices:
-		invoice_list = "\n".join(
-			[
-				f"  - {inv['invoice']} ({inv['supplier']}): {inv['amount']} - Reason: {inv['reason']}"
-				for inv in manual_verified_invoices
-			]
+	lines = "".join(
+		"<li>{invoice} — {supplier} — {amount} — {state}</li>".format(
+			invoice=row["invoice"],
+			supplier=row["supplier"],
+			amount=frappe.format_value(row["amount"], {"fieldtype": "Currency"}),
+			state=(
+				_("manually verified: {0}").format(row["reason"] or _("no reason given"))
+				if row["manual"]
+				else _("not confirmed by KRA (match status: {0})").format(row["match_status"])
+			),
 		)
+		for row in rows
+	)
 
-		frappe.msgprint(
-			_(
-				"<b>Notice:</b> The following invoices were manually verified (override):\n{0}\n\n"
-				"These may not be accepted by KRA for tax deduction."
-			).format(invoice_list),
-			indicator="yellow",
-			alert=True,
-		)
+	frappe.msgprint(
+		_(
+			"<b>eTIMS:</b> these invoices are not confirmed against KRA's purchase register:"
+			"<ul>{0}</ul>Payment is not blocked, but the expense is only deductible once KRA "
+			"holds the purchase. Run eTIMS purchase reconciliation for the period, and accept "
+			"or fix each exception before closing it."
+		).format(lines),
+		title=_("Unconfirmed with KRA"),
+		indicator="orange",
+	)
+
+	eTIMS.log_errors(
+		f"Payment submitted against unconfirmed invoices: {doc.name}",
+		f"Invoices: {[row['invoice'] for row in rows]}, User: {frappe.session.user}",
+	)
 
 
 @frappe.whitelist()
-def check_payment_eligibility(payment_entry_name):
-	"""Check if a payment entry can be submitted based on invoice verification
+def get_payment_etims_status(payment_entry_name):
+	"""KRA confirmation state of a Payment Entry's invoices, for dashboards.
 
-	Useful for:
-	- Dashboard indicators
-	- Pre-submission validation
-	- UI warnings
-
-	Args:
-	    payment_entry_name: Payment Entry document name
-
-	Returns:
-	    {
-	        "eligible": True/False,
-	        "unverified_invoices": [...],
-	        "manual_verified_invoices": [...],
-	        "message": "..."
-	    }
+	Reports; it does not gate. Nothing about payment is refused on this basis,
+	so there is no "eligible" answer to give - `unconfirmed` is the number that
+	matters, and each row carries the invoice's current KRA match status.
 	"""
 	if not can_modify_doctype("Purchase Invoice", "read"):
 		frappe.throw(
@@ -160,55 +111,20 @@ def check_payment_eligibility(payment_entry_name):
 			frappe.PermissionError,
 		)
 
-	try:
-		doc = frappe.get_doc("Payment Entry", payment_entry_name)
+	rows = _reference_status(frappe.get_doc("Payment Entry", payment_entry_name))
+	unconfirmed = [row for row in rows if not row["verified"]]
+	manual = [row for row in rows if row["manual"]]
 
-		unverified_invoices = []
-		manual_verified_invoices = []
-
-		for reference in doc.references:
-			if reference.reference_doctype == "Purchase Invoice":
-				invoice = frappe.get_doc("Purchase Invoice", reference.reference_name)
-
-				invoice_verified = invoice.get("custom_invoice_verified", 0)
-				kra_invoice_number = invoice.get("custom_kra_invoice_number", "")
-
-				if invoice_verified and kra_invoice_number == "MANUAL_OVERRIDE":
-					manual_verified_invoices.append(
-						{
-							"invoice": invoice.name,
-							"supplier": invoice.supplier,
-							"amount": invoice.grand_total,
-							"reason": invoice.get("custom_verification_override_reason", "Not specified"),
-						}
-					)
-				elif not invoice_verified:
-					unverified_invoices.append(
-						{
-							"invoice": invoice.name,
-							"supplier": invoice.supplier,
-							"amount": reference.allocated_amount,
-						}
-					)
-
-		eligible = len(unverified_invoices) == 0
-
-		if eligible and manual_verified_invoices:
-			message = "Payment can be made. Note: Some invoices were manually verified."
-		elif eligible:
-			message = "All invoices are verified. Payment can be made."
-		else:
-			message = f"{len(unverified_invoices)} invoice(s) not verified. Please verify before payment."
-
-		return {
-			"eligible": eligible,
-			"unverified_invoices": unverified_invoices,
-			"manual_verified_invoices": manual_verified_invoices,
-			"message": message,
-		}
-
-	except (frappe.DoesNotExistError, frappe.ValidationError) as e:
-		return {"eligible": False, "error": str(e), "message": f"Error checking eligibility: {e!s}"}
+	return {
+		"invoices": rows,
+		"unconfirmed": unconfirmed,
+		"manual_verified": manual,
+		"message": (
+			_("All {0} invoice(s) are confirmed with KRA.").format(len(rows))
+			if not unconfirmed
+			else _("{0} of {1} invoice(s) not yet confirmed by KRA.").format(len(unconfirmed), len(rows))
+		),
+	}
 
 
 @frappe.whitelist()

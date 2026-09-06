@@ -1,6 +1,7 @@
-from datetime import datetime, time
+import traceback
 
 import frappe
+from frappe.utils import add_days, cint, get_datetime, now, now_datetime
 
 from kenya_etims_compliance.utils.kra_client import KRAClient
 
@@ -103,89 +104,139 @@ def verify_supplier_pins():
 
 
 def fetch_purchase_transactions():
-	"""Daily: Fetch KRA purchase data and create register entries."""
+	"""Daily: pull KRA's purchase worklist and mirror it into the register.
+
+	``selectTrnsPurchaseSalesList`` returns the purchases KRA holds against
+	this PIN that have not yet been confirmed back with ``insertTrnsPurchase``
+	- a worklist that drains on confirmation, not a change feed. So the request
+	window is a rolling lookback and is deliberately never advanced forward: a
+	high-water mark would permanently skip an invoice a supplier files late for
+	an earlier date, and that invoice is exactly the one reconciliation must
+	catch. Repeat rows are absorbed by the dedup below.
+	"""
 	if not frappe.db.exists("DocType", "eTIMS Purchase Register Entry"):
 		return
 
+	from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_purchase_information.etims_purchase_information import (
+		upsert_purchase_invoice,
+	)
+	from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import (
+		DEFAULT_PURCHASE_FETCH_LOOKBACK_DAYS,
+		get_etims_settings,
+	)
 	from kenya_etims_compliance.utils.etims_utils import eTIMS
 
-	last_fetch = frappe.db.get_single_value("eTIMS Purchase Information", "last_search_date_and_time")
-	if not last_fetch:
-		last_fetch = "20260101000000"
-	else:
-		last_fetch = eTIMS.strf_datetime_format(last_fetch)
+	lookback = (
+		cint(get_etims_settings().get("purchase_fetch_lookback_days"))
+		or DEFAULT_PURCHASE_FETCH_LOOKBACK_DAYS
+	)
+	window_start = add_days(now_datetime(), -lookback)
 
-	result = KRAClient().post("selectTrnsPurchaseSalesList", {"lastReqDt": last_fetch})
+	# The stored timestamp is a record of the last look, not a high-water mark.
+	# When it predates the rolling window - a site that has not fetched in
+	# months, or a fresh install seeded with an old date - ask from the older
+	# of the two so the gap is actually covered instead of quietly skipped.
+	stored = frappe.db.get_single_value("eTIMS Purchase Information", "last_search_date_and_time")
+	if stored:
+		window_start = min(get_datetime(stored), window_start)
+
+	last_req_dt = eTIMS.strf_datetime_format(window_start)
+
+	result = KRAClient().post("selectTrnsPurchaseSalesList", {"lastReqDt": last_req_dt})
 	if "Success" not in result or not result["Success"]:
 		return
 
 	data = result["Success"]
-	invoices = data.get("saleList") if isinstance(data, dict) else []
+	invoices = (data.get("saleList") if isinstance(data, dict) else None) or []
 
-	inserted = 0
-	max_sale_date = None
+	inserted = linked = failed = 0
 
-	for inv in invoices or []:
+	for idx, inv in enumerate(invoices):
 		supplier_pin = inv.get("spplrTin", "")
 		kra_inv_no = inv.get("spplrInvcNo", 0)
 
-		sale_date = None
 		try:
 			sale_date = eTIMS.strp_date_object(inv.get("salesDt"))
-		except Exception as e:
-			frappe.log_error("eTIMS: Task error", str(e))
-
-		# Advance the watermark over every record the pull returned, not only
-		# the newly inserted ones. A window whose newest row is already stored
-		# would otherwise leave the watermark behind and be re-requested on
-		# every tick.
-		if sale_date and (max_sale_date is None or sale_date > max_sale_date):
-			max_sale_date = sale_date
-
-		if frappe.db.exists(
-			"eTIMS Purchase Register Entry",
-			{
-				"supplier_pin": supplier_pin,
-				"kra_invoice_number": kra_inv_no,
-			},
-		):
+		except (TypeError, ValueError) as e:
+			# invoice_date is mandatory on the register entry, so a row with an
+			# unparseable salesDt cannot be reconciled at all - drop it loudly
+			# instead of failing the whole pull at insert time.
+			failed += 1
+			frappe.log_error(
+				title="eTIMS: unparseable KRA salesDt",
+				message=f"supplier={supplier_pin} invoice={kra_inv_no} salesDt={inv.get('salesDt')!r}: {e}",
+			)
 			continue
 
-		frappe.get_doc(
-			{
-				"doctype": "eTIMS Purchase Register Entry",
-				"supplier_pin": supplier_pin,
-				"supplier_name": inv.get("spplrNm", ""),
-				"kra_invoice_number": kra_inv_no,
-				"invoice_date": sale_date,
-				"total_amount": inv.get("totAmt", 0),
-				"tax_amount": inv.get("totTaxAmt", 0),
-				"item_count": inv.get("totItemCnt", 0),
-				"fetch_date": frappe.utils.now_datetime(),
-				"match_status": "Pending",
-			}
-		).insert(ignore_permissions=True)
-		inserted += 1
+		# One malformed row must not cost the whole day's pull, and must not
+		# take the rows already written down with it.
+		save_point = f"etims_purchase_row_{idx}"
+		frappe.db.savepoint(save_point)
+		try:
+			# KRA's own per-band decomposition and item lines live only here,
+			# so store them even when the register row already exists -
+			# reconciliation compares band by band, not on one total.
+			etims_pinv = upsert_purchase_invoice(inv)
 
+			existing = frappe.db.get_value(
+				"eTIMS Purchase Register Entry",
+				{"supplier_pin": supplier_pin, "kra_invoice_number": kra_inv_no},
+				["name", "etims_purchase_invoice"],
+				as_dict=True,
+			)
+			if existing:
+				# Backfill the detail link on entries written before the raw
+				# purchase document was stored alongside them.
+				if etims_pinv and not existing.etims_purchase_invoice:
+					frappe.db.set_value(
+						"eTIMS Purchase Register Entry",
+						existing.name,
+						"etims_purchase_invoice",
+						etims_pinv,
+						update_modified=False,
+					)
+					linked += 1
+				frappe.db.release_savepoint(save_point)
+				continue
+
+			frappe.get_doc(
+				{
+					"doctype": "eTIMS Purchase Register Entry",
+					"supplier_pin": supplier_pin,
+					"supplier_name": inv.get("spplrNm", ""),
+					"kra_invoice_number": kra_inv_no,
+					"invoice_date": sale_date,
+					"total_amount": inv.get("totAmt", 0),
+					"tax_amount": inv.get("totTaxAmt", 0),
+					"item_count": inv.get("totItemCnt", 0),
+					"etims_purchase_invoice": etims_pinv,
+					"fetch_date": now_datetime(),
+					"match_status": "Pending",
+				}
+			).insert(ignore_permissions=True)
+			inserted += 1
+			frappe.db.release_savepoint(save_point)
+		except Exception:
+			frappe.db.rollback(save_point=save_point)
+			failed += 1
+			frappe.log_error(
+				title="eTIMS: purchase register row failed",
+				message=f"supplier={supplier_pin} invoice={kra_inv_no}\n{traceback.format_exc()}",
+			)
+
+	# Stamped for the operator only - see the docstring on why it is not the
+	# request key.
+	frappe.db.set_single_value("eTIMS Purchase Information", "last_search_date_and_time", now())
 	frappe.db.commit()
 
-	if max_sale_date:
-		# `last_search_date_and_time` is a Datetime column, and the read at the
-		# top of this function feeds `strf_datetime_format`, which only parses
-		# "%Y-%m-%d %H:%M:%S[.%f]". KRA's `salesDt` is "%Y%m%d", so widen it to
-		# a datetime here. Midnight of the newest day seen re-requests that day
-		# on the next tick; the dedup check above absorbs the repeat.
-		frappe.db.set_single_value(
-			"eTIMS Purchase Information",
-			"last_search_date_and_time",
-			datetime.combine(max_sale_date, time.min).strftime("%Y-%m-%d %H:%M:%S"),
-		)
-		frappe.db.commit()
-		frappe.logger().info(
-			"eTIMS fetch_purchase_transactions: inserted %s, advanced watermark to %s",
-			inserted,
-			max_sale_date,
-		)
+	frappe.logger().info(
+		"eTIMS fetch_purchase_transactions: %s rows since %s - %s new, %s linked, %s failed",
+		len(invoices),
+		last_req_dt,
+		inserted,
+		linked,
+		failed,
+	)
 
 
 def run_reconciliation_task():

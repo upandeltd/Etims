@@ -3,6 +3,8 @@
 
 import frappe
 from frappe import _
+from frappe.query_builder.functions import Abs, Count, Sum
+from pypika import Order
 
 
 def execute(filters=None):
@@ -31,44 +33,38 @@ def get_columns():
 
 
 def get_data(filters):
-	conditions = get_conditions(filters)
+	filters = filters or {}
+	sii = frappe.qb.DocType("Sales Invoice Item")
+	si = frappe.qb.DocType("Sales Invoice")
 
-	data = frappe.db.sql(
-		"""
-        SELECT
-            sii.item_code,
-            sii.item_name,
-            SUM(ABS(sii.qty)) AS qty_sold,
-            SUM(ABS(sii.base_amount)) AS total_amount,
-            sii.custom_tax_code AS tax_code,
-            SUM(ABS(sii.base_amount) - ABS(sii.base_net_amount)) AS tax_amount,
-            SUM(ABS(sii.base_net_amount)) AS net_amount,
-            COUNT(DISTINCT si.name) AS trx_count
-        FROM `tabSales Invoice Item` sii
-        INNER JOIN `tabSales Invoice` si ON si.name = sii.parent
-        WHERE si.docstatus = 1
-            AND si.custom_update_invoice_in_tims = 1
-            {conditions}
-        GROUP BY sii.item_code, sii.custom_tax_code
-        ORDER BY qty_sold DESC
-        """.format(conditions=conditions),
-		filters,
-		as_dict=True,
+	qty_sold = Sum(Abs(sii.qty)).as_("qty_sold")
+	query = (
+		frappe.qb.from_(sii)
+		.inner_join(si)
+		.on(si.name == sii.parent)
+		.where(si.docstatus == 1)
+		.where(si.custom_update_invoice_in_tims == 1)
+		.groupby(sii.item_code, sii.custom_tax_code)
+		.orderby(qty_sold, order=Order.desc)
+		.select(
+			sii.item_code,
+			sii.item_name,
+			qty_sold,
+			Sum(Abs(sii.base_amount)).as_("total_amount"),
+			sii.custom_tax_code.as_("tax_code"),
+			Sum(Abs(sii.base_amount) - Abs(sii.base_net_amount)).as_("tax_amount"),
+			Sum(Abs(sii.base_net_amount)).as_("net_amount"),
+			Count(si.name).distinct().as_("trx_count"),
+		)
 	)
 
-	return data
-
-
-def get_conditions(filters):
-	conditions = []
-
 	if filters.get("from_date"):
-		conditions.append("AND si.posting_date >= %(from_date)s")
+		query = query.where(si.posting_date >= filters["from_date"])
 	if filters.get("to_date"):
-		conditions.append("AND si.posting_date <= %(to_date)s")
+		query = query.where(si.posting_date <= filters["to_date"])
 	if filters.get("company"):
-		conditions.append("AND si.company = %(company)s")
+		query = query.where(si.company == filters["company"])
 	if filters.get("branch"):
-		conditions.append("AND si.custom_tax_branch_office = %(branch)s")
+		query = query.where(si.custom_tax_branch_office == filters["branch"])
 
-	return " ".join(conditions)
+	return query.run(as_dict=True)

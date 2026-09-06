@@ -8,7 +8,9 @@ Unlike the Z Report, it does not reset counters.
 
 import frappe
 from frappe import _
+from frappe.query_builder.functions import Coalesce, Count, Sum
 from frappe.utils import getdate, now_datetime
+from pypika import Order
 
 # Reuse the Z Report's data generation logic
 from kenya_etims_compliance.kenya_etims_compliance.report.etims_z_daily_report.etims_z_daily_report import (
@@ -22,6 +24,20 @@ def execute(filters=None):
 	return columns, data, None, chart, report_summary
 
 
+def _filter_invoices(query, si, branch, company, last_z_date, today):
+	"""Apply the shared Sales Invoice filters used by every X report query."""
+	query = query.where(si.docstatus == 1).where(si.custom_update_invoice_in_tims == 1)
+	if last_z_date:
+		query = query.where(si.posting_date > last_z_date)
+	# Always up to today
+	query = query.where(si.posting_date <= today)
+	if branch:
+		query = query.where(si.custom_tax_branch_office == branch)
+	if company:
+		query = query.where(si.company == company)
+	return query
+
+
 def get_data(filters):
 	branch = filters.get("branch")
 	company = filters.get("company")
@@ -29,28 +45,6 @@ def get_data(filters):
 	# Determine the date range: from last Z report date to now
 	last_z_date = _get_last_z_report_date(branch)
 	today = getdate()
-
-	conditions = [
-		"si.docstatus = 1",
-		"si.custom_update_invoice_in_tims = 1",
-	]
-	params = {}
-
-	if last_z_date:
-		conditions.append("si.posting_date > %(from_date)s")
-		params["from_date"] = last_z_date
-	# Always up to today
-	conditions.append("si.posting_date <= %(to_date)s")
-	params["to_date"] = today
-
-	if branch:
-		conditions.append("si.custom_tax_branch_office = %(branch)s")
-		params["branch"] = branch
-	if company:
-		conditions.append("si.company = %(company)s")
-		params["company"] = company
-
-	where = " AND ".join(conditions)
 
 	data = []
 
@@ -102,20 +96,21 @@ def get_data(filters):
 	data.append({"category": "", "description": "", "count": None, "amount": None})
 
 	# Receipt type breakdown — sign-correct (credit notes are negative in ERPNext)
-	receipt_data = frappe.db.sql(
-		"""
-        SELECT
-            COALESCE(si.custom_receipt_label, 'NS') AS label,
-            COUNT(*) AS cnt,
-            SUM(si.base_grand_total) AS total
-        FROM `tabSales Invoice` si
-        WHERE {where}
-        GROUP BY COALESCE(si.custom_receipt_label, 'NS')
-        ORDER BY label
-        """.format(where=where),
-		params,
-		as_dict=True,
-	)
+	si = frappe.qb.DocType("Sales Invoice")
+	receipt_label = Coalesce(si.custom_receipt_label, "NS")
+	receipt_query = _filter_invoices(
+		frappe.qb.from_(si).select(
+			receipt_label.as_("label"),
+			Count("*").as_("cnt"),
+			Sum(si.base_grand_total).as_("total"),
+		),
+		si,
+		branch,
+		company,
+		last_z_date,
+		today,
+	).groupby(receipt_label).orderby(receipt_label)
+	receipt_data = receipt_query.run(as_dict=True)
 
 	label_names = {
 		"NS": "Normal Sale",
@@ -142,23 +137,23 @@ def get_data(filters):
 	data.append({"category": "", "description": "", "count": None, "amount": None})
 
 	# Tax breakdown — sign-correct (credit notes are negative)
-	tax_data = frappe.db.sql(
-		"""
-        SELECT
-            stc.custom_code AS tax_code,
-            SUM(stc.custom_total_taxable_amount) AS taxable_amount,
-            SUM(stc.base_tax_amount_after_discount_amount) AS tax_amount
-        FROM `tabSales Taxes and Charges` stc
-        INNER JOIN `tabSales Invoice` si ON si.name = stc.parent
-        WHERE {where}
-            AND stc.custom_code IS NOT NULL
-            AND stc.custom_code != ''
-        GROUP BY stc.custom_code
-        ORDER BY stc.custom_code
-        """.format(where=where),
-		params,
-		as_dict=True,
+	stc = frappe.qb.DocType("Sales Taxes and Charges")
+	si = frappe.qb.DocType("Sales Invoice")
+	tax_query = (
+		frappe.qb.from_(stc)
+		.inner_join(si)
+		.on(si.name == stc.parent)
+		.select(
+			stc.custom_code.as_("tax_code"),
+			Sum(stc.custom_total_taxable_amount).as_("taxable_amount"),
+			Sum(stc.base_tax_amount_after_discount_amount).as_("tax_amount"),
+		)
+		.where(stc.custom_code.isnotnull())
+		.where(stc.custom_code != "")
+		.groupby(stc.custom_code)
+		.orderby(stc.custom_code)
 	)
+	tax_data = _filter_invoices(tax_query, si, branch, company, last_z_date, today).run(as_dict=True)
 
 	data.append({"category": "TAX BREAKDOWN BY RATE", "description": "", "count": None, "amount": None})
 	total_taxable = 0
@@ -188,21 +183,22 @@ def get_data(filters):
 	data.append({"category": "", "description": "", "count": None, "amount": None})
 	# Payment breakdown — sign-correct; drop the AND sip.amount > 0 clause that
 	# was hiding refund payment legs
-	payment_data = frappe.db.sql(
-		"""
-        SELECT
-            sip.mode_of_payment,
-            COUNT(DISTINCT si.name) AS cnt,
-            SUM(sip.amount) AS total
-        FROM `tabSales Invoice Payment` sip
-        INNER JOIN `tabSales Invoice` si ON si.name = sip.parent
-        WHERE {where}
-        GROUP BY sip.mode_of_payment
-        ORDER BY total DESC
-        """.format(where=where),
-		params,
-		as_dict=True,
+	sip = frappe.qb.DocType("Sales Invoice Payment")
+	si = frappe.qb.DocType("Sales Invoice")
+	payment_total = Sum(sip.amount).as_("total")
+	payment_query = (
+		frappe.qb.from_(sip)
+		.inner_join(si)
+		.on(si.name == sip.parent)
+		.select(
+			sip.mode_of_payment,
+			Count(si.name).distinct().as_("cnt"),
+			payment_total,
+		)
+		.groupby(sip.mode_of_payment)
+		.orderby(payment_total, order=Order.desc)
 	)
+	payment_data = _filter_invoices(payment_query, si, branch, company, last_z_date, today).run(as_dict=True)
 	data.append({"category": "PAYMENT METHOD BREAKDOWN", "description": "", "count": None, "amount": None})
 
 	for row in payment_data:

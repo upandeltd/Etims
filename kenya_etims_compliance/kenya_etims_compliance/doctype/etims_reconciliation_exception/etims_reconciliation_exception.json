@@ -1,0 +1,161 @@
+{
+ "actions": [],
+ "creation": "2026-09-05 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "source",
+  "exception_type",
+  "band_code",
+  "supplier_pin",
+  "supplier_name",
+  "kra_invoice_number",
+  "column_break_1",
+  "invoice_date",
+  "kra_amount",
+  "local_amount",
+  "variance_amount",
+  "section_break_refs",
+  "register_entry",
+  "purchase_invoice",
+  "column_break_2",
+  "accepted",
+  "accepted_reason"
+ ],
+ "fields": [
+  {
+   "columns": 1,
+   "fieldname": "source",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Source",
+   "options": "KRA\nLocal",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "columns": 2,
+   "fieldname": "exception_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Exception",
+   "options": "Amount Mismatch\nMissing Locally\nNot in KRA\nBand Mismatch",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "columns": 1,
+   "depends_on": "eval:doc.exception_type==\"Band Mismatch\"",
+   "fieldname": "band_code",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Band",
+   "options": "\nA\nB\nC\nD\nE",
+   "read_only": 1
+  },
+  {
+   "columns": 1,
+   "fieldname": "supplier_pin",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Supplier PIN",
+   "read_only": 1
+  },
+  {
+   "columns": 2,
+   "fieldname": "supplier_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Supplier",
+   "read_only": 1
+  },
+  {
+   "columns": 1,
+   "fieldname": "kra_invoice_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Invoice No",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "invoice_date",
+   "fieldtype": "Date",
+   "label": "Invoice Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "kra_amount",
+   "fieldtype": "Currency",
+   "label": "KRA Amount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "local_amount",
+   "fieldtype": "Currency",
+   "label": "Local Amount",
+   "read_only": 1
+  },
+  {
+   "columns": 1,
+   "fieldname": "variance_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Variance",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_refs",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "register_entry",
+   "fieldtype": "Link",
+   "label": "KRA Register Entry",
+   "options": "eTIMS Purchase Register Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "purchase_invoice",
+   "fieldtype": "Link",
+   "label": "Purchase Invoice",
+   "options": "Purchase Invoice",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "description": "Set on the source record, not here. Accepted exceptions do not block a period close.",
+   "fieldname": "accepted",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Accepted",
+   "read_only": 1
+  },
+  {
+   "fieldname": "accepted_reason",
+   "fieldtype": "Small Text",
+   "label": "Acceptance Reason",
+   "read_only": 1
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-09-05 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Kenya Etims Compliance",
+ "name": "eTIMS Reconciliation Exception",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "idx",
+ "sort_order": "ASC",
+ "states": []
+}

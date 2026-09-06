@@ -9,6 +9,8 @@ tax rate, and payment method.
 
 import frappe
 from frappe import _
+from frappe.query_builder import Case
+from frappe.query_builder.functions import Coalesce, Count, Sum
 from frappe.utils import getdate, now_datetime
 
 
@@ -27,22 +29,24 @@ def get_columns():
 	]
 
 
+def _filter_invoices(query, si, report_date, branch, company, docstatus=1):
+	"""Apply the shared Sales Invoice filters used by every Z report query."""
+	query = (
+		query.where(si.docstatus == docstatus)
+		.where(si.posting_date == report_date)
+		.where(si.custom_update_invoice_in_tims == 1)
+	)
+	if branch:
+		query = query.where(si.custom_tax_branch_office == branch)
+	if company:
+		query = query.where(si.company == company)
+	return query
+
+
 def get_data(filters):
 	report_date = getdate(filters.get("date")) if filters.get("date") else getdate()
 	branch = filters.get("branch")
 	company = filters.get("company")
-
-	conditions = ["si.docstatus = 1", "si.posting_date = %(date)s", "si.custom_update_invoice_in_tims = 1"]
-	params = {"date": report_date}
-
-	if branch:
-		conditions.append("si.custom_tax_branch_office = %(branch)s")
-		params["branch"] = branch
-	if company:
-		conditions.append("si.company = %(company)s")
-		params["company"] = company
-
-	where = " AND ".join(conditions)
 
 	data = []
 
@@ -86,20 +90,20 @@ def get_data(filters):
 	data.append({"category": "", "description": "", "count": None, "amount": None})
 
 	# --- Receipt type breakdown (NS/NC/CS/CC/TS/TC/PS) ---
-	receipt_data = frappe.db.sql(
-		"""
-        SELECT
-            COALESCE(si.custom_receipt_label, 'NS') AS label,
-            COUNT(*) AS cnt,
-            SUM(si.base_grand_total) AS total
-        FROM `tabSales Invoice` si
-        WHERE {where}
-        GROUP BY COALESCE(si.custom_receipt_label, 'NS')
-        ORDER BY label
-        """.format(where=where),
-		params,
-		as_dict=True,
-	)
+	si = frappe.qb.DocType("Sales Invoice")
+	receipt_label = Coalesce(si.custom_receipt_label, "NS")
+	receipt_query = _filter_invoices(
+		frappe.qb.from_(si).select(
+			receipt_label.as_("label"),
+			Count("*").as_("cnt"),
+			Sum(si.base_grand_total).as_("total"),
+		),
+		si,
+		report_date,
+		branch,
+		company,
+	).groupby(receipt_label).orderby(receipt_label)
+	receipt_data = receipt_query.run(as_dict=True)
 
 	label_names = {
 		"NS": "Normal Sale",
@@ -121,6 +125,29 @@ def get_data(filters):
 		total_count += row.cnt
 		total_amount += row.total or 0
 
+	# PS (Proforma Sale) receipts are draft (docstatus=0) invoices — get_receipt_label()
+	# only ever returns "PS" pre-submit, so the submitted-only query above can never
+	# surface them. Query drafts separately; shown informationally, NOT folded into
+	# TOTAL below (a proforma isn't a completed sale).
+	si = frappe.qb.DocType("Sales Invoice")
+	ps_data = _filter_invoices(
+		frappe.qb.from_(si).select(Count("*").as_("cnt"), Sum(si.base_grand_total).as_("total")),
+		si,
+		report_date,
+		branch,
+		company,
+		docstatus=0,
+	).run(as_dict=True)
+	if ps_data and ps_data[0].cnt:
+		data.append(
+			{
+				"category": "  PS",
+				"description": "Proforma Sale (draft, not a completed sale)",
+				"count": ps_data[0].cnt,
+				"amount": ps_data[0].total,
+			}
+		)
+
 	data.append({"category": "  TOTAL", "description": "", "count": total_count, "amount": total_amount})
 	data.append({"category": "", "description": "", "count": None, "amount": None})
 
@@ -129,31 +156,36 @@ def get_data(filters):
 	# SUM with the natural sign so a refund lowers Total Tax. Outer ABS would inflate.
 	# Per apply_tax_bands the KRA payload uses abs() per row — that is the right place
 	# to flip the sign, but the report must reflect the declared day's net.
-	tax_data = frappe.db.sql(
-		"""
-        SELECT
-            stc.custom_code AS tax_code,
-            SUM(stc.custom_total_taxable_amount) AS taxable_amount,
-            SUM(stc.base_tax_amount_after_discount_amount) AS tax_amount
-        FROM `tabSales Taxes and Charges` stc
-        INNER JOIN `tabSales Invoice` si ON si.name = stc.parent
-        WHERE {where}
-            AND stc.custom_code IS NOT NULL
-            AND stc.custom_code != ''
-        GROUP BY stc.custom_code
-        ORDER BY stc.custom_code
-        """.format(where=where),
-		params,
-		as_dict=True,
+	stc = frappe.qb.DocType("Sales Taxes and Charges")
+	si = frappe.qb.DocType("Sales Invoice")
+	tax_query = (
+		frappe.qb.from_(stc)
+		.inner_join(si)
+		.on(si.name == stc.parent)
+		.select(
+			stc.custom_code.as_("tax_code"),
+			si.is_return.as_("is_return"),
+			Sum(stc.custom_total_taxable_amount).as_("taxable_amount"),
+			Sum(stc.base_tax_amount_after_discount_amount).as_("tax_amount"),
+		)
+		.where(stc.custom_code.isnotnull())
+		.where(stc.custom_code != "")
+		.groupby(stc.custom_code, si.is_return)
+		.orderby(stc.custom_code)
+		.orderby(si.is_return)
 	)
+	tax_data = _filter_invoices(tax_query, si, report_date, branch, company).run(as_dict=True)
 
+	# TIS Spec §16.1.10/§16.1.11/§16.1.17 require Sale and Credit Note amounts
+	# reported separately per band/payment method, never netted together.
 	data.append({"category": "TAX BREAKDOWN BY RATE", "description": "", "count": None, "amount": None})
 	total_taxable = 0
 	total_tax = 0
 	for row in tax_data:
+		receipt_kind = "Credit Note" if row.is_return else "Sale"
 		data.append(
 			{
-				"category": f"  Rate {row.tax_code} — Taxable",
+				"category": f"  Rate {row.tax_code} ({receipt_kind}) — Taxable",
 				"description": "",
 				"count": None,
 				"amount": row.taxable_amount,
@@ -161,7 +193,7 @@ def get_data(filters):
 		)
 		data.append(
 			{
-				"category": f"  Rate {row.tax_code} — Tax",
+				"category": f"  Rate {row.tax_code} ({receipt_kind}) — Tax",
 				"description": "",
 				"count": None,
 				"amount": row.tax_amount,
@@ -176,43 +208,49 @@ def get_data(filters):
 
 	# --- Payment method breakdown ---
 
-	payment_data = frappe.db.sql(
-		"""
-        SELECT
-            sip.mode_of_payment,
-            COUNT(DISTINCT si.name) AS cnt,
-            SUM(sip.amount) AS total
-        FROM `tabSales Invoice Payment` sip
-        INNER JOIN `tabSales Invoice` si ON si.name = sip.parent
-        WHERE {where}
-        GROUP BY sip.mode_of_payment
-        ORDER BY total DESC
-        """.format(where=where),
-		params,
-		as_dict=True,
+	sip = frappe.qb.DocType("Sales Invoice Payment")
+	si = frappe.qb.DocType("Sales Invoice")
+	payment_query = (
+		frappe.qb.from_(sip)
+		.inner_join(si)
+		.on(si.name == sip.parent)
+		.select(
+			sip.mode_of_payment,
+			si.is_return.as_("is_return"),
+			Count(si.name).distinct().as_("cnt"),
+			Sum(sip.amount).as_("total"),
+		)
+		.groupby(sip.mode_of_payment, si.is_return)
+		.orderby(sip.mode_of_payment)
+		.orderby(si.is_return)
 	)
+	payment_data = _filter_invoices(payment_query, si, report_date, branch, company).run(as_dict=True)
 
 	data.append({"category": "PAYMENT METHOD BREAKDOWN", "description": "", "count": None, "amount": None})
 	for row in payment_data:
+		receipt_kind = "Credit Note" if row.is_return else "Sale"
 		data.append(
-			{"category": f"  {row.mode_of_payment}", "description": "", "count": row.cnt, "amount": row.total}
+			{
+				"category": f"  {row.mode_of_payment} ({receipt_kind})",
+				"description": "",
+				"count": row.cnt,
+				"amount": row.total,
+			}
 		)
 
 	data.append({"category": "", "description": "", "count": None, "amount": None})
 
 	# --- Discounts ---
-	discount_data = frappe.db.sql(
-		"""
-        SELECT
-            COUNT(*) AS cnt,
-            SUM(si.custom_total_discount_amount) AS total_discount
-        FROM `tabSales Invoice` si
-        WHERE {where}
-            AND si.custom_total_discount_amount != 0
-        """.format(where=where),
-		params,
-		as_dict=True,
-	)
+	si = frappe.qb.DocType("Sales Invoice")
+	discount_data = _filter_invoices(
+		frappe.qb.from_(si).select(
+			Count("*").as_("cnt"), Sum(si.custom_total_discount_amount).as_("total_discount")
+		),
+		si,
+		report_date,
+		branch,
+		company,
+	).where(si.custom_total_discount_amount != 0).run(as_dict=True)
 
 	if discount_data and discount_data[0].total_discount:
 		data.append(
@@ -227,22 +265,58 @@ def get_data(filters):
 		data.append({"category": "DISCOUNTS", "description": "None", "count": 0, "amount": 0})
 
 	# --- Item count ---
-	item_count = frappe.db.sql(
-		"""
-        SELECT SUM(ABS(sii.qty)) AS total_items
-        FROM `tabSales Invoice Item` sii
-        INNER JOIN `tabSales Invoice` si ON si.name = sii.parent
-        WHERE {where}
-        """.format(where=where),
-		params,
-		as_dict=True,
+	# Signed, net per row (matching the tax breakdown's own documented sign
+	# convention above): a credit note's negative qty must reduce, not inflate,
+	# the count. ABS-then-SUM double counted returns as extra sales.
+	sii = frappe.qb.DocType("Sales Invoice Item")
+	si = frappe.qb.DocType("Sales Invoice")
+	item_count_query = (
+		frappe.qb.from_(sii)
+		.inner_join(si)
+		.on(si.name == sii.parent)
+		.select(
+			Sum(Case().when(sii.qty > 0, sii.qty).else_(0)).as_("sold"),
+			Sum(Case().when(sii.qty < 0, -sii.qty).else_(0)).as_("returned"),
+		)
 	)
+	item_count = _filter_invoices(item_count_query, si, report_date, branch, company).run(as_dict=True)
 
 	data.append(
 		{
 			"category": "Total Items Sold",
 			"description": "",
-			"count": int(item_count[0].total_items or 0) if item_count else 0,
+			"count": int(item_count[0].sold or 0) if item_count else 0,
+			"amount": None,
+		}
+	)
+	data.append(
+		{
+			"category": "Total Items Returned",
+			"description": "",
+			"count": int(item_count[0].returned or 0) if item_count else 0,
+			"amount": None,
+		}
+	)
+
+	# --- Opening Deposit (TIS Spec §16.1.12) ---
+	# No POS Opening Entry / till-float workflow is wired to TIS branches in
+	# this app, so there is no real figure to report. Show 0 rather than
+	# inventing one; wire this to a cash-float doctype if the business starts
+	# tracking it.
+	data.append(
+		{"category": "Opening Deposit", "description": "Not tracked by this app", "count": None, "amount": 0}
+	)
+
+	# --- Number of Incomplete Sales (TIS Spec §16.1.20) ---
+	# "Incomplete sale" (started at the till, never finalized) has no tracked
+	# signal here — a Sales Invoice document only exists once created, and a
+	# draft (docstatus=0) is already reported above as PS. Show 0 rather than
+	# a misleading proxy.
+	data.append(
+		{
+			"category": "Number of Incomplete Sales",
+			"description": "Not tracked by this app",
+			"count": 0,
 			"amount": None,
 		}
 	)
@@ -266,19 +340,46 @@ def get_data(filters):
 			"colors": ["#2490ef"],
 		}
 
-# --- Stamp the Z-report watermark so the X report knows the lower bound ---
-# Without this write the X report silently aggregates all history while
-# printing "No previous Z Report" (it reads custom_last_z_report_date, which
-# nothing else in the app ever sets). Z is the end-of-day boundary that resets
-# X; the watermark belongs on the device initialization record.
-	if branch:
-		frappe.db.set_value(
-			"TIS Device Initialization",
-			{"branch_id": branch, "active": 1},
-			"custom_last_z_report_date",
-			now_datetime(),
-			update_modified=False,
-	)
-
-
 	return data, report_summary, chart
+
+
+@frappe.whitelist()
+def close_z_report(date, branch, company=None):
+	"""Explicitly close the Z report for ``date``/``branch``.
+
+	This is the ONLY place allowed to stamp ``custom_last_z_report_date`` — a
+	Z report is the immutable end-of-day closing record and the X report uses
+	this watermark as its lower bound (etims_x_daily_report.py). Writing it as
+	a side effect of merely viewing/filtering the report (the previous
+	behavior) silently moved the boundary forward on every page load and
+	corrupted the audit trail. This must be a deliberate, once-per-day action
+	triggered from the report's "Close Z Report" button.
+	"""
+	if "System Manager" not in frappe.get_roles() and "eTIMS Administrator" not in frappe.get_roles():
+		frappe.throw(_("Not permitted"), frappe.PermissionError)
+
+	report_date = getdate(date)
+	device = frappe.db.get_value(
+		"TIS Device Initialization",
+		{"branch_id": branch, "active": 1},
+		["name", "custom_last_z_report_date"],
+		as_dict=True,
+	)
+	if not device:
+		frappe.throw(_("No active TIS Device Initialization found for branch {0}").format(branch))
+
+	if device.custom_last_z_report_date and getdate(device.custom_last_z_report_date) >= report_date:
+		frappe.throw(
+			_("The Z report for {0} (branch {1}) is already closed as of {2}. It cannot be re-closed.").format(
+				report_date, branch, device.custom_last_z_report_date
+			)
+		)
+
+	frappe.db.set_value(
+		"TIS Device Initialization",
+		device.name,
+		"custom_last_z_report_date",
+		report_date,
+		update_modified=False,
+	)
+	return {"status": "success", "closed_date": str(report_date), "branch": branch}

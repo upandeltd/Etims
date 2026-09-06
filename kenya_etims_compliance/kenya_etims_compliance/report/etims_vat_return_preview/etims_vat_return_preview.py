@@ -20,9 +20,10 @@ as in the Z/X reports.
 
 import frappe
 from frappe import _
+from frappe.query_builder.functions import Sum
 from frappe.utils import flt
 
-from kenya_etims_compliance.kenya_etims_compliance.utils.etims_utils import (
+from kenya_etims_compliance.utils.etims_utils import (
 	KRA_TAX_BANDS,
 )
 
@@ -154,79 +155,72 @@ def _aggregate_sales_bands(from_date, to_date, company):
 	with the natural sign so credit notes reduce the totals. The rate is
 	taken from the linked Account row at query time, not hardcoded.
 	"""
-	company_clause = "AND par.company = %(company)s" if company else ""
+	child = frappe.qb.DocType("Sales Taxes and Charges")
+	par = frappe.qb.DocType("Sales Invoice")
+	acc = frappe.qb.DocType("Account")
 
-	rows = frappe.db.sql(
-		f"""
-        SELECT
-            child.custom_code AS tax_code,
-            SUM(child.custom_total_taxable_amount) AS taxable_amount,
-            SUM(child.base_tax_amount_after_discount_amount) AS tax_amount,
-            acc.tax_rate AS tax_rate
-        FROM `tabSales Taxes and Charges` child
-        INNER JOIN `tabSales Invoice` par ON par.name = child.parent
-        LEFT JOIN `tabAccount` acc ON acc.name = child.account_head
-        WHERE child.custom_code IN %(codes)s
-            AND par.docstatus = 1
-            AND par.custom_update_invoice_in_tims = 1
-            AND par.posting_date BETWEEN %(from_date)s AND %(to_date)s
-            {company_clause}
-        GROUP BY child.custom_code, acc.tax_rate
-        """,
-		{
-			"codes": list(KRA_TAX_BANDS),
-			"from_date": from_date,
-			"to_date": to_date,
-			"company": company,
-		},
-		as_dict=True,
+	query = (
+		frappe.qb.from_(child)
+		.inner_join(par)
+		.on(par.name == child.parent)
+		.left_join(acc)
+		.on(acc.name == child.account_head)
+		.where(child.custom_code.isin(list(KRA_TAX_BANDS)))
+		.where(par.docstatus == 1)
+		.where(par.custom_update_invoice_in_tims == 1)
+		.where(par.posting_date.between(from_date, to_date))
+		.groupby(child.custom_code, acc.tax_rate)
+		.select(
+			child.custom_code.as_("tax_code"),
+			Sum(child.custom_total_taxable_amount).as_("taxable_amount"),
+			Sum(child.base_tax_amount_after_discount_amount).as_("tax_amount"),
+			acc.tax_rate.as_("tax_rate"),
+		)
 	)
 
-	return _collect_bands(rows)
+	if company:
+		query = query.where(par.company == company)
+
+	return _collect_bands(query.run(as_dict=True))
 
 
 def _aggregate_purchase_bands(from_date, to_date, company, match_status):
 	"""Aggregate Purchase Taxes and Charges rows by KRA A-E band."""
-	company_clause = "AND par.company = %(company)s" if company else ""
+	child = frappe.qb.DocType("Purchase Taxes and Charges")
+	par = frappe.qb.DocType("Purchase Invoice")
+	acc = frappe.qb.DocType("Account")
 
-	if match_status == "Matched":
-		match_clause = "AND par.custom_kra_match_status = 'Matched'"
-	elif match_status == "not matched":
-		match_clause = (
-			"AND (par.custom_kra_match_status IS NULL "
-			"OR par.custom_kra_match_status = '' "
-			"OR par.custom_kra_match_status NOT IN ('Matched', 'Matched'))"
+	query = (
+		frappe.qb.from_(child)
+		.inner_join(par)
+		.on(par.name == child.parent)
+		.left_join(acc)
+		.on(acc.name == child.account_head)
+		.where(child.custom_code.isin(list(KRA_TAX_BANDS)))
+		.where(par.docstatus == 1)
+		.where(par.posting_date.between(from_date, to_date))
+		.groupby(child.custom_code, acc.tax_rate)
+		.select(
+			child.custom_code.as_("tax_code"),
+			Sum(child.custom_total_taxable_amount).as_("taxable_amount"),
+			Sum(child.base_tax_amount_after_discount_amount).as_("tax_amount"),
+			acc.tax_rate.as_("tax_rate"),
 		)
-	else:
-		match_clause = ""
-
-	rows = frappe.db.sql(
-		f"""
-        SELECT
-            child.custom_code AS tax_code,
-            SUM(child.custom_total_taxable_amount) AS taxable_amount,
-            SUM(child.base_tax_amount_after_discount_amount) AS tax_amount,
-            acc.tax_rate AS tax_rate
-        FROM `tabPurchase Taxes and Charges` child
-        INNER JOIN `tabPurchase Invoice` par ON par.name = child.parent
-        LEFT JOIN `tabAccount` acc ON acc.name = child.account_head
-        WHERE child.custom_code IN %(codes)s
-            AND par.docstatus = 1
-            AND par.posting_date BETWEEN %(from_date)s AND %(to_date)s
-            {company_clause}
-            {match_clause}
-        GROUP BY child.custom_code, acc.tax_rate
-        """,
-		{
-			"codes": list(KRA_TAX_BANDS),
-			"from_date": from_date,
-			"to_date": to_date,
-			"company": company,
-		},
-		as_dict=True,
 	)
 
-	return _collect_bands(rows)
+	if company:
+		query = query.where(par.company == company)
+
+	if match_status == "Matched":
+		query = query.where(par.custom_kra_match_status == "Matched")
+	elif match_status == "not matched":
+		query = query.where(
+			par.custom_kra_match_status.isnull()
+			| (par.custom_kra_match_status == "")
+			| par.custom_kra_match_status.notin(["Matched"])
+		)
+
+	return _collect_bands(query.run(as_dict=True))
 
 
 def _collect_bands(rows):

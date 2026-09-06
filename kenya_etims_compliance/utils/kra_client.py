@@ -176,12 +176,6 @@ class KRAClient:
 	def select_item(self, payload):
 		return self.post("selectItem", payload)
 
-	def select_trns_sales_info(self, payload):
-		return self.post("selectTrnsSalesInfo", payload)
-
-	def select_trns_purchase_info(self, payload):
-		return self.post("selectTrnsPurchaseInfo", payload)
-
 	def select_notice_info(self, payload):
 		return self.post("selectNoticeInfo", payload)
 

@@ -6,11 +6,8 @@ from frappe.tests.utils import FrappeTestCase
 
 from kenya_etims_compliance.custom_methods.item import searchItemReq, selectItemReq
 from kenya_etims_compliance.custom_methods.organization import get_org_user_info
-from kenya_etims_compliance.custom_methods.purchase_invoice import (
-	searchPurchaseTrnsReq,
-	selectPurchaseTrnsInfoReq,
-)
-from kenya_etims_compliance.custom_methods.sales_invoice import searchSalesTrnsReq, selectSalesTrnsInfoReq
+from kenya_etims_compliance.custom_methods.purchase_invoice import searchPurchaseTrnsReq
+from kenya_etims_compliance.custom_methods.sales_invoice import searchSalesTrnsReq
 from kenya_etims_compliance.custom_methods.stock import searchStockMoveReq
 from kenya_etims_compliance.custom_methods.stock_release import (
 	get_stock_release_list,
@@ -110,16 +107,6 @@ class TestETimsAPI(FrappeTestCase):
 		result = eTIMS.selectItem("TEST_ITEM_CODE")
 		self.assertIsInstance(result, dict)
 
-	def test_select_sales_trns_info(self):
-		"""Test selectTrnsSalesInfo"""
-		result = eTIMS.selectTrnsSalesInfo("12345")
-		self.assertIsInstance(result, dict)
-
-	def test_select_purchase_trns_info(self):
-		"""Test selectTrnsPurchaseInfo"""
-		result = eTIMS.selectTrnsPurchaseInfo("12345")
-		self.assertIsInstance(result, dict)
-
 	def test_select_notice_info(self):
 		"""Test selectNoticeInfo"""
 		result = eTIMS.selectNoticeInfo("NOTICE123")
@@ -158,19 +145,9 @@ class TestETimsWhitelistedMethods(FrappeTestCase):
 		result = searchSalesTrnsReq()
 		self.assertIsInstance(result, dict)
 
-	def test_select_sales_trns_info_req(self):
-		"""Test selectSalesTrnsInfoReq whitelisted method"""
-		result = selectSalesTrnsInfoReq("12345")
-		self.assertIsInstance(result, dict)
-
 	def test_search_purchase_trns_req(self):
 		"""Test searchPurchaseTrnsReq whitelisted method"""
 		result = searchPurchaseTrnsReq()
-		self.assertIsInstance(result, dict)
-
-	def test_select_purchase_trns_info_req(self):
-		"""Test selectPurchaseTrnsInfoReq whitelisted method"""
-		result = selectPurchaseTrnsInfoReq("12345")
 		self.assertIsInstance(result, dict)
 
 	def test_sync_stock_release_number(self):

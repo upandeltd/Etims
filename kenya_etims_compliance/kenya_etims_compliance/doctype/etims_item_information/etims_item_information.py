@@ -8,6 +8,7 @@ from frappe import _
 from frappe.model.document import Document
 
 from kenya_etims_compliance.utils.etims_utils import (
+	ensure_item_classification,
 	eTIMS,
 	get_country_of_origin,
 	get_item_tax_template,
@@ -330,7 +331,7 @@ def create_new_item_doctype(item):
 		new_item_doc.item_group = get_item_type(item.get("itemCd"))
 		new_item_doc.stock_uom = "Nos"
 		new_item_doc.custom_country_of_origin = nat_of_origin
-		new_item_doc.custom_item_classification_code = item.get("itemClsCd")
+		new_item_doc.custom_item_classification_code = ensure_item_classification(item.get("itemClsCd"))
 		new_item_doc.custom_packaging_unit_code = item.get("pkgUnitCd")
 		new_item_doc.custom_quantity_unit_code = item.get("qtyUnitCd")
 		new_item_doc.custom_default_unit_price = item.get("dftPrc")

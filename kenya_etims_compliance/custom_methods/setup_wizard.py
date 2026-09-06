@@ -234,58 +234,130 @@ def step5_fetch_classifications():
 		return {"status": "error", "message": result.get("Error", "Failed to fetch classifications")}
 
 
+KRA_TAX_CODES = {
+	"A": {"name": "Exempt", "rate": 0},
+	"B": {"name": "16.00%", "rate": 16},
+	"C": {"name": "0%", "rate": 0},
+	"D": {"name": "Non-VAT", "rate": 0},
+	"E": {"name": "8%", "rate": 8},
+}
+
+
+def get_kra_tax_codes():
+	"""KRA tax type codes A-E with display names and default rates.
+
+	Per the KRA TIS for OSCU/VSCU spec (receipt tax summary: Exempt, VAT at
+	16%, Zero rated, Non Vatable, VAT at 8%) and confirmed against a live
+	KRA-compliant company's Chart of Accounts import (Tax Master Data:
+	VAT-A-Exempt, VAT-B-16.00%, VAT-C-0%, VAT-D-Non-VAT, VAT-E-8%) — NOT the
+	app's own prior guess. Do not reorder without re-checking both sources:
+	A and B are not "A=standard rate", they are Exempt/16% respectively.
+	"""
+	return KRA_TAX_CODES
+
+
+def build_kra_tax_template(company, code, info):
+	"""Build a KRA-band Item Tax Template doc (code + name + tax row).
+
+	The tax row's account MUST be specific to this KRA band — bands A-E have
+	different accounting treatment, so the lookup matches ``Account.custom_tax_code``
+	to this band's code, never "any Tax-type account for the company" — that
+	would silently commingle unrelated bands' collections into one GL bucket.
+	If no such account exists yet, one is auto-created (see
+	``_get_or_create_band_account``). A company with no Duties and Taxes
+	group to nest under gets a template with no tax row (a valid, inert
+	Item Tax Template — ``Item Tax Template.validate()`` doesn't require
+	one) and a logged warning, rather than posting to the wrong account.
+	"""
+	account_name = _get_or_create_band_account(company, code, info)
+	template = frappe.get_doc(
+		{
+			"doctype": "Item Tax Template",
+			"title": f"KRA {code} - {info['name']}",
+			"company": company,
+			"custom_code": code,
+			"custom_code_name": info["name"],
+		}
+	)
+	if account_name:
+		template.append("taxes", {"tax_type": account_name, "tax_rate": info["rate"]})
+	else:
+		frappe.log_error(
+			title="eTIMS: KRA tax band unmapped",
+			message=(
+				f"No Duties and Taxes group account found for company {company!r} to create "
+				f"the KRA band {code} - {info['name']} account under. Created "
+				f"'KRA {code} - {info['name']}' without a tax row; postings for this band "
+				f"won't hit any GL account until one is created and tagged custom_tax_code={code!r}."
+			),
+		)
+	return template
+
+
+def _get_or_create_band_account(company, code, info):
+	"""Find the company's GL account tagged for this KRA band, or create one.
+
+	New accounts are named ``VAT-{code}-{name}`` (e.g. ``VAT-A-Exempt``) —
+	the same convention used by other KRA-compliant companies' Chart of
+	Accounts (see Tax Master Data reference import) — nested under the
+	company's Tax-type group account (standard CoA: "Duties and Taxes").
+	Returns None if the company has no such group to nest under.
+
+	Always (re)writes the account's own ``tax_rate`` to match this band.
+	``Item Tax Template Detail.tax_rate`` has a ``fetch_from: tax_type.tax_rate``
+	/ ``fetch_if_empty`` property setter, and Frappe treats ``0`` as empty for
+	that check — so every 0%-rate band (Exempt, Zero Rated, Non-VAT) refetches
+	from the Account on each save. Leaving the Account's rate stale (e.g. from
+	a reused pre-existing account) silently overwrites the template row the
+	next time it's saved; keeping the Account itself correct makes that fetch
+	a no-op instead of a corruption.
+	"""
+	existing = frappe.get_all(
+		"Account",
+		filters={"company": company, "custom_tax_code": code, "is_group": 0},
+		fields=["name"],
+		limit=1,
+	)
+	if existing:
+		frappe.db.set_value("Account", existing[0].name, "tax_rate", info["rate"])
+		return existing[0].name
+
+	parent = frappe.get_all(
+		"Account",
+		filters={"company": company, "account_type": "Tax", "is_group": 1},
+		fields=["name"],
+		order_by="lft",
+		limit=1,
+	)
+	if not parent:
+		return None
+
+	account = frappe.get_doc(
+		{
+			"doctype": "Account",
+			"account_name": f"VAT-{code}-{info['name']}",
+			"parent_account": parent[0].name,
+			"company": company,
+			"account_type": "Tax",
+			"custom_tax_code": code,
+			"tax_rate": info["rate"],
+		}
+	)
+	account.insert(ignore_permissions=True)
+	return account.name
+
+
 @frappe.whitelist()
 def step6_create_tax_templates(company):
 	"""Step 6: Auto-create Item Tax Templates for KRA tax codes A-E."""
 	if "System Manager" not in frappe.get_roles() and "eTIMS Administrator" not in frappe.get_roles():
 		frappe.throw(_("Not permitted"), frappe.PermissionError)
-	tax_codes = {
-		"A": {"name": "VAT 16%", "rate": 16},
-		"B": {"name": "Zero Rated", "rate": 0},
-		"C": {"name": "Exempt", "rate": 0},
-		"D": {"name": "Non-VAT", "rate": 0},
-		"E": {"name": "Excise Duty", "rate": 0},
-	}
-
-	# Find the default VAT account
-	vat_accounts = frappe.get_all(
-		"Account",
-		filters={
-			"company": company,
-			"account_type": "Tax",
-			"is_group": 0,
-		},
-		fields=["name", "tax_rate"],
-		limit=5,
-	)
 
 	created = 0
-	for code, info in tax_codes.items():
-		template_name = f"KRA {code} - {info['name']}"
-		if frappe.db.exists("Item Tax Template", {"custom_code": code}):
+	for code, info in KRA_TAX_CODES.items():
+		if frappe.db.exists("Item Tax Template", {"company": company, "custom_code": code}):
 			continue
-
-		template = frappe.get_doc(
-			{
-				"doctype": "Item Tax Template",
-				"title": template_name,
-				"company": company,
-				"custom_code": code,
-				"custom_code_name": info["name"],
-			}
-		)
-
-		# Add tax row if we have a VAT account
-		if vat_accounts:
-			template.append(
-				"taxes",
-				{
-					"tax_type": vat_accounts[0].name,
-					"tax_rate": info["rate"],
-				},
-			)
-
-		template.insert(ignore_permissions=True)
+		build_kra_tax_template(company, code, info).insert(ignore_permissions=True)
 		created += 1
 
 	# No explicit commit: the request auto-commits on success and rolls back the

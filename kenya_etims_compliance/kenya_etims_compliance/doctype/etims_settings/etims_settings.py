@@ -7,6 +7,10 @@ from frappe.model.document import Document
 
 from kenya_etims_compliance.utils.permissions import require
 
+# KRA's purchase worklist holds unconfirmed rows of any age, so the pull window
+# has to span a claimable history rather than a recent slice. Five years.
+DEFAULT_PURCHASE_FETCH_LOOKBACK_DAYS = 1825
+
 
 class eTIMSSettings(Document):
 	def validate(self):
@@ -77,6 +81,7 @@ def get_etims_settings():
 		"wait_for_etims_before_print": 1,
 		"etims_print_wait_seconds": 6,
 		"vat_obligation": "Registered",
+		"purchase_fetch_lookback_days": DEFAULT_PURCHASE_FETCH_LOOKBACK_DAYS,
 	}
 
 	try:
@@ -98,6 +103,10 @@ def get_etims_settings():
 		result["production_api_url"] = _defaults["production_api_url"]
 	if not result.get("sandbox_api_url"):
 		result["sandbox_api_url"] = _defaults["sandbox_api_url"]
+	# An Int field that was never filled in reads back as 0, and a zero-day
+	# window would ask KRA for purchases since "now" — i.e. for nothing.
+	if not result.get("purchase_fetch_lookback_days"):
+		result["purchase_fetch_lookback_days"] = _defaults["purchase_fetch_lookback_days"]
 
 	if is_privileged:
 		return result

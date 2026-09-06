@@ -130,12 +130,18 @@ class TestETIMSResponseUtils(FrappeTestCase):
 class TestSARNumberUtils(FrappeTestCase):
 	"""Tests for get_next_sar_number and get_org_sar_number."""
 
-	@patch("kenya_etims_compliance.utils.etims_utils.frappe.db.sql")
+	@patch("kenya_etims_compliance.utils.etims_utils.frappe.qb", new_callable=MagicMock)
 	@patch("kenya_etims_compliance.utils.etims_utils.frappe.new_doc")
 	@patch("kenya_etims_compliance.utils.etims_utils.get_org_sar_number")
-	def test_get_next_sar_number_increment(self, mock_get_org, mock_new_doc, mock_sql):
+	def test_get_next_sar_number_increment(self, mock_get_org, mock_new_doc, mock_qb):
 		"""get_next_sar_number should increment the highest existing sr_number by 1."""
-		mock_sql.return_value = [{"sr_number": 42}]
+		mock_query = mock_qb.from_.return_value
+		mock_query.where.return_value = mock_query
+		mock_query.orderby.return_value = mock_query
+		mock_query.limit.return_value = mock_query
+		mock_query.for_update.return_value = mock_query
+		mock_query.select.return_value = mock_query
+		mock_query.run.return_value = [{"sr_number": 42}]
 		mock_get_org.return_value = 0
 
 		mock_doc_instance = MagicMock()
@@ -147,17 +153,23 @@ class TestSARNumberUtils(FrappeTestCase):
 
 		result = get_next_sar_number(mock_doc, branch_id="HO")
 		self.assertEqual(result, 43)
-		mock_sql.assert_called_once()
-		self.assertTrue("FOR UPDATE" in mock_sql.call_args[0][0])
+		mock_query.for_update.assert_called_once()
+		mock_query.run.assert_called_once_with(as_dict=True)
 		self.assertEqual(mock_doc_instance.sr_number, 43)
 		mock_doc_instance.insert.assert_called_once()
 
-	@patch("kenya_etims_compliance.utils.etims_utils.frappe.db.sql")
+	@patch("kenya_etims_compliance.utils.etims_utils.frappe.qb", new_callable=MagicMock)
 	@patch("kenya_etims_compliance.utils.etims_utils.frappe.new_doc")
 	@patch("kenya_etims_compliance.utils.etims_utils.get_org_sar_number")
-	def test_get_next_sar_number_first_entry(self, mock_get_org, mock_new_doc, mock_sql):
+	def test_get_next_sar_number_first_entry(self, mock_get_org, mock_new_doc, mock_qb):
 		"""get_next_sar_number should return 1 when no previous SAR records exist."""
-		mock_sql.return_value = []
+		mock_query = mock_qb.from_.return_value
+		mock_query.where.return_value = mock_query
+		mock_query.orderby.return_value = mock_query
+		mock_query.limit.return_value = mock_query
+		mock_query.for_update.return_value = mock_query
+		mock_query.select.return_value = mock_query
+		mock_query.run.return_value = []
 		mock_get_org.return_value = 0
 
 		mock_doc_instance = MagicMock()

@@ -12,7 +12,16 @@ class eTIMSPurchaseInvoice(Document):
 		# Create supplier if not exist
 		self.create_supplier()
 
-		if not self.erpnext_purchase_invoice_updated == 1:
+		# create_and_link_erpnext_purchase_invoice() assumes every item is
+		# already a real Item (it prices and invoices by item_name as if it
+		# were the Item Code). That's only guaranteed when the caller passed
+		# register_items=True to upsert_purchase_invoice, which pre-creates
+		# them. The daily background pull opts out of item creation, so
+		# skip this here too - otherwise it throws LinkValidationError deep
+		# in create_buying_price_list and rolls back the whole raw-detail
+		# savepoint in fetch_purchase_transactions, silently discarding the
+		# eTIMS Purchase Invoice on every single pull.
+		if self.flags.get("register_items") and not self.erpnext_purchase_invoice_updated == 1:
 			self.create_and_link_erpnext_purchase_invoice()
 
 	# Method to create and link etim's and erp's purchase invoices

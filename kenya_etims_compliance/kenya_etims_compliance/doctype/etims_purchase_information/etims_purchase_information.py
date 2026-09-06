@@ -46,75 +46,93 @@ class eTIMSPurchaseInformation(Document):
 			return {"Error": "An error occurred on TIS server!"}
 
 
-def process_purchases(response_json):
+def process_purchases(response_json, register_items=True):
 	data = response_json.get("data") or {}
-	invoices = data.get("saleList")
 
-	if invoices:
-		for invoice in invoices:
-			doc_exists = check_if_doc_exists(
-				"eTIMS Purchase Invoice", "supplier_invoice_number", invoice.get("spplrInvcNo")
-			)
-
-			sale_date = eTIMS.strp_date_object(invoice.get("salesDt"))
-
-			if not doc_exists:
-				new_doc = frappe.new_doc("eTIMS Purchase Invoice")
-				new_doc.supplier_pin = invoice.get("spplrTin")
-				new_doc.supplier_name = invoice.get("spplrNm")
-				new_doc.supplier_branch_id = invoice.get("spplrBhfId")
-				new_doc.supplier_invoice_number = invoice.get("spplrInvcNo")
-				new_doc.receipt_type_code = invoice.get("rcptTyCd")
-				new_doc.payment_type_code = invoice.get("pmtTyCd")
-				new_doc.validated_date = invoice.get("cfmDt")
-				new_doc.sale_date = sale_date
-				new_doc.stock_released_date = invoice.get("stockRlsDt")
-				new_doc.total_item_count = invoice.get("totItemCnt")
-				new_doc.taxable_amount_a = invoice.get("taxblAmtA")
-				new_doc.taxable_amount_b = invoice.get("taxblAmtB")
-				new_doc.taxable_amount_c = invoice.get("taxblAmtC")
-				new_doc.taxable_amount_d = invoice.get("taxblAmtD")
-				new_doc.taxable_amount_e = invoice.get("taxblAmtE")
-				new_doc.tax_rate_a = invoice.get("taxRtA")
-				new_doc.tax_rate_b = invoice.get("taxRtB")
-				new_doc.tax_rate_c = invoice.get("taxRtC")
-				new_doc.tax_rate_d = invoice.get("taxRtD")
-				new_doc.tax_rate_e = invoice.get("taxRtE")
-				new_doc.tax_amt_a = invoice.get("taxAmtA")
-				new_doc.tax_amt_b = invoice.get("taxAmtB")
-				new_doc.tax_amt_c = invoice.get("taxAmtC")
-				new_doc.tax_amt_d = invoice.get("taxAmtD")
-				new_doc.tax_amt_e = invoice.get("taxAmtE")
-				new_doc.total_taxable_amount = invoice.get("totTaxblAmt")
-				new_doc.total_tax_amount = invoice.get("totTaxAmt")
-				new_doc.total_amount = invoice.get("totAmt")
-				new_doc.remark = invoice.get("remark")
-
-				for item_detail in invoice.get("itemList"):
-					try:
-						# Method to create new item if not exists and register it to etims
-						eTIMS.map_new_item(item_detail)
-						item_dict = assign_purchase_item(item_detail)
-
-						new_doc.append("items", item_dict)
-
-					except (frappe.ValidationError, frappe.DoesNotExistError) as e:
-						frappe.log_error(
-							title="eTIMS: Purchase Item Processing failed", message=traceback.format_exc()
-						)
-						frappe.throw(str(e))
-
-				new_doc.insert()
+	for invoice in data.get("saleList") or []:
+		upsert_purchase_invoice(invoice, register_items=register_items)
 
 
-def check_if_doc_exists(doc, doc_filter, doc_value):
-	cdcls_exists = False
-	code_info_docs = frappe.db.get_all(doc, filters={doc_filter: doc_value})
+def upsert_purchase_invoice(invoice, register_items=False):
+	"""Store one KRA ``saleList`` row as an eTIMS Purchase Invoice, items included.
 
-	if code_info_docs:
-		cdcls_exists = True
+	The per-band totals (taxblAmt/taxRt/taxAmt A-E) and the full ``itemList`` are
+	the only place KRA's own tax decomposition is recorded, so they are always
+	persisted — reconciliation reads them to compare band by band instead of
+	inferring a mismatch from a single total.
 
-	return cdcls_exists
+	register_items: also create and KRA-register any unknown Item. Only the
+	manual search does this; the daily pull must not silently create Items or
+	POST to KRA on every tick.
+
+	Returns the eTIMS Purchase Invoice name (existing or newly created).
+	"""
+	supplier_pin = invoice.get("spplrTin") or ""
+	supplier_invoice_number = invoice.get("spplrInvcNo")
+
+	# KRA invoice numbers are per-supplier sequences, so the PIN is half the
+	# identity. Matching on the number alone collided across suppliers and
+	# silently dropped the second supplier's invoice.
+	existing = frappe.db.get_value(
+		"eTIMS Purchase Invoice",
+		{"supplier_pin": supplier_pin, "supplier_invoice_number": supplier_invoice_number},
+		"name",
+	)
+	if existing:
+		return existing
+
+	new_doc = frappe.new_doc("eTIMS Purchase Invoice")
+	new_doc.supplier_pin = supplier_pin
+	new_doc.supplier_name = invoice.get("spplrNm")
+	new_doc.supplier_branch_id = invoice.get("spplrBhfId")
+	new_doc.supplier_invoice_number = supplier_invoice_number
+	new_doc.receipt_type_code = invoice.get("rcptTyCd")
+	new_doc.payment_type_code = invoice.get("pmtTyCd")
+	new_doc.validated_date = invoice.get("cfmDt")
+	new_doc.sale_date = eTIMS.strp_date_object(invoice.get("salesDt"))
+	new_doc.stock_released_date = invoice.get("stockRlsDt")
+	new_doc.total_item_count = invoice.get("totItemCnt")
+	new_doc.taxable_amount_a = invoice.get("taxblAmtA")
+	new_doc.taxable_amount_b = invoice.get("taxblAmtB")
+	new_doc.taxable_amount_c = invoice.get("taxblAmtC")
+	new_doc.taxable_amount_d = invoice.get("taxblAmtD")
+	new_doc.taxable_amount_e = invoice.get("taxblAmtE")
+	new_doc.tax_rate_a = invoice.get("taxRtA")
+	new_doc.tax_rate_b = invoice.get("taxRtB")
+	new_doc.tax_rate_c = invoice.get("taxRtC")
+	new_doc.tax_rate_d = invoice.get("taxRtD")
+	new_doc.tax_rate_e = invoice.get("taxRtE")
+	new_doc.tax_amt_a = invoice.get("taxAmtA")
+	new_doc.tax_amt_b = invoice.get("taxAmtB")
+	new_doc.tax_amt_c = invoice.get("taxAmtC")
+	new_doc.tax_amt_d = invoice.get("taxAmtD")
+	new_doc.tax_amt_e = invoice.get("taxAmtE")
+	new_doc.total_taxable_amount = invoice.get("totTaxblAmt")
+	new_doc.total_tax_amount = invoice.get("totTaxAmt")
+	new_doc.total_amount = invoice.get("totAmt")
+	new_doc.remark = invoice.get("remark")
+
+	for item_detail in invoice.get("itemList") or []:
+		if register_items:
+			try:
+				eTIMS.map_new_item(item_detail)
+			except (frappe.ValidationError, frappe.DoesNotExistError):
+				frappe.log_error(
+					title="eTIMS: Purchase Item Processing failed", message=traceback.format_exc()
+				)
+				raise
+
+		new_doc.append("items", assign_purchase_item(item_detail))
+
+	# after_insert reads this to decide whether it's safe to build the
+	# ERPNext-side Purchase Invoice: that flow treats item_name as a real
+	# Item Code, which is only true when register_items mapped/created the
+	# Items above. The daily pull (register_items=False) must still persist
+	# the raw KRA row for reconciliation without that side effect.
+	new_doc.flags.register_items = register_items
+	new_doc.insert(ignore_permissions=True)
+
+	return new_doc.name
 
 
 def assign_purchase_item(item_detail):

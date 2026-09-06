@@ -119,7 +119,7 @@ def get_data(filters):
 		order_by="posting_date desc",
 		limit_page_length=5000,
 	):
-		has_invoice = pi.custom_invoice_number and pi.custom_invoice_number > 0
+		has_invoice = bool(pi.custom_invoice_number) and pi.custom_invoice_number != "0"
 		status = _get_status(pi.custom_update_purchase_in_tims, has_invoice)
 		backed = "Yes" if has_invoice else "No"
 		data.append(

@@ -75,11 +75,10 @@ def process_queue_entry(queue_entry_name):
 	Calls the KRA API and updates both the queue entry and source document.
 	"""
 	# Lock the queue entry to prevent concurrent processing
-	locked_status = frappe.db.sql(
-		"SELECT status FROM `tabeTIMS Invoice Queue` WHERE name=%s FOR UPDATE",
-		queue_entry_name,
-		as_dict=True,
-	)
+	queue = frappe.qb.DocType("eTIMS Invoice Queue")
+	locked_status = (
+		frappe.qb.from_(queue).where(queue.name == queue_entry_name).for_update().select(queue.status)
+	).run(as_dict=True)
 	if not locked_status or locked_status[0].status not in ("Queued", "Failed"):
 		return  # Already processing or sent
 

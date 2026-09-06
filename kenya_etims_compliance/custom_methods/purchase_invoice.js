@@ -116,6 +116,15 @@ frappe.ui.form.on("Purchase Invoice",{
                     mark_as_manually_verified(frm);
                 }, __('eTIMS Actions'));
             }
+
+            // Reconciliation exception: KRA has no record of this purchase, and
+            // the operator says that is fine. Accepting here (not on the log's
+            // exception row) survives the next reconciliation re-run.
+            if (frm.doc.custom_kra_match_status === 'Not in KRA') {
+                frm.add_custom_button(__('Accept as Not in KRA'), function() {
+                    accept_not_in_kra(frm);
+                }, __('eTIMS Actions'));
+            }
         }
     },
 
@@ -277,4 +286,26 @@ function mark_as_manually_verified(frm) {
             }
         });
     }, __('Manual Verification Override'), __('Verify'));
+}
+
+function accept_not_in_kra(frm) {
+    frappe.prompt([
+        {
+            fieldname: 'reason',
+            fieldtype: 'Small Text',
+            label: __('Reason'),
+            description: __('Why this purchase is accepted without a matching KRA register entry. Stored on the invoice, so it survives the next reconciliation run.'),
+            reqd: 1
+        }
+    ], function(values) {
+        frappe.call({
+            method: 'kenya_etims_compliance.custom_methods.reconciliation.accept_local_exception',
+            args: {
+                purchase_invoice: frm.doc.name,
+                reason: values.reason
+            },
+            freeze: true,
+            callback: () => frm.reload_doc()
+        });
+    }, __('Accept as Not in KRA'), __('Accept'));
 }

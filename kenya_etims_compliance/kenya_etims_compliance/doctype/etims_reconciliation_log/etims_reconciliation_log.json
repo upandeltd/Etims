@@ -7,8 +7,11 @@
  "field_order": [
   "period",
   "branch",
+  "status",
   "run_date",
   "run_by",
+  "closed_by",
+  "closed_on",
   "column_break_1",
   "total_kra_entries",
   "match_rate",
@@ -16,7 +19,12 @@
   "total_mismatched",
   "total_missing_locally",
   "total_not_in_kra",
-  "total_variance"
+  "total_band_mismatches",
+  "total_variance",
+  "total_exceptions",
+  "unresolved_exceptions",
+  "section_break_exceptions",
+  "exceptions"
  ],
  "fields": [
   {
@@ -94,9 +102,67 @@
    "read_only": 1
   },
   {
+   "fieldname": "total_band_mismatches",
+   "fieldtype": "Int",
+   "label": "Band Mismatches",
+   "read_only": 1
+  },
+  {
    "fieldname": "total_variance",
    "fieldtype": "Currency",
    "label": "Total Variance",
+   "read_only": 1
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Draft\nClosed",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.status==\"Closed\"",
+   "fieldname": "closed_by",
+   "fieldtype": "Link",
+   "label": "Closed By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.status==\"Closed\"",
+   "fieldname": "closed_on",
+   "fieldtype": "Datetime",
+   "label": "Closed On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_exceptions",
+   "fieldtype": "Int",
+   "label": "Exceptions",
+   "read_only": 1
+  },
+  {
+   "bold": 1,
+   "fieldname": "unresolved_exceptions",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Unresolved",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_exceptions",
+   "fieldtype": "Section Break",
+   "label": "Exceptions"
+  },
+  {
+   "description": "Frozen at close. Accept variances on the source record, then re-run reconciliation.",
+   "fieldname": "exceptions",
+   "fieldtype": "Table",
+   "label": "Exceptions",
+   "options": "eTIMS Reconciliation Exception",
    "read_only": 1
   }
  ],

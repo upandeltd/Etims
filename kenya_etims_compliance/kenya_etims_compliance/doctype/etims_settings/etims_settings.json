@@ -39,7 +39,7 @@
   "enforce_invoice_verification",
   "auto_verify_invoices",
   "column_break_bpgc",
-  "allow_payment_unverified",
+  "purchase_fetch_lookback_days",
   "sb_queue",
   "enable_queue",
   "queue_max_retries",
@@ -218,10 +218,10 @@
   },
   {
    "default": "1",
-   "description": "Require all supplier invoices to be verified with KRA before payment. Critical for 2026 tax compliance.",
+   "description": "Block closing a reconciliation period while KRA-vs-local exceptions remain unresolved. Payment is never blocked - it warns and shows the invoice's KRA match status.",
    "fieldname": "enforce_invoice_verification",
    "fieldtype": "Check",
-   "label": "Enforce Invoice Verification"
+   "label": "Enforce Reconciliation at Period Close"
   },
   {
    "default": "0",
@@ -231,11 +231,12 @@
    "label": "Auto-Verify Invoices"
   },
   {
-   "default": "0",
-   "description": "Allow payments for unverified invoices with approval (not recommended - may affect tax deductibility)",
-   "fieldname": "allow_payment_unverified",
-   "fieldtype": "Check",
-   "label": "Allow Payment Without Verification"
+   "default": "1825",
+   "description": "How far back the daily pull asks KRA for purchases. selectTrnsPurchaseSalesList is a worklist of purchases you have not confirmed yet, of any age - not a change feed - so this must reach back over your whole claimable history, and it is never advanced forward. Default 1825 days (5 years). Narrow it only if the pull gets heavy.",
+   "fieldname": "purchase_fetch_lookback_days",
+   "fieldtype": "Int",
+   "label": "Purchase Fetch Lookback (Days)",
+   "non_negative": 1
   },
   {
    "fieldname": "column_break_owpm",

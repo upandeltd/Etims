@@ -8,11 +8,23 @@ import calendar
 
 import frappe
 from frappe import _
+from frappe.query_builder.functions import Sum
 from frappe.utils import add_months, flt, getdate, now_datetime
+
+from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import (
+	get_etims_settings,
+)
+from kenya_etims_compliance.utils.etims_utils import KRA_TAX_BANDS
 
 
 def run_reconciliation(period=None, branch=None):
-	"""Run purchase reconciliation for a given period.
+	"""Reconcile a period's purchases against KRA's register and file its exceptions.
+
+	The eTIMS Reconciliation Log for a (period, branch) pair *is* the period
+	document: re-running updates it in place and rebuilds its exception table,
+	so there is one authoritative statement of where the books and KRA's
+	purchase register disagree. A Closed period is a filed snapshot - it is
+	refused rather than silently rewritten.
 
 	Args:
 		period: YYYY-MM string (defaults to previous month)
@@ -33,30 +45,36 @@ def run_reconciliation(period=None, branch=None):
 	last_day = calendar.monthrange(int(year), int(month))[1]
 	to_date = f"{year}-{month}-{last_day}"
 
+	log = _get_period_log(period, branch)
+	if log and log.status == "Closed":
+		return {
+			"error": _("Period {0} is closed. Re-open it before reconciling again.").format(period),
+			"period": period,
+			"log": log.name,
+		}
+
 	# Step 0: Mark auto-created (from-eTIMS) PIs as Matched. Their corresponding
 	# KRA register entries are still counted once by the main loop below, so the
 	# count must NOT be added again — doing so double-counted them and pushed
 	# match_rate above 100%.
 	_prematch_auto_created(from_date, to_date, branch)
 
-	# Step 1: Get KRA entries
 	kra_entries = _get_kra_entries(from_date, to_date, branch)
-
-	# Step 2: Get local PIs
 	local_pis = _get_local_purchase_invoices(from_date, to_date, branch)
 
-	# Step 3: Run matching
 	matched = 0
 	mismatched = 0
 	missing_locally = 0
 	total_variance = 0
 	matched_pi_names = set()
+	exceptions = []
 
 	for entry in kra_entries:
 		if entry.match_status in ("Matched", "Matched (Auto-Created)"):
 			matched += 1
 			if entry.matched_purchase_invoice:
 				matched_pi_names.add(entry.matched_purchase_invoice)
+				exceptions.extend(_band_exceptions(entry, entry.matched_purchase_invoice))
 			continue
 
 		result = _match_entry(entry, local_pis, matched_pi_names)
@@ -64,53 +82,136 @@ def run_reconciliation(period=None, branch=None):
 		if result["status"] == "Matched":
 			matched += 1
 			matched_pi_names.add(result["pi_name"])
-		elif result["status"] == "Amount Mismatch":
+			exceptions.extend(_band_exceptions(entry, result["pi_name"]))
+			continue
+
+		if result["status"] == "Amount Mismatch":
 			mismatched += 1
-			total_variance += abs(result.get("variance", 0))
+			total_variance += abs(flt(result.get("variance")))
 			matched_pi_names.add(result["pi_name"])
+			exceptions.extend(_band_exceptions(entry, result["pi_name"]))
 		else:
 			missing_locally += 1
 
-	# Step 4: Find local PIs not in KRA
+		exceptions.append(_kra_exception(entry, result))
+
+	# Local invoices KRA never received. Accepted ones stay in the table as
+	# accepted rows - dropping them would make a resolved exception look like
+	# it never existed.
 	not_in_kra = 0
 	for pi in local_pis:
-		if pi.name not in matched_pi_names and pi.custom_kra_match_status != "Matched":
+		if pi.name in matched_pi_names or pi.custom_kra_match_status == "Matched":
+			continue
+
+		accepted = pi.custom_kra_match_status == "Accepted"
+		if not accepted:
 			frappe.db.set_value(
 				"Purchase Invoice", pi.name, "custom_kra_match_status", "Not in KRA", update_modified=False
 			)
-			not_in_kra += 1
+		not_in_kra += 1
+		exceptions.append(_local_exception(pi, accepted))
 
-	# Step 5: Log
-	total_matched_all = matched
 	total_entries = len(kra_entries)
-	match_rate = round((total_matched_all / total_entries) * 100, 1) if total_entries > 0 else 0
+	match_rate = round((matched / total_entries) * 100, 1) if total_entries > 0 else 0
+	unresolved = len([e for e in exceptions if not e["accepted"]])
+	band_mismatches = len([e for e in exceptions if e["exception_type"] == "Band Mismatch"])
 
-	frappe.get_doc(
+	log_name = _write_period_log(
+		log,
 		{
-			"doctype": "eTIMS Reconciliation Log",
 			"period": period,
 			"branch": branch,
 			"run_date": now_datetime(),
 			"run_by": frappe.session.user,
 			"total_kra_entries": total_entries,
 			"match_rate": match_rate,
-			"total_matched": total_matched_all,
+			"total_matched": matched,
 			"total_mismatched": mismatched,
 			"total_missing_locally": missing_locally,
 			"total_not_in_kra": not_in_kra,
+			"total_band_mismatches": band_mismatches,
 			"total_variance": total_variance,
-		}
-	).insert(ignore_permissions=True)
+			"total_exceptions": len(exceptions),
+			"unresolved_exceptions": unresolved,
+		},
+		exceptions,
+	)
 
 	return {
 		"period": period,
+		"log": log_name,
 		"total_kra_entries": total_entries,
-		"matched": total_matched_all,
+		"matched": matched,
 		"match_rate": match_rate,
 		"mismatched": mismatched,
 		"missing_locally": missing_locally,
 		"not_in_kra": not_in_kra,
+		"band_mismatches": band_mismatches,
 		"total_variance": total_variance,
+		"exceptions": len(exceptions),
+		"unresolved": unresolved,
+	}
+
+
+def _get_period_log(period, branch=None):
+	"""The newest reconciliation log for this period+branch, or None."""
+	filters = {"period": period, "branch": branch if branch else ["in", ["", None]]}
+	return frappe.db.get_value(
+		"eTIMS Reconciliation Log",
+		filters,
+		["name", "status"],
+		as_dict=True,
+		order_by="creation desc",
+	)
+
+
+def _write_period_log(log, summary, exceptions):
+	"""Create or refresh the period's log. Returns its name."""
+	doc = (
+		frappe.get_doc("eTIMS Reconciliation Log", log.name)
+		if log
+		else frappe.new_doc("eTIMS Reconciliation Log")
+	)
+	doc.update(summary)
+	doc.status = "Draft"
+	doc.set("exceptions", exceptions)
+	doc.save(ignore_permissions=True)
+	return doc.name
+
+
+def _kra_exception(entry, result):
+	pi = result.get("pi")
+	return {
+		"source": "KRA",
+		"exception_type": result["status"],
+		"supplier_pin": entry.supplier_pin,
+		"supplier_name": entry.supplier_name,
+		"kra_invoice_number": entry.kra_invoice_number,
+		"invoice_date": entry.invoice_date,
+		"kra_amount": entry.total_amount,
+		"local_amount": flt(pi.base_grand_total) if pi else 0,
+		"variance_amount": flt(result.get("variance")),
+		"register_entry": entry.name,
+		"purchase_invoice": pi.name if pi else None,
+		"accepted": 1 if entry.variance_accepted else 0,
+		"accepted_reason": entry.variance_reason,
+	}
+
+
+def _local_exception(pi, accepted):
+	return {
+		"source": "Local",
+		"exception_type": "Not in KRA",
+		"supplier_pin": pi.tax_id,
+		"supplier_name": pi.supplier,
+		"kra_invoice_number": pi.bill_no,
+		"invoice_date": pi.posting_date,
+		"kra_amount": 0,
+		"local_amount": pi.base_grand_total,
+		"variance_amount": flt(pi.base_grand_total),
+		"purchase_invoice": pi.name,
+		"accepted": 1 if accepted else 0,
+		"accepted_reason": pi.custom_kra_acceptance_reason if accepted else None,
 	}
 
 
@@ -151,6 +252,9 @@ def _get_kra_entries(from_date, to_date, branch=None):
 			"tax_amount",
 			"match_status",
 			"matched_purchase_invoice",
+			"etims_purchase_invoice",
+			"variance_accepted",
+			"variance_reason",
 		],
 		limit_page_length=0,
 	)
@@ -177,12 +281,35 @@ def _get_local_purchase_invoices(from_date, to_date, branch=None):
 			"custom_invoice_number",
 			"custom_purchase_is_from_etims",
 			"custom_kra_match_status",
+			"custom_kra_acceptance_reason",
+			"bill_no",
 		],
 		limit_page_length=0,
 	)
 
 
+def _normalise_invoice_no(value):
+	"""Comparable form of a supplier invoice number.
+
+	KRA stores ``spplrInvcNo`` as an integer sequence, ERPNext stores the same
+	number as free text in ``bill_no``, so "0544", 544 and " 544 " all have to
+	compare equal.
+	"""
+	text = str(value or "").strip().upper()
+	return text.lstrip("0") or text
+
+
 def _match_entry(entry, local_pis, already_matched):
+	"""Match one KRA register entry to a local Purchase Invoice.
+
+	Identity first: KRA's ``spplrInvcNo`` is the supplier's own invoice number,
+	which this app already transmits from ``bill_no`` (purchase_invoice.py) and
+	stores back on verification. When both sides carry it the pair is certain,
+	and any difference in money is then a real amount discrepancy rather than a
+	bad guess. Only when the number is missing or unmatched does the date+amount
+	heuristic run, and it stays tight - a wrong pairing files a wrong return.
+	"""
+	kra_invoice_no = _normalise_invoice_no(entry.kra_invoice_number)
 	candidates = []
 
 	for pi in local_pis:
@@ -191,16 +318,21 @@ def _match_entry(entry, local_pis, already_matched):
 		# Only match submitted (not cancelled) PIs
 		if (pi.tax_id or "") != entry.supplier_pin:
 			continue
+
+		variance = flt(pi.base_grand_total) - flt(entry.total_amount)
+
+		if kra_invoice_no and _normalise_invoice_no(pi.bill_no) == kra_invoice_no:
+			# No date window here: a supplier's invoice number is unique within
+			# their own sequence, and late filing is exactly the case where the
+			# dates legitimately differ by more than the tolerance.
+			return _settle(entry, pi, variance)
+
 		# Date tolerance: allow +/- 2 days for transmission delays
 		date_diff = abs((getdate(pi.posting_date) - getdate(entry.invoice_date)).days)
 		if date_diff > 2:
 			continue
 
-		variance = flt(pi.base_grand_total) - flt(entry.total_amount)
 		candidates.append({"pi": pi, "variance": variance, "date_diff": date_diff})
-
-	# Sort by: exact date first, then closest amount
-	candidates.sort(key=lambda x: (x["date_diff"], abs(x["variance"])))
 
 	if not candidates:
 		frappe.db.set_value(
@@ -212,15 +344,19 @@ def _match_entry(entry, local_pis, already_matched):
 		)
 		return {"status": "Missing Locally"}
 
-	candidates.sort(key=lambda x: abs(x["variance"]))
+	# Closest date first, then closest amount. The previous code re-sorted on
+	# amount alone immediately afterwards, throwing the date preference away.
+	candidates.sort(key=lambda c: (c["date_diff"], abs(c["variance"])))
 	best = candidates[0]
 
-	if abs(best["variance"]) <= 1:
-		_record_match(entry, best["pi"], "Matched", 0)
-		return {"status": "Matched", "pi_name": best["pi"].name}
-	else:
-		_record_match(entry, best["pi"], "Amount Mismatch", best["variance"])
-		return {"status": "Amount Mismatch", "pi_name": best["pi"].name, "variance": best["variance"]}
+	return _settle(entry, best["pi"], best["variance"])
+
+
+def _settle(entry, pi, variance):
+	# 1 KES absorbs rounding between KRA's own totals and ERPNext's.
+	status = "Matched" if abs(variance) <= 1 else "Amount Mismatch"
+	_record_match(entry, pi, status, 0 if status == "Matched" else variance)
+	return {"status": status, "pi_name": pi.name, "pi": pi, "variance": variance}
 
 
 def _record_match(entry, pi, status, variance):
@@ -247,33 +383,193 @@ def _record_match(entry, pi, status, variance):
 	)
 
 
+def _get_kra_bands(etims_purchase_invoice):
+	"""KRA's own per-band decomposition for one already-stored purchase row.
+
+	eTIMS Purchase Invoice is the only place this ever lands (see
+	upsert_purchase_invoice) - the register entry itself only carries a
+	single total_amount/tax_amount pair.
+	"""
+	fields = [f"taxable_amount_{code.lower()}" for code in KRA_TAX_BANDS] + [
+		f"tax_amt_{code.lower()}" for code in KRA_TAX_BANDS
+	]
+	row = frappe.db.get_value("eTIMS Purchase Invoice", etims_purchase_invoice, fields, as_dict=True)
+	if not row:
+		return {}
+	return {
+		code: {
+			"taxable_amount": flt(row.get(f"taxable_amount_{code.lower()}")),
+			"tax_amount": flt(row.get(f"tax_amt_{code.lower()}")),
+		}
+		for code in KRA_TAX_BANDS
+	}
+
+
+def _get_local_purchase_bands(pi_name):
+	"""One Purchase Invoice's own tax rows, aggregated by KRA A-E band.
+
+	Same custom_code / custom_total_taxable_amount /
+	base_tax_amount_after_discount_amount fields the VAT Return Preview
+	report aggregates across a period, scoped here to a single invoice.
+	"""
+	child = frappe.qb.DocType("Purchase Taxes and Charges")
+	rows = (
+		frappe.qb.from_(child)
+		.where(child.parent == pi_name)
+		.where(child.custom_code.isin(list(KRA_TAX_BANDS)))
+		.groupby(child.custom_code)
+		.select(
+			child.custom_code.as_("tax_code"),
+			Sum(child.custom_total_taxable_amount).as_("taxable_amount"),
+			Sum(child.base_tax_amount_after_discount_amount).as_("tax_amount"),
+		)
+		.run(as_dict=True)
+	)
+	return {
+		row.tax_code: {"taxable_amount": flt(row.taxable_amount), "tax_amount": flt(row.tax_amount)}
+		for row in rows
+	}
+
+
+def _band_exceptions(entry, pi_name):
+	"""Compare KRA's per-band decomposition against the matched PI's own tax
+	rows. A clean total match can still hide a wrong VAT band classification
+	- e.g. a standard-rated item recorded as exempt nets the same grand
+	total but files the wrong return - so every matched pair is checked
+	band by band, not just on the total that already agreed.
+	"""
+	if not entry.etims_purchase_invoice:
+		return []
+
+	kra_bands = _get_kra_bands(entry.etims_purchase_invoice)
+	if not kra_bands:
+		return []
+	local_bands = _get_local_purchase_bands(pi_name)
+
+	zero = {"taxable_amount": 0.0, "tax_amount": 0.0}
+	exceptions = []
+	for code in KRA_TAX_BANDS:
+		kra = kra_bands.get(code, zero)
+		local = local_bands.get(code, zero)
+		variance = kra["tax_amount"] - local["tax_amount"]
+		# Same 1 KES rounding tolerance _settle uses for the invoice total.
+		if abs(variance) <= 1 and abs(kra["taxable_amount"] - local["taxable_amount"]) <= 1:
+			continue
+
+		exceptions.append(
+			{
+				"source": "KRA",
+				"exception_type": "Band Mismatch",
+				"supplier_pin": entry.supplier_pin,
+				"supplier_name": entry.supplier_name,
+				"kra_invoice_number": entry.kra_invoice_number,
+				"invoice_date": entry.invoice_date,
+				"band_code": code,
+				"kra_amount": kra["tax_amount"],
+				"local_amount": local["tax_amount"],
+				"variance_amount": variance,
+				"register_entry": entry.name,
+				"purchase_invoice": pi_name,
+				"accepted": 1 if entry.variance_accepted else 0,
+				"accepted_reason": entry.variance_reason,
+			}
+		)
+	return exceptions
+
+
 @frappe.whitelist()
 def run_reconciliation_manual(period=None, branch=None):
 	"""Whitelisted method for manual reconciliation trigger."""
 	frappe.has_permission("eTIMS Reconciliation Log", "create", throw=True)
 	result = run_reconciliation(period, branch)
+	if result.get("error"):
+		frappe.throw(result["error"])
 	frappe.msgprint(
 		_(
-			"Reconciliation: {matched} matched, {mismatched} mismatched, "
-			"{missing_locally} missing locally, {not_in_kra} not in KRA"
+			"{period}: {matched} matched ({match_rate}%), {mismatched} mismatched, "
+			"{missing_locally} missing locally, {not_in_kra} not in KRA, "
+			"{band_mismatches} band mismatches. "
+			"{unresolved} of {exceptions} exceptions unresolved."
 		).format(**result)
 	)
 	return result
 
 
 @frappe.whitelist()
-def accept_variance(entry_name, reason):
-	"""Accept a variance with a reason."""
-	frappe.has_permission("eTIMS Purchase Register Entry", "write", throw=True)
+def accept_local_exception(purchase_invoice, reason):
+	"""Accept a purchase KRA has no record of, so it stops blocking the close.
+
+	Acceptance lives on the source record, never on the log's exception row, so
+	it survives a re-run: the next reconciliation rebuilds the table and reads
+	the acceptance back. The KRA side of the same decision is the register
+	entry's own `variance_accepted` field, which its form already exposes.
+	"""
+	if not reason:
+		frappe.throw(_("A reason is required to accept a reconciliation exception."))
+
+	frappe.has_permission("Purchase Invoice", "write", throw=True)
 	frappe.db.set_value(
-		"eTIMS Purchase Register Entry",
-		entry_name,
+		"Purchase Invoice",
+		purchase_invoice,
 		{
-			"variance_accepted": 1,
-			"variance_reason": reason,
+			"custom_kra_match_status": "Accepted",
+			"custom_kra_acceptance_reason": reason,
 		},
+		update_modified=False,
 	)
 	return {"status": "success"}
+
+
+@frappe.whitelist()
+def close_period(period, branch=None):
+	"""Freeze a period once its exceptions are resolved.
+
+	A close is only meaningful over freshly computed numbers, so this re-runs
+	the reconciliation first and refuses while anything is still unresolved -
+	that refusal is the whole control. `enforce_invoice_verification` turns it
+	into advice instead of a block for businesses that reconcile after filing.
+	"""
+	frappe.has_permission("eTIMS Reconciliation Log", "write", throw=True)
+
+	result = run_reconciliation(period, branch)
+	if result.get("error"):
+		frappe.throw(result["error"])
+
+	unresolved = result["unresolved"]
+	if unresolved and get_etims_settings().get("enforce_invoice_verification", 1):
+		frappe.throw(
+			_(
+				"{0} unresolved {1} in {2}. Accept each one with a reason, or fix the "
+				"underlying invoice and re-run, before closing the period."
+			).format(unresolved, _("exception") if unresolved == 1 else _("exceptions"), period)
+		)
+
+	frappe.db.set_value(
+		"eTIMS Reconciliation Log",
+		result["log"],
+		{
+			"status": "Closed",
+			"closed_by": frappe.session.user,
+			"closed_on": now_datetime(),
+		},
+	)
+	return result
+
+
+@frappe.whitelist()
+def reopen_period(log_name, reason):
+	"""Reopen a closed period. Auditable, and deliberately not silent."""
+	frappe.has_permission("eTIMS Reconciliation Log", "write", throw=True)
+	if not reason:
+		frappe.throw(_("A reason is required to reopen a closed period."))
+
+	doc = frappe.get_doc("eTIMS Reconciliation Log", log_name)
+	doc.status = "Draft"
+	doc.closed_by = None
+	doc.closed_on = None
+	doc.save()
+	doc.add_comment("Info", _("Period reopened: {0}").format(reason))
+	return {"status": "success", "log": doc.name}
 
 
 def reconcile_credit_notes(period=None, branch=None):

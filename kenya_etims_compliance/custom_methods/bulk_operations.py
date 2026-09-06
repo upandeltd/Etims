@@ -293,8 +293,8 @@ def _build_invoice_payload(doc):
 @frappe.whitelist()
 def bulk_verify_purchase_invoices(from_date=None, to_date=None):
 	"""Verify unverified Purchase Invoices with KRA in batch."""
-	# CRITICAL 9 — bulk verification writes custom_invoice_verified=1 and the
-	# payment-eligibility check (check_payment_eligibility) trusts that bit.
+	# CRITICAL 9 — bulk verification writes custom_invoice_verified=1, which the
+	# payment advisory and the reconciliation period close both read.
 	# require() gives us the base write grant; we narrow further so a plain
 	# Purchase Clerk cannot drive unlimited KRA traffic and trip the
 	# site-global 5-failure circuit breaker (HIGH API/permissions finding).

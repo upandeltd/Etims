@@ -5,6 +5,7 @@ from datetime import datetime
 import frappe
 import requests
 from frappe import _, scrub
+from frappe.query_builder.functions import Cast_, Max
 from frappe.utils import cint, flt
 
 from kenya_etims_compliance.utils.etims_utils import (
@@ -13,6 +14,7 @@ from kenya_etims_compliance.utils.etims_utils import (
 	get_next_sar_number,
 	get_org_sar_number,
 	get_tax_template_details,
+	split_item_tax,
 )
 from kenya_etims_compliance.utils.permissions import (
 	can_modify_doctype,
@@ -31,22 +33,6 @@ def searchPurchaseTrnsReq(invoice_no=None, last_req_dt=None):
 	require("Purchase Invoice", "read")
 
 	response = eTIMS.searchTrns(invoice_no, last_req_dt, "purchase")
-
-	for key, value in response.items():
-		if key == "Success":
-			return {"Success": value}
-		else:
-			return {"Error": value}
-
-
-@frappe.whitelist()
-def selectPurchaseTrnsInfoReq(invoice_no):
-	"""Get purchase transaction details from eTIMS"""
-	# Proxies a KRA lookup on the company's credentials, so it must not be
-	# reachable by any authenticated session.
-	require("Purchase Invoice", "read")
-
-	response = eTIMS.selectTrnsPurchaseInfo(invoice_no)
 
 	for key, value in response.items():
 		if key == "Success":
@@ -492,8 +478,9 @@ def stockIOSaveReq(doc, date_str):
 
 	for item in doc.items:
 		if item.get("custom_maintain_stock") == 1 and item.get("custom_tax_code") in ["B", "E"]:
-			taxblAmt += flt(item.get("net_amount"))
-			taxAmt += flt(item.get("amount")) - flt(item.get("net_amount"))
+			item_taxbl, item_tax = split_item_tax(item.get("amount"), item.get("net_amount"), item.get("item_tax_template"))
+			taxblAmt += item_taxbl
+			taxAmt += item_tax
 
 	payload = {
 		"sarNo": get_next_sar_number(doc, doc.custom_tax_branch_office),
@@ -572,10 +559,10 @@ def get_last_inv_number(doc, branch_id):
 	# FOR UPDATE so two concurrent submits cannot read the same max and assign a
 	# DUPLICATE eTIMS invoice number (KRA rejects duplicate invcNo). No commit
 	# occurs between this lock and the set_value that writes the number.
-	frappe.db.sql(
-		"SELECT name FROM `tabTIS Device Initialization` WHERE branch_id = %s FOR UPDATE",
-		branch_id,
-	)
+	tis_device = frappe.qb.DocType("TIS Device Initialization")
+	frappe.qb.from_(tis_device).where(tis_device.branch_id == branch_id).for_update().select(
+		tis_device.name
+	).run()
 
 	settings_docs = frappe.db.get_all(
 		"TIS Device Initialization", filters={"branch_id": branch_id}, fields=["last_purchase_invoice_number"]
@@ -597,16 +584,16 @@ def get_last_inv_number(doc, branch_id):
 		# eTIMS-assigned running numbers), so an ORDER BY on the column would sort
 		# lexically and pick the wrong row, and non-numeric values can't be
 		# incremented. Only numeric-looking values count towards "last number".
-		result = frappe.db.sql(
-			"""
-			SELECT MAX(CAST(custom_invoice_number AS UNSIGNED))
-			FROM `tabPurchase Invoice`
-			WHERE name != %(name)s
-				AND custom_tax_branch_office = %(branch_id)s
-				AND custom_invoice_number REGEXP '^[0-9]+$'
-			""",
-			{"name": doc.name, "branch_id": branch_id},
-		)
+		pinv = frappe.qb.DocType("Purchase Invoice")
+		result = (
+			frappe.qb.from_(pinv)
+			.where(
+				(pinv.name != doc.name)
+				& (pinv.custom_tax_branch_office == branch_id)
+				& (pinv.custom_invoice_number.regexp(r"^[0-9]+$"))
+			)
+			.select(Max(Cast_(pinv.custom_invoice_number, "UNSIGNED")))
+		).run()
 
 		if result and result[0][0] is not None:
 			last_inv_no = max(last_inv_no or 0, cint(result[0][0]))
@@ -616,6 +603,8 @@ def get_last_inv_number(doc, branch_id):
 	except Exception as e:
 		frappe.log_error("eTIMS: Invoice number calculation error", str(e))
 		cur_number = (last_inv_no or 0) + 1
+
+	return cur_number
 
 
 def get_original_invoice_number(doc):
@@ -664,6 +653,7 @@ def etims_pur_item_list(doc):
 
 		if not item_detail:
 			frappe.throw(f"Item {item.get('item_code')} not found or is disabled")
+		taxbl_amt, tax_amt = split_item_tax(item.get("amount"), item.get("net_amount"), item.get("item_tax_template"))
 
 		barcode = eTIMS.get_item_barcode(item.item_code, item.uom)
 
@@ -685,9 +675,9 @@ def etims_pur_item_list(doc):
 			"dcRt": abs(flt(item.get("discount_percentage"))),
 			"dcAmt": abs(flt(item.get("discount_amount"))),
 			"taxTyCd": item_tax_details,
-			"taxblAmt": abs(round(flt(item.get("net_amount")), 2)),
-			"taxAmt": abs(round((flt(item.get("amount")) - flt(item.get("net_amount"))), 2)),
-			"totAmt": abs(flt(item.get("amount"))),
+			"taxblAmt": taxbl_amt,
+			"taxAmt": tax_amt,
+			"totAmt": round(taxbl_amt + tax_amt, 2),
 			"totDcAmt": abs(flt(item.get("discount_amount"))),
 			# "itemExprDt":null
 		}
@@ -717,6 +707,7 @@ def etims_stock_item_list(doc):
 			if not item_detail:
 				frappe.throw(f"Item {item.get('item_code')} not found or is disabled")
 
+			taxbl_amt, tax_amt = split_item_tax(item.get("amount"), item.get("net_amount"), item.get("item_tax_template"))
 			barcode = eTIMS.get_item_barcode(item.item_code, item.uom)
 
 			item_etims_data = {
@@ -734,9 +725,9 @@ def etims_stock_item_list(doc):
 				"dcRt": abs(flt(item.get("discount_percentage"))),
 				"dcAmt": abs(flt(item.get("discount_amount"))),
 				"taxTyCd": item_tax_details,
-				"taxblAmt": abs(round(flt(item.get("net_amount")), 2)),
-				"taxAmt": abs(round((flt(item.get("amount")) - flt(item.get("net_amount"))), 2)),
-				"totAmt": abs(flt(item.get("amount"))),
+				"taxblAmt": taxbl_amt,
+				"taxAmt": tax_amt,
+				"totAmt": round(taxbl_amt + tax_amt, 2),
 				"totDcAmt": abs(round((flt(item.get("discount_amount")) * flt(item.get("qty"))), 2)),
 			}
 			if item_etims_data not in stock_item_list:
@@ -764,9 +755,28 @@ def purchase_return_information(doc):
 		if doc.return_against:
 			return_amount = doc.grand_total
 			return_against = frappe.get_doc("Purchase Invoice", doc.return_against)
-			prev_return_amount = return_against.grand_total
 
-			diff_amount = prev_return_amount + return_amount
+			# Compare against what's still outstanding, not the original invoice's
+			# full total: prior return tranches already reduce that balance. Without
+			# this, a second (or later) return that completes a 100% reversal still
+			# reads as "partial" against the ORIGINAL total, and the required KRA
+			# cancellation tags (cnclReqDt/cnclDt) never fire even though the
+			# original is fully credited back.
+			prior_returns = flt(
+				frappe.db.get_value(
+					"Purchase Invoice",
+					{
+						"is_return": 1,
+						"docstatus": 1,
+						"return_against": doc.return_against,
+						"name": ["!=", doc.name or ""],
+					},
+					"sum(grand_total)",
+				)
+			)
+			remaining_balance = return_against.grand_total + prior_returns
+
+			diff_amount = remaining_balance + return_amount
 
 		if diff_amount > 0:
 			return_status = "partial"
@@ -892,7 +902,14 @@ def verify_supplier_invoice(docname):
 					"custom_invoice_verified": 1,
 					"custom_verification_date": frappe.utils.now(),
 					"custom_qr_code": invoice_details.get("qrCode", ""),
-					"custom_kra_invoice_number": invoice_details.get("invcNo", ""),
+					# KRA's purchase register keys the supplier's invoice number as
+					# `spplrInvcNo` (see etims_utils.searchTrns), and the local
+					# fast-path above builds the same key. `invcNo` is the SALES
+					# side's field and is absent from both, so this silently stored
+					# "" and threw away the audit link on every verification.
+					"custom_kra_invoice_number": (
+						invoice_details.get("spplrInvcNo") or invoice_details.get("invcNo") or ""
+					),
 					"custom_supplier_pin_verified": supplier_pin,
 				},
 			)

@@ -1,5 +1,9 @@
 import frappe
 from frappe import _
+from frappe.query_builder.functions import Sum
+from frappe.utils import flt
+
+from kenya_etims_compliance.utils.etims_utils import KRA_TAX_BANDS
 
 
 def execute(filters=None):
@@ -29,6 +33,7 @@ def get_columns():
 		{"fieldname": "local_amount", "label": _("Local Amount"), "fieldtype": "Currency", "width": 120},
 		{"fieldname": "variance", "label": _("Variance"), "fieldtype": "Currency", "width": 100},
 		{"fieldname": "match_status", "label": _("Status"), "fieldtype": "Data", "width": 140},
+		{"fieldname": "band_code", "label": _("Band"), "fieldtype": "Data", "width": 60},
 	]
 
 
@@ -65,6 +70,7 @@ def _get_kra_entries(filters):
 			"invoice_date",
 			"total_amount",
 			"matched_purchase_invoice",
+			"etims_purchase_invoice",
 			"variance_amount",
 			"match_status",
 		],
@@ -96,17 +102,102 @@ def _get_kra_entries(filters):
 				"local_amount": local_amount,
 				"variance": e.variance_amount or 0,
 				"match_status": e.match_status,
+				"band_code": "",
 			}
 		)
 
+	data.extend(_get_band_mismatch_rows(entries))
 	return data
 
 
+def _get_band_mismatch_rows(entries):
+	"""Same KRA-vs-local A-E band comparison the reconciliation engine files
+	as exceptions, surfaced live here too so a preparer sees a wrong VAT
+	band classification before a period is even reconciled and closed.
+
+	Batches both sides' lookups (one query each, not one pair per matched
+	row) the same way the caller already batches local_amounts above.
+	"""
+	matched = [e for e in entries if e.matched_purchase_invoice and e.etims_purchase_invoice]
+	if not matched:
+		return []
+
+	band_fields = [f"taxable_amount_{code.lower()}" for code in KRA_TAX_BANDS] + [
+		f"tax_amt_{code.lower()}" for code in KRA_TAX_BANDS
+	]
+	kra_by_pinv = {
+		row.name: row
+		for row in frappe.get_all(
+			"eTIMS Purchase Invoice",
+			filters={"name": ["in", [e.etims_purchase_invoice for e in matched]]},
+			fields=["name", *band_fields],
+		)
+	}
+
+	child = frappe.qb.DocType("Purchase Taxes and Charges")
+	local_rows = (
+		frappe.qb.from_(child)
+		.where(child.parent.isin([e.matched_purchase_invoice for e in matched]))
+		.where(child.custom_code.isin(list(KRA_TAX_BANDS)))
+		.groupby(child.parent, child.custom_code)
+		.select(
+			child.parent.as_("pi_name"),
+			child.custom_code.as_("tax_code"),
+			Sum(child.custom_total_taxable_amount).as_("taxable_amount"),
+			Sum(child.base_tax_amount_after_discount_amount).as_("tax_amount"),
+		)
+		.run(as_dict=True)
+	)
+	local_by_pi = {}
+	for row in local_rows:
+		local_by_pi.setdefault(row.pi_name, {})[row.tax_code] = {
+			"taxable_amount": flt(row.taxable_amount),
+			"tax_amount": flt(row.tax_amount),
+		}
+
+	zero = {"taxable_amount": 0.0, "tax_amount": 0.0}
+	rows = []
+	for e in matched:
+		kra_row = kra_by_pinv.get(e.etims_purchase_invoice)
+		if not kra_row:
+			continue
+		local_bands = local_by_pi.get(e.matched_purchase_invoice, {})
+		for code in KRA_TAX_BANDS:
+			kra = {
+				"taxable_amount": flt(kra_row.get(f"taxable_amount_{code.lower()}")),
+				"tax_amount": flt(kra_row.get(f"tax_amt_{code.lower()}")),
+			}
+			local = local_bands.get(code, zero)
+			variance = kra["tax_amount"] - local["tax_amount"]
+			if abs(variance) <= 1 and abs(kra["taxable_amount"] - local["taxable_amount"]) <= 1:
+				continue
+			rows.append(
+				{
+					"source": "KRA",
+					"kra_invoice_number": e.kra_invoice_number,
+					"supplier_pin": e.supplier_pin,
+					"supplier_name": e.supplier_name,
+					"invoice_date": e.invoice_date,
+					"kra_amount": kra["tax_amount"],
+					"local_pi": e.matched_purchase_invoice,
+					"local_amount": local["tax_amount"],
+					"variance": variance,
+					"match_status": "Band Mismatch",
+					"band_code": code,
+				}
+			)
+	return rows
+
+
 def _get_not_in_kra_entries(filters):
-	"""Local PIs that have no matching KRA entry."""
+	"""Local PIs KRA has no record of, including the ones already accepted.
+
+	An accepted row is resolved, not deleted — it keeps its own status so the
+	red "Not in KRA" tile only counts what still needs a decision.
+	"""
 	pi_filters = {
 		"docstatus": 1,
-		"custom_kra_match_status": "Not in KRA",
+		"custom_kra_match_status": ["in", ["Not in KRA", "Accepted"]],
 	}
 	if filters.get("from_date") and filters.get("to_date"):
 		pi_filters["posting_date"] = ["between", [filters["from_date"], filters["to_date"]]]
@@ -116,7 +207,7 @@ def _get_not_in_kra_entries(filters):
 	pis = frappe.get_all(
 		"Purchase Invoice",
 		filters=pi_filters,
-		fields=["name", "supplier", "tax_id", "posting_date", "base_grand_total"],
+		fields=["name", "supplier", "tax_id", "posting_date", "base_grand_total", "custom_kra_match_status"],
 		order_by="posting_date desc",
 		limit_page_length=2000,
 	)
@@ -134,7 +225,8 @@ def _get_not_in_kra_entries(filters):
 				"local_pi": pi.name,
 				"local_amount": pi.base_grand_total,
 				"variance": pi.base_grand_total,
-				"match_status": "Not in KRA",
+				"match_status": pi.custom_kra_match_status,
+				"band_code": "",
 			}
 		)
 

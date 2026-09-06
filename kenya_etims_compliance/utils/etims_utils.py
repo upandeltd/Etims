@@ -2,6 +2,8 @@ from datetime import datetime
 
 import frappe
 from frappe import _
+from frappe.utils import flt
+from pypika import Order
 
 from kenya_etims_compliance.utils.kra_client import KRAClient
 
@@ -456,8 +458,12 @@ class eTIMS:
 		"""
 		if trns_type == "sales":
 			endpoint = "selectTrnsSalesList"
+			list_key = "salesList"
+			invoice_field = "invcNo"
 		elif trns_type == "purchase":
-			endpoint = "selectTrnsPurchaseList"
+			endpoint = "selectTrnsPurchaseSalesList"
+			list_key = "saleList"
+			invoice_field = "spplrInvcNo"
 		else:
 			return {"Error": "Invalid transaction type. Use 'sales' or 'purchase'"}
 
@@ -476,9 +482,8 @@ class eTIMS:
 		# If the user asked for a specific invoice, filter the list down to it
 		if invoice_no and "Success" in result:
 			data = result.get("Success") or {}
-			list_key = "salesList" if trns_type == "sales" else "purchaseList"
-			items = data.get(list_key) or data.get("saleList") or []
-			match = [it for it in items if str(it.get("invcNo")) == str(invoice_no)]
+			items = data.get(list_key) or []
+			match = [it for it in items if str(it.get(invoice_field)) == str(invoice_no)]
 			if not match:
 				return {"Error": f"No {trns_type} transaction found for invoice {invoice_no}"}
 			return {"Success": match[0] if len(match) == 1 else match}
@@ -534,18 +539,6 @@ class eTIMS:
 		"""Get item details from eTIMS (Section 7.9)"""
 		client = KRAClient()
 		return client.select_item({"itemCd": item_code})
-
-	@staticmethod
-	def selectTrnsSalesInfo(invoice_no):
-		"""Get sales transaction details from eTIMS (Section 7.21)"""
-		client = KRAClient()
-		return client.select_trns_sales_info({"invcNo": invoice_no})
-
-	@staticmethod
-	def selectTrnsPurchaseInfo(invoice_no):
-		"""Get purchase transaction details from eTIMS (Section 7.21)"""
-		client = KRAClient()
-		return client.select_trns_purchase_info({"invcNo": invoice_no})
 
 	# Medium Priority Features - Phase 4
 
@@ -715,7 +708,7 @@ def create_new_item_doctype(item):
 	new_item_doc.stock_uom = "Nos"
 	new_item_doc.valuation_rate = item.get("prc")
 	new_item_doc.custom_country_of_origin = nat_of_origin
-	new_item_doc.custom_item_classification_code = item.get("itemClsCd")
+	new_item_doc.custom_item_classification_code = ensure_item_classification(item.get("itemClsCd"))
 	new_item_doc.custom_packaging_unit_code = item.get("pkgUnitCd")
 	new_item_doc.custom_quantity_unit_code = item.get("qtyUnitCd")
 	new_item_doc.custom_default_packing_unit = pkgUnitNm
@@ -775,6 +768,30 @@ def get_country_of_origin(item_code):
 	return "Kenya"
 
 
+def ensure_item_classification(item_cls_code):
+	"""KRA's classification code list (selectCodeList) is synced separately
+	and can lag behind what a supplier's purchase data or a registered-items
+	sync actually references. custom_item_classification_code is a Link, so
+	an unrecognised code fails Item creation outright rather than just
+	missing a friendly name. Stub the code locally - the code sync only
+	creates missing rows and never overwrites, so a later real sync can
+	still fill in the proper name without conflict.
+	"""
+	if not item_cls_code:
+		return item_cls_code
+
+	if not frappe.db.exists("eTIMS Item Classification", item_cls_code):
+		frappe.get_doc(
+			{
+				"doctype": "eTIMS Item Classification",
+				"item_class_code": item_cls_code,
+				"item_class_name": _("Unclassified (pending code sync)"),
+			}
+		).insert(ignore_permissions=True)
+
+	return item_cls_code
+
+
 def get_item_type(item_code):
 	item_type_code = item_code[2:3]
 
@@ -806,19 +823,17 @@ def get_next_sar_number(doc, branch_id):
 	KRA API call (during payload construction) to minimize lock hold time.
 	Lock is released when the enclosing transaction commits.
 	"""
-	last_sar = frappe.db.sql(
-		"""
-        SELECT sr_number FROM `tabeTIMS Stock Release Number`
-        WHERE tax_branch_office = %s
-        ORDER BY sr_number DESC
-        LIMIT 1
-        FOR UPDATE
-    """,
-		(branch_id,),
-		as_dict=True,
-	)
+	sar = frappe.qb.DocType("eTIMS Stock Release Number")
+	last_sar = (
+		frappe.qb.from_(sar)
+		.where(sar.tax_branch_office == branch_id)
+		.orderby(sar.sr_number, order=Order.desc)
+		.limit(1)
+		.for_update()
+		.select(sar.sr_number)
+	).run(as_dict=True)
 
-	next_number = (last_sar[0].sr_number + 1) if last_sar else 1
+	next_number = (last_sar[0].get("sr_number") + 1) if last_sar else 1
 
 	new_doc = frappe.new_doc("eTIMS Stock Release Number")
 	new_doc.reference_type = doc.doctype
@@ -850,6 +865,60 @@ KRA_TAX_BANDS = ("A", "B", "C", "D", "E")
 NON_VAT_CODE = "D"
 
 
+def _resolve_band_code(tax_row):
+	"""KRA band letter for a Sales/Purchase Taxes and Charges row.
+
+	``custom_code`` is ``fetch_from: account_head.custom_tax_code`` — the fetch
+	does not fire on rows ERPNext auto-creates via its own
+	``add_taxes_from_item_tax_template()`` (any invoice whose items span more
+	than one Item Tax Template), so fall back to a direct Account lookup
+	rather than silently dropping the row's band.
+	"""
+	return tax_row.get("custom_code") or frappe.db.get_value(
+		"Account", tax_row.get("account_head"), "custom_tax_code"
+	)
+
+
+def get_item_tax_template_rate(template_name):
+	"""The plain KRA band percentage for an Item Tax Template, e.g. 16.0 for
+	"KRA B - 16.00% - VEL". Unlike the header tax row, this always carries the
+	rate regardless of how that row's own tax ended up computed.
+	"""
+	if not template_name:
+		return 0
+	return flt(
+		frappe.db.get_value("Item Tax Template Detail", {"parent": template_name}, "tax_rate")
+	)
+
+
+def split_item_tax(gross_amount, net_amount, item_tax_template):
+	"""Decompose one invoice line into ``(taxable_base, tax_amount)``, correctly,
+	regardless of whether ERPNext computed this line's tax inclusively or
+	exclusively.
+
+	ERPNext backs tax OUT of ``net_amount`` only when the line's tax row is
+	inclusive (``included_in_print_rate=1``) — the case for every single-band
+	invoice in this system. Whenever an invoice's items span more than one
+	Item Tax Template, ERPNext's own ``add_taxes_from_item_tax_template()``
+	auto-creates *additive* (exclusive) header rows instead and never backs
+	tax out of the item row at all — so ``net_amount`` silently equals
+	``gross_amount`` and a naive ``gross - net`` always yields a false 0, even
+	though real tax was charged. That false 0 is KRA-critical: it also
+	defeats ``_kra_line_problems``'s check for a taxed line declared non-VAT,
+	on exactly the multi-band invoices where such a misconfiguration is
+	easiest to miss.
+	"""
+	gross_amount = abs(flt(gross_amount))
+	net_amount = abs(flt(net_amount))
+	if net_amount < gross_amount:
+		# Inclusive: ERPNext already backed the tax out of this row — trust it.
+		return round(net_amount, 2), round(gross_amount - net_amount, 2)
+	# Exclusive (or genuinely 0%-rated): net_amount carries no tax information
+	# either way — derive this item's own tax directly from its band's rate.
+	tax_amt = round(gross_amount * get_item_tax_template_rate(item_tax_template) / 100, 2)
+	return round(gross_amount, 2), tax_amt
+
+
 def apply_tax_bands(payload, taxes, rate_func):
 	"""Aggregate KRA tax bands A-E into ``payload`` from a document's tax rows.
 
@@ -870,7 +939,7 @@ def apply_tax_bands(payload, taxes, rate_func):
 		payload[f"taxAmt{code}"] = 0
 
 	for tax in (taxes or []):
-		code = tax.get("custom_code")
+		code = _resolve_band_code(tax)
 		if code in KRA_TAX_BANDS:
 			payload[f"taxblAmt{code}"] += abs(round(tax.get("custom_total_taxable_amount") or 0, 2))
 			payload[f"taxAmt{code}"] += abs(tax.get("base_tax_amount_after_discount_amount") or 0)

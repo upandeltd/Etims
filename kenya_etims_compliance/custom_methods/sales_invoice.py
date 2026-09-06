@@ -22,10 +22,12 @@ from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_
 from kenya_etims_compliance.utils.etims_utils import (
 	KRA_TAX_BANDS,
 	NON_VAT_CODE,
+	_resolve_band_code,
 	apply_tax_bands,
 	eTIMS,
 	get_next_sar_number,
 	get_org_sar_number,
+	split_item_tax,
 )
 from kenya_etims_compliance.utils.kra_client import KRAClient
 
@@ -85,23 +87,6 @@ def searchSalesTrnsReq(invoice_no=None, last_req_dt=None):
 	_guard_kra_sales_lookup(invoice_no)
 
 	response = eTIMS.searchTrns(invoice_no, last_req_dt, "sales")
-
-	for key, value in response.items():
-		if key == "Success":
-			return {"Success": value}
-		else:
-			return {"Error": value}
-
-
-@frappe.whitelist()
-def selectSalesTrnsInfoReq(invoice_no):
-	"""Get sales transaction details from eTIMS"""
-	# Proxies a KRA lookup on the company's credentials, so it must not be
-	# reachable by any authenticated session, nor leak another branch's
-	# fiscal status.
-	_guard_kra_sales_lookup(invoice_no)
-
-	response = eTIMS.selectTrnsSalesInfo(invoice_no)
 
 	for key, value in response.items():
 		if key == "Success":
@@ -288,7 +273,8 @@ def insert_tax_amounts(doc):
 			try:
 				if doc.taxes:
 					for item in doc.taxes:
-						if item.get("custom_code") == key:
+						row_code = _resolve_band_code(item)
+						if row_code == key:
 							tax_templates = frappe.db.get_all(
 								"Item Tax Template", filters={"custom_code": key}, fields=["custom_code_name"]
 							)
@@ -298,12 +284,14 @@ def insert_tax_amounts(doc):
 									"Sales Taxes and Charges",
 									item.get("name"),
 									{
+										"custom_code": row_code,
 										"custom_total_taxable_amount": round(value, 2),
 										"custom_code_name": tax_templates[0].get("custom_code_name"),
 									},
 									update_modified=False,
 								)
 								# Sync in-memory child row to match DB write
+								item.custom_code = row_code
 								item.custom_total_taxable_amount = round(value, 2)
 								item.custom_code_name = tax_templates[0].get("custom_code_name")
 			except (frappe.DoesNotExistError, frappe.DataError) as e:
@@ -542,8 +530,11 @@ def stockIOSaveReq(doc, date_str):
 		if len(stock_list):
 			for item in doc.items:
 				if item.get("custom_maintain_stock") == 1 and item.get("custom_tax_code") in ["B", "E"]:
-					taxblAmt += item.get("base_net_amount")
-					taxAmt += item.get("base_amount") - item.get("base_net_amount")
+					item_taxbl, item_tax = split_item_tax(
+						item.get("base_amount"), item.get("base_net_amount"), item.get("item_tax_template")
+					)
+					taxblAmt += item_taxbl
+					taxAmt += item_tax
 
 			payload = {
 				"sarNo": get_next_sar_number(doc, doc.custom_tax_branch_office),
@@ -639,10 +630,10 @@ def get_last_inv_number(doc, branch_id):
 		# The lock is held until the allocating transaction commits — and there
 		# is NO intermediate commit between here and the set_value that writes
 		# the number — so the next allocator always sees the committed number.
-		frappe.db.sql(
-			"SELECT name FROM `tabTIS Device Initialization` WHERE branch_id = %s FOR UPDATE",
-			branch_id,
-		)
+		tis_device = frappe.qb.DocType("TIS Device Initialization")
+		frappe.qb.from_(tis_device).where(tis_device.branch_id == branch_id).for_update().select(
+			tis_device.name
+		).run()
 
 		settings_docs = frappe.db.get_all(
 			"TIS Device Initialization", filters={"branch_id": branch_id}, fields=["*"]
@@ -773,7 +764,7 @@ def kra_transmission_problems(doc):
 			"itemClsCd": detail[0].get("custom_item_classification_code"),
 			"pkgUnitCd": detail[0].get("custom_packaging_unit_code"),
 			"qtyUnitCd": detail[0].get("custom_quantity_unit_code"),
-			"taxAmt": abs(round((flt(item.get("base_amount")) - flt(item.get("base_net_amount"))), 2)),
+			"taxAmt": split_item_tax(item.get("base_amount"), item.get("base_net_amount"), item.get("item_tax_template"))[1],
 		}
 		problems.extend(_kra_line_problems(item, item_tax_code, row))
 	return problems
@@ -802,6 +793,9 @@ def etims_sale_item_list_sales(doc):
 		# it None when absent and, unlike ERPNext's own fields, nothing
 		# repopulates it during validate. flt() keeps the multiply from crashing.
 		dc_amt = abs(round((flt(item.get("custom_discount_amount_kes")) * flt(item.get("qty"))), 2))
+		taxbl_amt, tax_amt = split_item_tax(
+			item.get("base_amount"), item.get("base_net_amount"), item.get("item_tax_template")
+		)
 		row = {
 			"itemCd": item_cd,
 			"itemClsCd": item_detail[0].get("custom_item_classification_code"),
@@ -819,9 +813,9 @@ def etims_sale_item_list_sales(doc):
 			# "isrcAmt":null,
 			"totDcAmt": dc_amt,
 			"taxTyCd": item_tax_code,
-			"taxblAmt": abs(round(item.get("base_net_amount"), 2)),
-			"taxAmt": abs(round((item.get("base_amount") - item.get("base_net_amount")), 2)),
-			"totAmt": abs(item.get("base_amount")),
+			"taxblAmt": taxbl_amt,
+			"taxAmt": tax_amt,
+			"totAmt": round(taxbl_amt + tax_amt, 2),
 		}
 
 		problems = _kra_line_problems(item, item_tax_code, row)
@@ -874,6 +868,9 @@ def etims_sale_item_list_stock(doc):
 			)
 			if not item_detail:
 				frappe.throw(f"Item {item.get('item_code')} not found or is disabled")
+			taxbl_amt, tax_amt = split_item_tax(
+				item.get("base_amount"), item.get("base_net_amount"), item.get("item_tax_template")
+			)
 			item_etims_data = {
 				"itemSeq": item.get("idx"),
 				"itemCd": item_detail[0].get("custom_item_code"),
@@ -889,9 +886,9 @@ def etims_sale_item_list_stock(doc):
 				"dcAmt": abs(round((flt(item.get("custom_discount_amount_kes")) * flt(item.get("qty"))), 2)),
 				"totDcAmt": abs(round((flt(item.get("custom_discount_amount_kes")) * flt(item.get("qty"))), 2)),
 				"taxTyCd": item_tax_code,
-				"taxblAmt": abs(round(item.get("base_net_amount"), 2)),
-				"taxAmt": abs(round((item.get("base_amount") - item.get("base_net_amount")), 2)),
-				"totAmt": abs(item.get("base_amount")),
+				"taxblAmt": taxbl_amt,
+				"taxAmt": tax_amt,
+				"totAmt": round(taxbl_amt + tax_amt, 2),
 			}
 
 			if item_etims_data not in stock_item_list:
@@ -995,9 +992,26 @@ def sales_return_information(doc):
 		if doc.return_against:
 			return_amount = doc.grand_total
 			return_against = frappe.get_doc("Sales Invoice", doc.return_against)
-			prev_return_amount = return_against.grand_total
 
-			diff_amount = prev_return_amount + return_amount
+			# Compare against what's still outstanding, not the original invoice's
+			# full total: prior return tranches already reduce that balance. Without
+			# this, a second (or later) return that completes a 100% reversal still
+			# reads as "partial" against the ORIGINAL total, and the required KRA
+			# cancellation tags (cnclReqDt/cnclDt) never fire even though the
+			# original is fully credited back.
+			prior_returns = flt(
+				frappe.db.sql(
+					"""
+					select sum(grand_total) from `tabSales Invoice`
+					where is_return=1 and docstatus=1
+					and return_against=%(return_against)s and name != %(name)s
+					""",
+					{"return_against": doc.return_against, "name": doc.name or ""},
+				)[0][0]
+			)
+			remaining_balance = return_against.grand_total + prior_returns
+
+			diff_amount = remaining_balance + return_amount
 
 		if diff_amount > 0:
 			return_status = "partial"

@@ -205,7 +205,7 @@ The app communicates with KRA via 13+ API endpoints:
 | searchItem / selectItem | Search and retrieve items |
 | trnsSalesSaveWrReq | Submit sales transactions |
 | trnsPurchaseSaveReq | Submit purchase transactions |
-| searchTrns / selectTrnsSalesInfo / selectTrnsPurchaseInfo | Search transactions |
+| selectTrnsSalesList / selectTrnsPurchaseSalesList | Search transactions (list only — KRA exposes no per-invoice detail call) |
 | stockReleaseNoSaveReq | Submit stock release numbers |
 | searchStockMove / searchStockReleaseNo / selectStockReleaseNoList | Search stock data |
 | invoiceCheckerReq | Verify supplier invoices |

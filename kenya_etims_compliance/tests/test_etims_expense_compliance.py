@@ -129,14 +129,12 @@ class TestEtimsExpenseCompliance(FrappeTestCase):
 		# Result should have success and invoices keys
 		self.assertTrue("success" in result or "invoices" in result or "count" in result)
 
-	def test_payment_eligibility_check(self):
-		"""Test payment eligibility checking"""
-		from kenya_etims_compliance.custom_methods.payment_entry import check_payment_eligibility
+	def test_payment_etims_status_requires_a_real_payment_entry(self):
+		"""A missing Payment Entry must raise, not report "all confirmed"."""
+		from kenya_etims_compliance.custom_methods.payment_entry import get_payment_etims_status
 
-		result = check_payment_eligibility("TEST-PAYMENT-001")
-
-		# Result should have eligible key
-		self.assertTrue("eligible" in result or "error" in result)
+		with self.assertRaises(frappe.DoesNotExistError):
+			get_payment_etims_status("TEST-PAYMENT-001")
 
 	def test_get_unpaid_invoices_summary(self):
 		"""Test getting unpaid invoices summary by verification status"""
@@ -217,26 +215,21 @@ class TestEtimsSettingsIntegration(FrappeTestCase):
 		self.assertIsInstance(settings, dict)
 
 	def test_compliance_settings_keys(self):
-		"""Test that compliance settings keys exist"""
+		"""The settings the compliance chain actually reads must be present."""
 		from kenya_etims_compliance.kenya_etims_compliance.doctype.etims_settings.etims_settings import (
 			get_etims_settings,
 		)
 
 		settings = get_etims_settings()
 
-		# Check for new compliance settings
-		# Note: These may not exist in existing installations
-		_expected_keys = [
+		for key in (
+			# gates the period close in custom_methods.reconciliation
 			"enforce_invoice_verification",
 			"auto_verify_invoices",
-			"allow_payment_unverified",
-			"verification_amount_threshold",
-			"enable_po_tracking",
-		]
-
-		# At least some of these should exist after migration
-		# This test verifies the settings structure is correct
-		self.assertIsInstance(settings, dict)
+			# rolling window for tasks.fetch_purchase_transactions
+			"purchase_fetch_lookback_days",
+		):
+			self.assertIn(key, settings)
 
 
 def run_tests():
