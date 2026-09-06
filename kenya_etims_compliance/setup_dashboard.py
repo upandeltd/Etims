@@ -6,7 +6,7 @@ have backing documents. Idempotently REPAIRS each card/chart on every run
 migrate. Defensive — a single failed insert is logged and skipped so it can
 never abort `bench migrate`.
 
-Two hard requirements learned from rendering these on a live v15 bench:
+Three hard requirements learned from rendering these on a live v15 bench:
   1. Card/chart `name`s MUST match the `number_card_name` / `chart_name` refs in
      kenya_etims_compliance/workspace/etims_compliance/etims_compliance.json, and
      a Number Card's name derives from its `label` (so label == the ref).
@@ -14,6 +14,9 @@ Two hard requirements learned from rendering these on a live v15 bench:
      [doctype, field, operator, value] conditions, NOT a dict. A dict becomes a
      frappe._dict whose `.append` is None, crashing dashboard_chart.get() with
      "'NoneType' object is not callable".
+  3. Any card whose `function` isn't "Count" (Sum/Average/Minimum/Maximum) MUST
+     set `aggregate_function_based_on` to the field being aggregated - Number
+     Card.validate() throws "Aggregate Field is required" otherwise.
 """
 
 import frappe
@@ -26,7 +29,7 @@ def create_number_cards():
 			"label": "eTIMS Sales Today",
 			"document_type": "Sales Invoice",
 			"function": "Count",
-			"filters_json": '[["Sales Invoice","docstatus","=",1],["Sales Invoice","posting_date","=",Today]]',
+			"filters_json": '[["Sales Invoice","docstatus","=",1],["Sales Invoice","posting_date","Timespan","today"]]',
 			"color": "#10b981",
 		},
 		{
@@ -34,7 +37,7 @@ def create_number_cards():
 			"label": "eTIMS Sales This Month",
 			"document_type": "Sales Invoice",
 			"function": "Count",
-			"filters_json": '[["Sales Invoice","docstatus","=",1],["Sales Invoice","posting_date","between",[This Month]]]',
+			"filters_json": '[["Sales Invoice","docstatus","=",1],["Sales Invoice","posting_date","Timespan","this month"]]',
 			"color": "#3b82f6",
 		},
 		{
@@ -50,7 +53,7 @@ def create_number_cards():
 			"label": "eTIMS Failed Today",
 			"document_type": "eTIMS Invoice Queue",
 			"function": "Count",
-			"filters_json": '[["eTIMS Invoice Queue","status","=","Failed"],["eTIMS Invoice Queue","modified","Today"]]',
+			"filters_json": '[["eTIMS Invoice Queue","status","=","Failed"],["eTIMS Invoice Queue","modified","Timespan","today"]]',
 			"color": "#ef4444",
 		},
 		{
@@ -58,7 +61,7 @@ def create_number_cards():
 			"label": "eTIMS Purchase Today",
 			"document_type": "Purchase Invoice",
 			"function": "Count",
-			"filters_json": '[["Purchase Invoice","docstatus","=",1],["Purchase Invoice","posting_date","=",Today]]',
+			"filters_json": '[["Purchase Invoice","docstatus","=",1],["Purchase Invoice","posting_date","Timespan","today"]]',
 			"color": "#8b5cf6",
 		},
 		{
@@ -66,7 +69,7 @@ def create_number_cards():
 			"label": "eTIMS Purchase This Month",
 			"document_type": "Purchase Invoice",
 			"function": "Count",
-			"filters_json": '[["Purchase Invoice","docstatus","=",1],["Purchase Invoice","posting_date","between",[This Month]]]',
+			"filters_json": '[["Purchase Invoice","docstatus","=",1],["Purchase Invoice","posting_date","Timespan","this month"]]',
 			"color": "#06b6d4",
 		},
 		# --- Enhanced dashboard cards ---
@@ -75,7 +78,8 @@ def create_number_cards():
 			"label": "eTIMS Sales Amount Today",
 			"document_type": "Sales Invoice",
 			"function": "Sum",
-			"filters_json": '[["Sales Invoice","docstatus","=",1],["Sales Invoice","posting_date","=",Today]]',
+			"aggregate_field": "base_grand_total",
+			"filters_json": '[["Sales Invoice","docstatus","=",1],["Sales Invoice","posting_date","Timespan","today"]]',
 			"color": "#10b981",
 		},
 		{
@@ -83,7 +87,8 @@ def create_number_cards():
 			"label": "eTIMS Sales Amount Month",
 			"document_type": "Sales Invoice",
 			"function": "Sum",
-			"filters_json": '[["Sales Invoice","docstatus","=",1],["Sales Invoice","posting_date","between",[This Month]]]',
+			"aggregate_field": "base_grand_total",
+			"filters_json": '[["Sales Invoice","docstatus","=",1],["Sales Invoice","posting_date","Timespan","this month"]]',
 			"color": "#10b981",
 		},
 		{
@@ -91,7 +96,7 @@ def create_number_cards():
 			"label": "eTIMS Stock Entries Today",
 			"document_type": "Stock Entry",
 			"function": "Count",
-			"filters_json": '[["Stock Entry","docstatus","=",1],["Stock Entry","posting_date","=",Today]]',
+			"filters_json": '[["Stock Entry","docstatus","=",1],["Stock Entry","posting_date","Timespan","today"]]',
 			"color": "#f97316",
 		},
 		{
@@ -118,6 +123,83 @@ def create_number_cards():
 			"function": "kenya_etims_compliance.custom_methods.dashboard.get_days_to_filing_deadline",
 			"color": "#7c3aed",
 		},
+		{
+			"name": "eTIMS Sales Transmitted",
+			"label": "eTIMS Sales Transmitted",
+			"document_type": "Sales Invoice",
+			"function": "Count",
+			"filters_json": '[["Sales Invoice","docstatus","=",1],["Sales Invoice","posting_date","Timespan","this month"],["Sales Invoice","custom_update_sales_to_etims","=",1]]',
+			"color": "#10b981",
+		},
+		{
+			"name": "eTIMS Sales Pending",
+			"label": "eTIMS Sales Pending",
+			"document_type": "Sales Invoice",
+			"function": "Count",
+			"filters_json": '[["Sales Invoice","docstatus","=",1],["Sales Invoice","posting_date","Timespan","this month"],["Sales Invoice","custom_update_invoice_in_tims","=",1],["Sales Invoice","custom_update_sales_to_etims","=",0]]',
+			"color": "#f59e0b",
+		},
+		{
+			"name": "eTIMS Sales Success Rate",
+			"label": "eTIMS Sales Success Rate",
+			"type": "Custom",
+			"document_type": "Sales Invoice",
+			"function": "kenya_etims_compliance.custom_methods.dashboard.get_sales_success_rate",
+			"color": "#22c55e",
+		},
+		{
+			"name": "eTIMS Queue Failed",
+			"label": "eTIMS Queue Failed",
+			"document_type": "eTIMS Invoice Queue",
+			"function": "Count",
+			"filters_json": '[["eTIMS Invoice Queue","status","=","Failed"]]',
+			"color": "#ef4444",
+		},
+		{
+			"name": "eTIMS Purchases Matched",
+			"label": "eTIMS Purchases Matched",
+			"document_type": "Purchase Invoice",
+			"function": "Count",
+			"filters_json": '[["Purchase Invoice","docstatus","=",1],["Purchase Invoice","posting_date","Timespan","this month"],["Purchase Invoice","custom_kra_match_status","=","Matched"]]',
+			"color": "#22c55e",
+		},
+		{
+			"name": "eTIMS Purchases Unmatched",
+			"label": "eTIMS Purchases Unmatched",
+			"document_type": "Purchase Invoice",
+			"function": "Count",
+			"filters_json": '[["Purchase Invoice","docstatus","=",1],["Purchase Invoice","posting_date","Timespan","this month"],["Purchase Invoice","custom_kra_match_status","not in",["Matched",""]]]',
+			"color": "#eab308",
+		},
+		{
+			"name": "eTIMS Input VAT At Risk",
+			"label": "eTIMS Input VAT At Risk",
+			"type": "Custom",
+			"document_type": "Purchase Invoice",
+			"function": "kenya_etims_compliance.custom_methods.dashboard.get_input_vat_at_risk",
+			"color": "#dc2626",
+		},
+		{
+			"name": "eTIMS Errors This Month",
+			"label": "eTIMS Errors This Month",
+			"document_type": "Error Logging",
+			"function": "Count",
+			"filters_json": '[["Error Logging","creation","Timespan","this month"]]',
+			"color": "#f43f5e",
+		},
+		{
+			"name": "eTIMS Avg Compliance Score",
+			"label": "eTIMS Avg Compliance Score",
+			"document_type": "eTIMS Compliance Score",
+			"function": "Average",
+			"aggregate_field": "overall_score",
+			"filters_json": '[["eTIMS Compliance Score","docstatus","<",2]]',
+			"color": "#8b5cf6",
+			# overall_score is a Percent field, not money - block the Currency
+			# Link field's implicit company-default so the widget doesn't
+			# render it as "Sh 83.00".
+			"currency": "",
+		},
 	]
 
 	for c in cards:
@@ -133,6 +215,7 @@ def create_number_cards():
 				"type": c.get("type", "Document Type"),
 				"filters_json": c.get("filters_json", "[]"),
 				"color": c.get("color"),
+				"currency": c.get("currency"),
 				"show_percentage_stats": c.get("show_percentage_stats", 0),
 				"stats_time_interval": c.get("stats_time_interval", "Daily"),
 				"is_public": 1,
@@ -140,6 +223,8 @@ def create_number_cards():
 			if c.get("type", "Document Type") == "Document Type":
 				doc_data["document_type"] = c["document_type"]
 				doc_data["function"] = c["function"]
+				if c["function"] != "Count":
+					doc_data["aggregate_function_based_on"] = c["aggregate_field"]
 			elif c.get("type") == "Custom":
 				doc_data["method"] = c["function"]
 				if c.get("document_type"):
@@ -201,6 +286,26 @@ def create_dashboard_charts():
 			"timespan": "Last Month",
 			"time_interval": "Daily",
 			"filters_json": "[]",
+		},
+		{
+			"name": "eTIMS Purchase Match Status",
+			"chart_name": "eTIMS Purchase Match Status",
+			"chart_type": "Group By",
+			"document_type": "Purchase Invoice",
+			"group_by_based_on": "custom_kra_match_status",
+			"type": "Pie",
+			"color": "#3b82f6",
+			"filters_json": '[["Purchase Invoice","docstatus","=",1]]',
+		},
+		{
+			"name": "eTIMS Sales Transmission Status",
+			"chart_name": "eTIMS Sales Transmission Status",
+			"chart_type": "Group By",
+			"document_type": "Sales Invoice",
+			"group_by_based_on": "custom_update_sales_to_etims",
+			"type": "Pie",
+			"color": "#10b981",
+			"filters_json": '[["Sales Invoice","docstatus","=",1]]',
 		},
 	]
 
