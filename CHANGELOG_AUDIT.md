@@ -21,6 +21,8 @@
 11. [Post-Audit Fixes (2026-07-29)](#11-post-audit-fixes-2026-07-29)
 12. [Workspace Sidebar & Desk Icon Fix (2026-07-29)](#12-workspace-sidebar--desk-icon-fix-2026-07-29)
 13. [Role Profiles (2026-07-29)](#13-role-profiles-2026-07-29)
+14. [Number Card Dashboard Fixes (2026-09-06)](#14-number-card-dashboard-fixes-2026-09-06)
+15. [Purchase-Side Reconciliation Engine (2026-09-06)](#15-purchase-side-reconciliation-engine-2026-09-06)
 
 ---
 
@@ -634,6 +636,73 @@ Added per-persona **Role Profiles** so an admin can grant eTIMS access in one fi
 `Role Profile.on_update` enqueues `update_all_users` on the `long` queue (it only runs synchronously under `in_install`/`in_test`) and locks the doc until the job runs. On a normal production server (workers running) this drains automatically. On a worker-less box, the queued action leaves a stale file lock in `sites/<site>/locks/` that blocks the next migrate with `DocumentLockedError` -- clear the locks and run a `bench worker` (long queue) to drain. Verified clean on `mbaguya` with a worker running: migrate succeeds, all seven profiles present with their roles, no residual locks.
 
 **Files changed:** `hooks.py` (Role Profile fixture entry), `kenya_etims_compliance/fixtures/role_profile.json` (new).
+
+---
+
+## 14. Number Card Dashboard Fixes (2026-09-06)
+
+Two independent bugs left the eTIMS workspace unable to render 8 of its 12 number cards.
+
+### 14.1 Root cause
+
+- Sum-type cards (`eTIMS Sales Amount Today`, `eTIMS Sales Amount This Month`) never set `aggregate_function_based_on`, which Number Card's own `validate()` requires whenever `function != "Count"`. Every insert failed with "Aggregate Field is required to create a number card".
+- All 8 filtered cards used bareword `Today` / `This Month` inside `filters_json` instead of Frappe's `Timespan` operator (`["Sales Invoice", "posting_date", "Timespan", "today"]`), which crashes client-side the moment the workspace widget resolves the dynamic filter via `orjson.loads()`.
+
+### 14.2 Fix and verification
+
+Fixed both in `setup_dashboard.py`'s card definitions and re-synced `workspace/etims/etims.json` so the fixture matches. Verified live: `create_number_cards()` inserts all 12 rows with zero new Error Log entries, and the workspace renders real values end-to-end in browser (Sales Today: KES 3.00, Sales This Month: KES 17208.00, etc.).
+
+**Files changed:** `kenya_etims_compliance/setup_dashboard.py`, `kenya_etims_compliance/kenya_etims_compliance/workspace/etims/etims.json`.
+
+---
+
+## 15. Purchase-Side Reconciliation Engine (2026-09-06)
+
+Closes the "trust the till" gap on the purchase side: Purchase Invoices no longer need a human to mark them verified before payment can happen, and payment is never blocked on KRA state the payer doesn't control. Instead, a real reconciliation engine matches each local Purchase Invoice against KRA's own purchase register -- KES-tolerant, band-by-band (A-E) -- and enforcement moves from ad hoc invoice/payment gates to period close.
+
+### 15.1 Reconciliation engine
+
+**Files:** `custom_methods/reconciliation.py`, `tasks.py`
+
+- New per-band comparison (`_get_band_mismatch_rows`) reconciling KRA's own A-E tax decomposition against the local eTIMS Purchase Invoice for every matched register entry, not just the header total.
+- `run_reconciliation(period, branch)` is the single entry point used by both the scheduled job and the manual "Run Reconciliation" button; `close_period` now blocks on unresolved reconciliation exceptions instead of a payment-time verification flag.
+- `fetch_purchase_transactions` fixed to advance a proper rolling high-water mark instead of an unbounded/self-widening lookback window; `eTIMS Purchase Information.upsert_purchase_invoice` dedup hardened.
+
+### 15.2 New DocType: eTIMS Reconciliation Exception
+
+Tracks Missing Locally / Not in KRA / Amount Mismatch (now including per-band mismatches) individually so each can be reviewed, accepted, or corrected before a period closes, instead of the old behavior of silently blocking or silently passing.
+
+### 15.3 Payment Entry advisory gate
+
+**File:** `custom_methods/payment_entry.py`
+
+Replaced the hard block ("Cannot make payment for unverified invoices") with an advisory-only notice naming each unconfirmed invoice and its KRA match status, since KRA's purchase register is only populated once the *supplier* files -- routinely after the payment is already due. Blocking `check_payment_eligibility` replaced by reporting-only `get_payment_etims_status`.
+
+### 15.4 Purchase Invoice
+
+**Files:** `custom_methods/purchase_invoice.py`, `custom_methods/purchase_invoice.js`
+
+Added `purchase_return_information` (debit-note counterpart to the existing sales-return logic), an `accept_not_in_kra` UI action for resolving reconciliation exceptions, and reworked `verify_supplier_invoice` / `get_last_inv_number` against the new verification/band fields.
+
+### 15.5 Shared KRA tax-band handling
+
+**File:** `utils/etims_utils.py`
+
+`KRA_TAX_BANDS` and `_resolve_band_code` / `apply_tax_bands` are now the single source of truth for the A-E band breakdown that was previously duplicated ad hoc across sales and purchase payload builders. Propagated into `etims_vat_return_preview`, `etims_x_daily_report` / `etims_z_daily_report` (new shared `_filter_invoices` helper), and `etims_plu_report`. Also fixes `create_new_item_doctype` to auto-vivify a missing `custom_item_classification_code` Link target instead of throwing on first sync.
+
+### 15.6 Settings and fixtures
+
+Existing `enforce_invoice_verification` setting repurposed as the period-close gate (relabeled "Enforce Reconciliation at Period Close"); new `purchase_fetch_lookback_days` setting for the high-water-mark fetch. New Purchase Invoice verification/reconciliation custom fields installed via `install_queue_fields.py` and wired into `after_install.py` and `setup_wizard.py`.
+
+### 15.7 Also
+
+`escpos.py` QR code now checks both bytes of its little-endian length prefix (previously only one), and logs via `frappe.log_error` instead of silently dropping the code when a legitimate KRA verification URL lands in an unsafe length range; `kra_client.py` drops `select_trns_sales_info`/`select_trns_purchase_info` -- not real KRA endpoints (README corrected to match: KRA exposes list-only search, no per-invoice detail call). Test suite updated to match the advisory payment flow and the new reconciliation/band behavior.
+
+### 15.8 Verification
+
+`git status --short` clean after commit; two independent, file-disjoint commits pushed to `upstream/coale-v16` with zero new Error Log entries introduced.
+
+**Files changed:** 42 files, +2251/-939. Primary: `custom_methods/reconciliation.py`, `tasks.py`, `custom_methods/payment_entry.py`, `custom_methods/purchase_invoice.py`/`.js`, `utils/etims_utils.py`, `utils/escpos.py`, `utils/kra_client.py`; new doctype `doctype/etims_reconciliation_exception/`; `doctype/etims_reconciliation_log/etims_reconciliation_log.js` (new); `doctype/etims_settings/`; reports `etims_vat_return_preview`, `etims_x_daily_report`, `etims_z_daily_report`, `etims_plu_report`, `etims_purchase_reconciliation`; `installation/after_install.py`; `custom_methods/install_queue_fields.py`; `fixtures/custom_field.json`; `custom_methods/setup_wizard.py`, `dashboard.py`, `sales_invoice.py`, `bulk_operations.py`, `queue_processor.py`, `stock_reconciliation_etims.py`; `doctype/etims_purchase_information/`, `etims_purchase_invoice/`, `etims_item_information/`; tests (`test_escpos.py` new, `test_etims_custom_methods.py`, `test_etims_expense_compliance.py`, `test_etims_utils.py`); `README.md`.
 
 ---
 
