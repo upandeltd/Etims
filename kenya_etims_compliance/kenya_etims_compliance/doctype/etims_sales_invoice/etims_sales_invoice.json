@@ -86,109 +86,129 @@
    "fieldname": "trader_invoice_number",
    "fieldtype": "Link",
    "label": "Trader Invoice Number",
-   "options": "Sales Invoice"
+   "options": "Sales Invoice",
+   "read_only": 1
   },
   {
    "fieldname": "original_invoice_number",
    "fieldtype": "Int",
-   "label": "Original Invoice Number"
+   "label": "Original Invoice Number",
+   "read_only": 1
   },
   {
    "fieldname": "customer_tin",
    "fieldtype": "Data",
-   "label": "Customer Tin"
+   "label": "Customer Tin",
+   "read_only": 1
   },
   {
    "fieldname": "customer_name",
    "fieldtype": "Data",
-   "label": "Customer Name"
+   "label": "Customer Name",
+   "read_only": 1
   },
   {
    "default": "N",
    "description": "C- Copy, N- Normal, P- Profoma, T- Training\n\n",
    "fieldname": "sales_type_code",
    "fieldtype": "Data",
-   "label": "Sales Type Code"
+   "label": "Sales Type Code",
+   "read_only": 1
   },
   {
    "default": "S",
    "description": "S- Sale, R- Credit Note after Sale\n\n",
    "fieldname": "receipt_type_code",
    "fieldtype": "Data",
-   "label": "Receipt Type Code"
+   "label": "Receipt Type Code",
+   "read_only": 1
   },
   {
    "default": "02",
    "description": "01- Wait for Approval, 02- Approved, 03- Cancel Request, 04- Cancelled, 05- Credit Note Generated, 06- Transferred",
    "fieldname": "sales_status_code",
    "fieldtype": "Data",
-   "label": "Sales Status Code"
+   "label": "Sales Status Code",
+   "read_only": 1
   },
   {
    "fieldname": "confirmation_date",
    "fieldtype": "Data",
-   "label": "Confirmation Date"
+   "label": "Confirmation Date",
+   "read_only": 1
   },
   {
    "fieldname": "sales_date",
    "fieldtype": "Data",
-   "label": "Sales Date"
+   "label": "Sales Date",
+   "read_only": 1
   },
   {
    "fieldname": "invoice_number",
    "fieldtype": "Int",
    "in_list_view": 1,
-   "label": "Invoice Number"
+   "label": "Invoice Number",
+   "read_only": 1
   },
   {
    "fieldname": "stock_release_date",
    "fieldtype": "Data",
-   "label": "Stock Release Date"
+   "label": "Stock Release Date",
+   "read_only": 1
   },
   {
    "fieldname": "total_item_count",
    "fieldtype": "Int",
-   "label": "Total Item Count"
+   "label": "Total Item Count",
+   "read_only": 1
   },
   {
    "fieldname": "total_taxable_amount",
    "fieldtype": "Currency",
-   "label": "Total Taxable Amount"
+   "label": "Total Taxable Amount",
+   "read_only": 1
   },
   {
    "fieldname": "total_tax_amount",
    "fieldtype": "Currency",
-   "label": "Total Tax Amount"
+   "label": "Total Tax Amount",
+   "read_only": 1
   },
   {
    "fieldname": "total_amount",
    "fieldtype": "Currency",
-   "label": "Total Amount"
+   "label": "Total Amount",
+   "read_only": 1
   },
   {
    "fieldname": "purchase_accept",
    "fieldtype": "Data",
-   "label": "Purchase Accept"
+   "label": "Purchase Accept",
+   "read_only": 1
   },
   {
    "fieldname": "remark",
    "fieldtype": "Small Text",
-   "label": "Remark"
+   "label": "Remark",
+   "read_only": 1
   },
   {
    "fieldname": "registration_name",
    "fieldtype": "Data",
-   "label": "Registration Name"
+   "label": "Registration Name",
+   "read_only": 1
   },
   {
    "fieldname": "modifier_name",
    "fieldtype": "Data",
-   "label": "Modifier Name"
+   "label": "Modifier Name",
+   "read_only": 1
   },
   {
    "fieldname": "receipt_publish_date",
    "fieldtype": "Data",
-   "label": "Receipt Publish Date"
+   "label": "Receipt Publish Date",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_oxzn",
@@ -214,7 +234,8 @@
    "fieldname": "items",
    "fieldtype": "Table",
    "label": "Items",
-   "options": "eTIMS Sales Invoice Item"
+   "options": "eTIMS Sales Invoice Item",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_fou8",
@@ -224,7 +245,8 @@
    "fieldname": "branch_id",
    "fieldtype": "Link",
    "label": "Branch ID",
-   "options": "Tax Branch Office"
+   "options": "Tax Branch Office",
+   "read_only": 1
   },
   {
    "default": "0",
@@ -232,7 +254,8 @@
    "fetch_if_empty": 1,
    "fieldname": "update_invoice_in_etims",
    "fieldtype": "Check",
-   "label": "Update Invoice In eTIMS"
+   "label": "Update Invoice In eTIMS",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_7wlw",
@@ -244,19 +267,22 @@
    "fieldname": "company",
    "fieldtype": "Link",
    "label": "Company",
-   "options": "Company"
+   "options": "Company",
+   "read_only": 1
   },
   {
    "fieldname": "sales_control_unit",
    "fieldtype": "Data",
-   "label": "Sales Control Unit"
+   "label": "Sales Control Unit",
+   "read_only": 1
   },
   {
    "default": "01",
    "description": "01- Cash, 02- Credit, 03- Cash/Credit, 04- Bank Check, 05- Debit&Credit Card, 06- Mobile-Money, 07- Other",
    "fieldname": "payment_type_code",
    "fieldtype": "Data",
-   "label": "Payment Type Code"
+   "label": "Payment Type Code",
+   "read_only": 1
   },
   {
    "default": "0",
@@ -264,7 +290,8 @@
    "fieldname": "is_return",
    "fieldtype": "Check",
    "in_list_view": 1,
-   "label": "Is Return"
+   "label": "Is Return",
+   "read_only": 1
   },
   {
    "default": "06",
@@ -272,7 +299,8 @@
    "description": "01- Missing Quantity, 02- Missing Data, 03- Damaged, 04- Wasted, 05- Raw Material Shortage, 06- Refund",
    "fieldname": "credit_note_reason_code",
    "fieldtype": "Data",
-   "label": "Credit Note Reason Code"
+   "label": "Credit Note Reason Code",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_hrel",
@@ -283,7 +311,8 @@
    "fieldname": "sales_updated_in_etims",
    "fieldtype": "Check",
    "in_list_view": 1,
-   "label": "Sales Updated In eTIMS"
+   "label": "Sales Updated In eTIMS",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_jnmm",
@@ -292,51 +321,61 @@
   {
    "fieldname": "current_receipt_number",
    "fieldtype": "Data",
-   "label": "Current Receipt Number"
+   "label": "Current Receipt Number",
+   "read_only": 1
   },
   {
    "fieldname": "total_receipt_number",
    "fieldtype": "Data",
-   "label": "Total Receipt Number"
+   "label": "Total Receipt Number",
+   "read_only": 1
   },
   {
    "fieldname": "internal_data",
    "fieldtype": "Data",
-   "label": "Internal Data"
+   "label": "Internal Data",
+   "read_only": 1
   },
   {
    "fieldname": "receipt_signature",
    "fieldtype": "Data",
-   "label": "Receipt Signature"
+   "label": "Receipt Signature",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_laq6",
-   "fieldtype": "Column Break"
+   "fieldtype": "Column Break",
+   "read_only": 1
   },
   {
    "fieldname": "control_unit_date_time",
    "fieldtype": "Data",
-   "label": "Control Unit Date Time"
+   "label": "Control Unit Date Time",
+   "read_only": 1
   },
   {
    "fieldname": "control_unit_date",
    "fieldtype": "Datetime",
-   "label": "Control Unit Date"
+   "label": "Control Unit Date",
+   "read_only": 1
   },
   {
    "fieldname": "control_unit_time",
    "fieldtype": "Time",
-   "label": "Control Unit Time"
+   "label": "Control Unit Time",
+   "read_only": 1
   },
   {
    "fieldname": "receipt_qr_code",
    "fieldtype": "Data",
-   "label": "Receipt QR Code"
+   "label": "Receipt QR Code",
+   "read_only": 1
   },
   {
    "fieldname": "taxable_amount_a",
    "fieldtype": "Currency",
-   "label": "Taxable Amount (A)"
+   "label": "Taxable Amount (A)",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_x8z8",
@@ -345,72 +384,86 @@
   {
    "fieldname": "tax_rate_a",
    "fieldtype": "Percent",
-   "label": "Tax Rate (A)"
+   "label": "Tax Rate (A)",
+   "read_only": 1
   },
   {
    "fieldname": "tax_amount_a",
    "fieldtype": "Currency",
-   "label": "Tax Amount (A)"
+   "label": "Tax Amount (A)",
+   "read_only": 1
   },
   {
    "fieldname": "taxable_amount_b",
    "fieldtype": "Currency",
-   "label": "Taxable Amount (B)"
+   "label": "Taxable Amount (B)",
+   "read_only": 1
   },
   {
    "fieldname": "tax_rate_b",
    "fieldtype": "Percent",
-   "label": "Tax Rate (B)"
+   "label": "Tax Rate (B)",
+   "read_only": 1
   },
   {
    "fieldname": "tax_amount_b",
    "fieldtype": "Currency",
-   "label": "Tax Amount (B)"
+   "label": "Tax Amount (B)",
+   "read_only": 1
   },
   {
    "fieldname": "taxable_amount_c",
    "fieldtype": "Currency",
-   "label": "Taxable Amount (C)"
+   "label": "Taxable Amount (C)",
+   "read_only": 1
   },
   {
    "fieldname": "tax_rate_c",
    "fieldtype": "Percent",
-   "label": "Tax Rate (C)"
+   "label": "Tax Rate (C)",
+   "read_only": 1
   },
   {
    "fieldname": "tax_amount_c",
    "fieldtype": "Currency",
-   "label": "Tax Amount (C)"
+   "label": "Tax Amount (C)",
+   "read_only": 1
   },
   {
    "fieldname": "taxable_amount_d",
    "fieldtype": "Currency",
-   "label": "Taxable Amount (D)"
+   "label": "Taxable Amount (D)",
+   "read_only": 1
   },
   {
    "fieldname": "tax_rate_d",
    "fieldtype": "Percent",
-   "label": "Tax Rate (D)"
+   "label": "Tax Rate (D)",
+   "read_only": 1
   },
   {
    "fieldname": "tax_amount_d",
    "fieldtype": "Currency",
-   "label": "Tax Amount (D)"
+   "label": "Tax Amount (D)",
+   "read_only": 1
   },
   {
    "fieldname": "taxable_amount_e",
    "fieldtype": "Currency",
-   "label": "Taxable Amount (E)"
+   "label": "Taxable Amount (E)",
+   "read_only": 1
   },
   {
    "fieldname": "tax_rate_e",
    "fieldtype": "Percent",
-   "label": "Tax Rate (E)"
+   "label": "Tax Rate (E)",
+   "read_only": 1
   },
   {
    "fieldname": "tax_amount_e",
    "fieldtype": "Currency",
-   "label": "Tax Amount (E)"
+   "label": "Tax Amount (E)",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_u7t3",
@@ -423,34 +476,40 @@
   {
    "fieldname": "total_non_taxable_amount",
    "fieldtype": "Currency",
-   "label": "Total Non Taxable Amount"
+   "label": "Total Non Taxable Amount",
+   "read_only": 1
   },
   {
    "fieldname": "total_before_discount",
    "fieldtype": "Currency",
-   "label": "Total Before Discount"
+   "label": "Total Before Discount",
+   "read_only": 1
   },
   {
    "fieldname": "total_discount_amount",
    "fieldtype": "Currency",
-   "label": "Total Discount Amount"
+   "label": "Total Discount Amount",
+   "read_only": 1
   },
   {
    "fieldname": "receipt_url",
    "fieldtype": "Data",
-   "label": "Receipt URL"
+   "label": "Receipt URL",
+   "read_only": 1
   },
   {
    "fieldname": "return_against",
    "fieldtype": "Link",
    "label": "Return Against",
-   "options": "Sales Invoice"
+   "options": "Sales Invoice",
+   "read_only": 1
   },
   {
    "default": "0",
    "fieldname": "update_stock",
    "fieldtype": "Check",
-   "label": "Update Stock"
+   "label": "Update Stock",
+   "read_only": 1
   },
   {
    "fieldname": "status",
@@ -458,14 +517,15 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Status",
-   "options": "Pending eTIMS Sync\neTIMS Synced"
+   "options": "Pending eTIMS Sync\neTIMS Synced",
+   "read_only": 1
   }
  ],
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-14 16:28:10.030369",
- "modified_by": "Administrator",
+ "modified": "2026-06-07 11:09:38.332659",
+ "modified_by": "admin@nexagensolutions.com",
  "module": "Kenya Etims Compliance",
  "name": "eTIMS Sales Invoice",
  "naming_rule": "Expression",
