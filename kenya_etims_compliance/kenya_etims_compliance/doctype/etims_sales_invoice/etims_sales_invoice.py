@@ -101,6 +101,7 @@ class eTIMSSalesInvoice(Document):
                     elif item.get("tax_type_code") in ["A", "a"]:
                             total_taxable_a += item.get("taxable_amount")
                             total_non_taxable_amount += total_taxable_a
+                            total_taxable_amount += total_taxable_a
 
                             self.taxable_amount_a = total_taxable_a
                             self.tax_rate_a = 0
