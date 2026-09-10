@@ -60,23 +60,49 @@ class TestBranchUserGuards(FrappeTestCase):
         bu.used_unused = "Y"
 
         captured = {}
-        resp = MagicMock()
-        resp.json.return_value = {"resultCd": "000", "resultMsg": "ok"}
+        client = MagicMock()
+        client.post.side_effect = lambda endpoint, payload, **_kwargs: captured.update(
+            endpoint=endpoint, payload=payload
+        ) or {"Success": None}
 
-        def fake_request(method, url, json=None, headers=None):
-            captured["payload"] = json
-            return resp
-
-        with patch.object(bu_mod, "requests") as req, patch.object(bu_mod, "eTIMS") as et:
-            req.request.side_effect = fake_request
-            et.get_headers.return_value = {}
-            et.tims_base_url.return_value = "http://kra.test/"
+        with patch.object(bu_mod, "KRAClient", return_value=client):
             bu.bhfUserSaveReq()
 
+        self.assertEqual(captured["endpoint"], "saveBhfUser")
         self.assertEqual(captured["payload"]["userId"], "mustafa@sajmustafa.c")  # 20 chars
         self.assertEqual(len(captured["payload"]["userId"]), 20)
         # The record itself keeps the full value for creator matching.
         self.assertEqual(bu.user_id, "mustafa@sajmustafa.com")
+
+    def test_bhf_user_save_reports_error_without_saving_when_headers_missing(self):
+        """Regression: KRAClient's require_auth pre-flight must surface a clear
+        local error instead of the old code silently POSTing with no auth
+        headers and returning KRA's opaque 'There is no Header information'.
+        """
+        bu = frappe.new_doc("eTIMS Branch User")
+        bu.user_id = "edwin"
+        bu.user_name = "edwin"
+        bu.password = "x"
+        bu.registration_name = "edwin"
+        bu.modifier_name = "edwinY"
+        bu.system_user = self._login()
+        bu.used_unused = "Y"
+
+        client = MagicMock()
+        client.post.return_value = {
+            "Error": (
+                "No active TIS Device Initialization for branch 'None'. Cannot call "
+                "KRA API without authentication headers (tin, bhfId, cmcKey)."
+            ),
+            "Retryable": False,
+        }
+
+        with patch.object(bu_mod, "KRAClient", return_value=client):
+            result = bu.bhfUserSaveReq()
+
+        self.assertIn("Error", result)
+        self.assertIn("authentication headers", result["Error"])
+        self.assertNotEqual(bu.saved, 1)
 
     def test_creator_resolved_via_system_user_link(self):
         login = self._login()

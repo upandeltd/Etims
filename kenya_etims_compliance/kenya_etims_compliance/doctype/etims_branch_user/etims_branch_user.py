@@ -1,12 +1,11 @@
 # Copyright (c) 2024, Upande Ltd and contributors
 # For license information, please see license.txt
 
-import requests, traceback
-
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from kenya_etims_compliance.utils.etims_utils import eTIMS
+
+from kenya_etims_compliance.utils.kra_client import KRAClient
 
 
 # KRA caps these identifier fields at 20 characters (saveBhfUser spec).
@@ -63,7 +62,6 @@ class eTIMSBranchUser(Document):
 
     @frappe.whitelist()
     def bhfUserSaveReq(self):
-        headers = eTIMS.get_headers()
         user = self
         if not user.get("saved") == 1:
             payload = {
@@ -99,32 +97,17 @@ class eTIMSBranchUser(Document):
                     title=_("Field too long for KRA"),
                 )
 
-            try:
-                response = requests.request(
-                    "POST",
-                    eTIMS.tims_base_url() + 'saveBhfUser',
-                    json=payload,
-                    headers=headers
-                )
-                response_json = response.json()
+            # Route through KRAClient (not raw requests) so a branch that can't
+            # resolve TIS Device Initialization headers (tin/bhfId/cmcKey) fails
+            # fast locally with an actionable message instead of silently
+            # POSTing with no auth headers and getting KRA's opaque "There is
+            # no Header information".
+            result = KRAClient().post(
+                "saveBhfUser", payload, reference_doctype="eTIMS Branch User", reference_name=user.name
+            )
+            if "Success" not in result:
+                return {"Error": result.get("Error", "Unknown error")}
 
-                if not response_json.get("resultCd") == '000':
-                    # KRA hides the offending field; log every field length so it
-                    # can be identified from the Error Log.
-                    field_lengths = {
-                        k: (len(v) if isinstance(v, str) else v) for k, v in payload.items()
-                    }
-                    frappe.log_error(
-                        message="saveBhfUser rejected: {0}\nField lengths: {1}".format(
-                            response_json.get("resultMsg"), field_lengths
-                        ),
-                        title="eTIMS Branch User register failed",
-                    )
-                    return {"Error": response_json.get("resultMsg")}
-
-                user.saved = 1
-                user.save()
-                return {"Success": response_json.get("resultMsg")}
-            except Exception as e:
-                frappe.log_error(frappe.get_traceback(), "User Register")
-                raise e
+            user.saved = 1
+            user.save()
+            return {"Success": "User registered"}
