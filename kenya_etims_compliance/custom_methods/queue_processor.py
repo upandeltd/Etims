@@ -21,6 +21,25 @@ def should_use_queue():
 	return settings.get("enable_queue", 1)
 
 
+# The shared `custom_etims_queue_status`/`custom_etims_queue_entry` fields on
+# a source document belong to its PRIMARY fiscal submission only. A primary
+# success handler may enqueue further auxiliary calls on its own (e.g. Sales
+# Invoice's post-signing stock-master sync) — those get their own eTIMS
+# Invoice Queue row for audit/retry, but must never drive the shared fields:
+# a later auxiliary failure would mask an already-signed receipt behind an
+# unrelated timeout, and a later auxiliary success would be fed through the
+# wrong doctype response parser (guaranteed exception, silently swallowed).
+PRIMARY_ENDPOINTS = {
+	"Sales Invoice": {"save_sales"},
+	"Purchase Invoice": {"insert_purchase"},
+	"Stock Entry": {"insert_stock_io"},
+}
+
+
+def _is_primary_submission(reference_doctype, api_endpoint):
+	return api_endpoint in PRIMARY_ENDPOINTS.get(reference_doctype, set())
+
+
 def enqueue_invoice(doc, payload, api_endpoint, branch_id=None):
 	"""Create queue entry and enqueue background job.
 
@@ -47,16 +66,18 @@ def enqueue_invoice(doc, payload, api_endpoint, branch_id=None):
 	)
 	queue_entry.insert(ignore_permissions=True)
 
-	# Set status on the source document
-	frappe.db.set_value(
-		doc.doctype,
-		doc.name,
-		{
-			"custom_etims_queue_status": "Queued",
-			"custom_etims_queue_entry": queue_entry.name,
-		},
-		update_modified=False,
-	)
+	# Set status on the source document — but only for the primary fiscal
+	# submission; see PRIMARY_ENDPOINTS above.
+	if _is_primary_submission(doc.doctype, api_endpoint):
+		frappe.db.set_value(
+			doc.doctype,
+			doc.name,
+			{
+				"custom_etims_queue_status": "Queued",
+				"custom_etims_queue_entry": queue_entry.name,
+			},
+			update_modified=False,
+		)
 
 	frappe.enqueue(
 		"kenya_etims_compliance.custom_methods.queue_processor.process_queue_entry",
@@ -232,6 +253,7 @@ def process_queue_entry(queue_entry_name):
 		else:
 			queue_entry.last_error = error_msg
 			queue_entry.next_retry_at = _calculate_next_retry(new_retry_count)
+		queue_entry.save(ignore_permissions=True)
 		frappe.db.commit()
 
 		_update_source_status(queue_entry, "Failed", error_msg)
@@ -356,11 +378,18 @@ def get_queue_status():
 
 @frappe.whitelist()
 def retry_single_entry(queue_entry_name):
-	"""Manually retry a single failed queue entry."""
+	"""Manually retry a single queue entry stuck in Failed or Queued.
+
+	"Queued" is included because the pre-flight-down path in
+	``process_queue_entry`` deliberately leaves a not-yet-exhausted entry
+	"Queued" rather than "Failed" (see its CRITICAL 5 comment) — that state
+	is just as retry-eligible as "Failed", and both ``process_queue_entry``'s
+	own lock guard and ``retry_failed_invoices`` already treat it that way.
+	"""
 	frappe.has_permission("eTIMS Invoice Queue", "write", throw=True)
 	entry = frappe.get_doc("eTIMS Invoice Queue", queue_entry_name)
-	if entry.status != "Failed":
-		frappe.throw(_("Only failed entries can be retried"))
+	if entry.status not in ("Failed", "Queued"):
+		frappe.throw(_("Only failed or queued entries can be retried"))
 
 	frappe.enqueue(
 		"kenya_etims_compliance.custom_methods.queue_processor.process_queue_entry",
@@ -512,19 +541,26 @@ def cleanup_terminal_queue_entries():
 def _update_source_status(queue_entry, status, error_msg=None, commit=True):
 	"""Update the source document's eTIMS queue status fields.
 
+	Only the primary fiscal submission for ``reference_doctype`` may drive
+	this shared field — see PRIMARY_ENDPOINTS. An auxiliary entry's own
+	eTIMS Invoice Queue row still gets updated by the caller; it just never
+	touches the document everyone else reads "is this invoice fiscalised"
+	from.
+
 	``commit=False`` leaves the write in the caller's transaction so it can be
 	made atomic with related work.
 	"""
-	update_dict = {"custom_etims_queue_status": status}
-	if error_msg:
-		update_dict["custom_etims_last_error"] = error_msg[:2000]
-		update_dict["custom_etims_retry_count"] = queue_entry.retry_count or 0
-	frappe.db.set_value(
-		queue_entry.reference_doctype,
-		queue_entry.reference_name,
-		update_dict,
-		update_modified=False,
-	)
+	if _is_primary_submission(queue_entry.reference_doctype, queue_entry.api_endpoint):
+		update_dict = {"custom_etims_queue_status": status}
+		if error_msg:
+			update_dict["custom_etims_last_error"] = error_msg[:2000]
+			update_dict["custom_etims_retry_count"] = queue_entry.retry_count or 0
+		frappe.db.set_value(
+			queue_entry.reference_doctype,
+			queue_entry.reference_name,
+			update_dict,
+			update_modified=False,
+		)
 	if commit:
 		frappe.db.commit()
 
@@ -541,11 +577,21 @@ def _handle_success(queue_entry, result):
 	still had no signature. If the supplementary work fails we roll its partial
 	writes back, persist "Sent" alone, and leave the rest to
 	``repair_sent_without_signature``.
+
+	An auxiliary endpoint (e.g. Sales Invoice's post-signing stock-master
+	sync) has nothing to hand off here: its response shape matches no
+	sub-handler's, and the shared source-document fields belong solely to
+	the primary submission. Its own eTIMS Invoice Queue row — already "Sent"
+	by the caller — is the complete record.
 	"""
-	data = result.get("Success") or {}
 	doctype = queue_entry.reference_doctype
 	docname = queue_entry.reference_name
 
+	if not _is_primary_submission(doctype, queue_entry.api_endpoint):
+		frappe.db.commit()
+		return
+
+	data = result.get("Success") or {}
 	_update_source_status(queue_entry, "Sent", commit=False)
 
 	try:
