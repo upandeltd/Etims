@@ -843,7 +843,14 @@ def etims_sale_item_list_sales(doc):
 	sales_item_list = []
 	for idx, row in enumerate(merged_items.values(), start=1):
 		row["itemSeq"] = idx
-		row["prc"] = round(row["splyAmt"] / row["qty"], 2) if row["qty"] else 0
+		# Not rounded to 2dp like the amount fields: for a merged multi-rate
+		# row (see the comment above) a 2dp-rounded average price makes
+		# qty * prc drift from splyAmt by tens of cents at realistic
+		# quantities, which KRA's own per-item cross-check rejects as
+		# "Supply/Taxable/Total amount is incorrect for item X" (910).
+		# splyAmt (the summed real transaction amount) stays authoritative;
+		# prc is back-derived from it, not the other way around.
+		row["prc"] = row["splyAmt"] / row["qty"] if row["qty"] else 0
 		row["dcRt"] = round((row["dcAmt"] / row["splyAmt"]) * 100, 2) if row["splyAmt"] else 0
 		sales_item_list.append(row)
 
@@ -893,6 +900,8 @@ def etims_sale_item_list_stock(doc):
 
 			if item_etims_data not in stock_item_list:
 				stock_item_list.append(item_etims_data)
+
+	return stock_item_list
 
 def get_tax_template_details(template_name):
 	if not template_name:
