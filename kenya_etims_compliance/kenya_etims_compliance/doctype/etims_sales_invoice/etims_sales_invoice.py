@@ -288,10 +288,51 @@ def retry_pending_etims_invoices():
 
             if sales_invoice.docstatus == 1:
                 doc = frappe.get_doc("eTIMS Sales Invoice", d.name)
-                trnsSalesSaveWrReq(doc)
+
+                # The scheduler runs as Administrator, so the session user can't tell us the
+                # branch. Resolve credentials from the invoice's own company/branch instead.
+                credentials = get_retry_credentials(doc)
+
+                if not credentials:
+                    frappe.log_error(
+                        f"No eTIMS credentials found for eTIMS Sales Invoice {doc.name} "
+                        f"(company: {doc.company}, branch: {doc.branch_id}). "
+                        "Check PIN, Branch ID and Communication Key on Tax Branch Configurations.",
+                        "Retry eTIMS Submission Failed."
+                    )
+                    continue
+
+                trnsSalesSaveWrReq(doc, headers=credentials.get("headers"), base_url=credentials.get("base_url"))
 
         except Exception:
             frappe.log_error(frappe.get_traceback(), "Retry eTIMS Submission Failed.")
+
+
+def get_retry_credentials(doc):
+    '''
+    Resolve eTIMS credentials for a background retry without relying on frappe.session.user.
+    Branch order: the invoice's branch -> the invoice creator's default branch -> the
+    company's only branch (only when it has exactly one, to avoid reporting under the wrong branch).
+    '''
+    branch_id = doc.branch_id or frappe.db.get_value(
+        "User Permission",
+        {"user": doc.owner, "allow": "Tax Branch Office", "is_default": 1},
+        "for_value"
+    )
+
+    if not branch_id:
+        branches = frappe.db.get_all(
+            "Tax Branch Configurations",
+            filters={"company": doc.company},
+            pluck="tax_branch_office",
+            limit=2
+        )
+
+        if len(branches) == 1:
+            branch_id = branches[0]
+
+    if branch_id:
+        return eTIMS.get_branch_credentials(doc.company, branch_id)
 
 
 def writeInvoiceToeTIMS(doc, method):
@@ -329,12 +370,14 @@ def writeInvoiceToeTIMS(doc, method):
 
 
 @frappe.whitelist()
-def trnsSalesSaveWrReq(doc):
+def trnsSalesSaveWrReq(doc, headers=None, base_url=None):
 
     '''
     Method that collects sales information and updates it to tims server
     '''
-    headers = eTIMS.get_headers() 
+    # headers/base_url are passed in by scheduled jobs; interactive calls use the session user's branch
+    headers = headers or eTIMS.get_headers()
+    base_url = base_url or eTIMS.tims_base_url()
                 
     payload = {
         "trdInvcNo": doc.get("trader_invoice_number"),
@@ -405,7 +448,7 @@ def trnsSalesSaveWrReq(doc):
     try:
         response = requests.request(
             "POST", 
-            eTIMS.tims_base_url() + 'saveTrnsSalesOsdc', 
+            base_url + 'saveTrnsSalesOsdc',
             json = payload, 
             headers=headers)
 
@@ -464,7 +507,7 @@ def trnsSalesSaveWrReq(doc):
         settings_details = get_etims_details(doc.company, headers.get("bhfId"), doc.owner, doc.modified_by)
 
         if settings_details.get("update_stock")==1:
-            stockIOSaveReq(doc, doc.get("sales_date"))
+            stockIOSaveReq(doc, doc.get("sales_date"), headers=headers, base_url=base_url)
     
         
         frappe.msgprint(f'Invoice {doc.trader_invoice_number} has been submitted to eTIMS 🎉')
@@ -481,10 +524,12 @@ def trnsSalesSaveWrReq(doc):
 
     return
         
-def stockIOSaveReq(doc, date_str):
+def stockIOSaveReq(doc, date_str, headers=None, base_url=None):
     taxAmt = 0
     taxblAmt = 0
-    headers = eTIMS.get_headers()
+    branch_id = headers.get("bhfId") if headers else None
+    headers = headers or eTIMS.get_headers()
+    base_url = base_url or eTIMS.tims_base_url()
     stock_list = etims_sale_item_list_stock(doc)
     if len(stock_list):
         for item in doc.items:
@@ -493,7 +538,7 @@ def stockIOSaveReq(doc, date_str):
                 taxAmt +=  item.get("tax_amount")
                         
         payload = {
-            "sarNo": get_etims_sar_no(doc),
+            "sarNo": get_etims_sar_no(doc, branch_id),
             "orgSarNo": get_org_etims_sar_no(doc),
             "regTyCd": "A",
             "custTin": doc.customer_tin,
@@ -529,7 +574,7 @@ def stockIOSaveReq(doc, date_str):
                 # print(payload)
                 response = requests.request(
                             "POST", 
-                            eTIMS.tims_base_url() + 'insertStockIO',
+                            base_url + 'insertStockIO',
                             json = payload, 
                             headers=headers
                         )
@@ -612,9 +657,9 @@ def etims_sale_item_list_stock(doc):
                 
     return stock_item_list
 
-def get_etims_sar_no(doc):
+def get_etims_sar_no(doc, branch_id=None):
         etims_sar_no = 1
-        branch_id = eTIMS.get_user_branch_id()
+        branch_id = branch_id or eTIMS.get_user_branch_id()
         try:
             etims_sar_docs = frappe.get_last_doc("eTIMS Stock Release Number", filters={"tax_branch_office": branch_id})
             

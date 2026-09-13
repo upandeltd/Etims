@@ -7,6 +7,17 @@ from frappe.model.document import Document
 from kenya_etims_compliance.utils.etims_utils import eTIMS
 
 class TISDeviceInitialization(Document):
+    def on_update(self):
+        # Mirror credentials onto linked Tax Branch Configurations so scheduled jobs
+        # (running as Administrator) can read them without a user -> branch lookup.
+        for config in frappe.get_all("Tax Branch Configurations", filters={"tis_device_initialization": self.name}, pluck="name"):
+            frappe.db.set_value("Tax Branch Configurations", config, {
+                "pin": self.pin,
+                "branch_id": self.branch_id,
+                "communication_key": self.communication_key,
+                "api_mode": self.api_mode,
+            }, update_modified=False)
+
 	# Method to initialize and verify a device with etims
     @frappe.whitelist()
     def deviceVerificationReq(self):

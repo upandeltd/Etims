@@ -17,7 +17,52 @@ class eTIMS():
             }
             
             return headers
-        
+
+    def get_branch_credentials(company, branch_id):
+        '''
+        eTIMS credentials for a specific company + branch, independent of frappe.session.user.
+        Meant for scheduled/background jobs, which run as Administrator (no branch permission).
+        Reads the values stored on Tax Branch Configurations, falling back to the linked
+        TIS Device Initialization if they have not been filled in yet.
+        Returns None when pin, branch id or communication key is missing.
+        '''
+        fields = ["pin", "branch_id", "communication_key", "api_mode"]
+
+        config = frappe.db.get_value(
+            "Tax Branch Configurations",
+            {"company": company, "tax_branch_office": branch_id},
+            ["tis_device_initialization"] + fields,
+            as_dict=True
+        )
+
+        if not config:
+            return
+
+        if not (config.pin and config.branch_id and config.communication_key) and config.tis_device_initialization:
+            config.update(
+                frappe.db.get_value("TIS Device Initialization", config.tis_device_initialization, fields, as_dict=True) or {}
+            )
+
+        if not (config.pin and config.branch_id and config.communication_key):
+            return
+
+        return {
+            "headers": {
+                "tin": config.pin,
+                "bhfId": config.branch_id,
+                "cmcKey": config.communication_key,
+            },
+            "base_url": eTIMS.get_api_base_url(config.api_mode),
+        }
+
+    def get_api_base_url(api_mode):
+        if api_mode == "Production":
+            return 'https://etims-api.kra.go.ke/etims-api/'
+        elif api_mode == "Sandbox":
+            return 'https://etims-api-sbx.kra.go.ke/etims-api/'
+
+        return eTIMS.get_base_url() + '/api/method/kenya_etims_compliance.utils.etims_response.'
+
     def get_base_url():
         base_url = frappe.utils.get_url()
         

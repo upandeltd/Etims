@@ -12,6 +12,12 @@
   "tax_branch_office",
   "tis_device_initialization",
   "parent_tax_account",
+  "etims_credentials_section",
+  "pin",
+  "branch_id",
+  "column_break_etims_creds",
+  "communication_key",
+  "api_mode",
   "accounts_tab",
   "tax_accounts",
   "create_accounts",
@@ -189,11 +195,48 @@
    "fieldname": "update_stock_stock",
    "fieldtype": "Check",
    "label": "Update Stock"
+  },
+  {
+   "fieldname": "etims_credentials_section",
+   "fieldtype": "Section Break",
+   "label": "eTIMS Credentials"
+  },
+  {
+   "fetch_from": "tis_device_initialization.pin",
+   "fieldname": "pin",
+   "fieldtype": "Data",
+   "label": "PIN",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "tis_device_initialization.branch_id",
+   "fieldname": "branch_id",
+   "fieldtype": "Data",
+   "label": "Branch ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_etims_creds",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "tis_device_initialization.communication_key",
+   "fieldname": "communication_key",
+   "fieldtype": "Data",
+   "label": "Communication Key",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "tis_device_initialization.api_mode",
+   "fieldname": "api_mode",
+   "fieldtype": "Data",
+   "label": "API Mode",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-14 17:38:11.019045",
+ "modified": "2026-09-13 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Kenya Etims Compliance",
  "name": "Tax Branch Configurations",
