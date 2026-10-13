@@ -106,7 +106,7 @@ after_migrate = [
 # Uninstallation
 # ------------
 
-# before_uninstall = "kenya_etims_compliance.uninstall.before_uninstall"
+before_uninstall = "kenya_etims_compliance.uninstall.before_uninstall"
 # after_uninstall = "kenya_etims_compliance.uninstall.after_uninstall"
 
 # Integration Setup
