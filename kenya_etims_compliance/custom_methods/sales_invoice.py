@@ -134,6 +134,44 @@ def on_cancel(doc, method):
 			),
 		)
 
+# Substrings of a Mode of Payment name -> KRA pmtTyCd. ERPNext's own `type`
+# cannot tell these apart (M-pesa is routinely configured as type "Cash").
+_MOBILE_MONEY = ("mpesa", "m-pesa", "mobile", "airtel", "tkash", "t-kash", "equitel")
+_CHEQUE = ("cheque", "check")
+_CARD = ("card", "visa", "mastercard")
+
+
+def _row_payment_code(row):
+	name = (row.mode_of_payment or "").lower()
+	if any(k in name for k in _MOBILE_MONEY):
+		return "06"
+	if any(k in name for k in _CHEQUE):
+		return "04"
+	if row.get("type") == "Bank" or any(k in name for k in _CARD):
+		return "05"
+	return "01" if row.get("type") == "Cash" else "07"
+
+
+def payment_type_code(doc):
+	"""KRA pmtTyCd for a POS sale, from what was actually tendered.
+
+	KRA takes one code per receipt, so a split between non-credit modes reports
+	the mode that carried the most money. A sale left partly unpaid is 03
+	(Cash/Credit). Returns None when nothing was tendered (room charge, untendered
+	sale) so the existing value stands.
+	"""
+	paid = {}
+	for row in doc.payments:
+		if flt(row.amount):
+			code = _row_payment_code(row)
+			paid[code] = paid.get(code, 0) + abs(flt(row.amount))
+	if not paid:
+		return None
+	if not doc.is_return and flt(doc.outstanding_amount) > 0.01:
+		return "03"
+	return max(paid, key=paid.get)
+
+
 def validate(doc, method):
 	"""
 	Method validate invoice number before submitting invoice
@@ -143,6 +181,9 @@ def validate(doc, method):
 		enable_etims = frappe.db.get_value("POS Profile", doc.pos_profile, "custom_enable_etims_signing")
 		if enable_etims:
 			doc.custom_update_invoice_in_tims = 1
+
+	if doc.is_pos and (code := payment_type_code(doc)):
+		doc.custom_payment_type_code = code
 
 	if doc.custom_invoice_number and doc.name:
 		doc_exists = frappe.db.exists("Sales Invoice", {"name": doc.name})
