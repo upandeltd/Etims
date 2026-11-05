@@ -4,7 +4,7 @@ import traceback
 import frappe
 import requests
 from frappe import _
-from frappe.utils import add_to_date, now_datetime
+from frappe.utils import add_days, add_to_date, now_datetime
 from rq.timeouts import JobTimeoutException
 
 from kenya_etims_compliance.custom_methods.notifications import send_queue_failure_alert
@@ -239,6 +239,17 @@ def process_queue_entry(queue_entry_name):
 			)
 			return
 
+		# KRA 924 = invcNo already used at KRA. The local allocator only sees this
+		# site's numbers, so a shared SCU / other POS / restored DB puts KRA ahead.
+		# Retrying the same frozen payload can never succeed — renumber instead.
+		if (
+			queue_entry.api_endpoint == "save_sales"
+			and "(924)" in str(e)
+			and (queue_entry.retry_count or 0) < (queue_entry.max_retries or 3)
+			and _renumber_duplicate_invoice(queue_entry)
+		):
+			return
+
 		error_msg = str(e)[:2000]
 
 		queue_entry.reload()
@@ -265,6 +276,58 @@ def process_queue_entry(queue_entry_name):
 
 		if queue_entry.status == "Failed" and new_retry_count >= (queue_entry.max_retries or 3):
 			_handle_exhausted(queue_entry)
+
+
+def _renumber_duplicate_invoice(queue_entry):
+	"""Move a 924-rejected Sales Invoice to the next free eTIMS number and re-queue.
+
+	New number = max(KRA's highest, local highest) + 1. Returns False (no change)
+	if KRA's record at the rejected number is this very invoice (lost-ack retry):
+	renumbering then would create a DUPLICATE fiscal receipt.
+	"""
+	from kenya_etims_compliance.custom_methods.sales_invoice import (
+		get_last_inv_number,
+		sync_kra_invoice_floor,
+	)
+
+	queue_entry.reload()
+	payload = json.loads(queue_entry.payload)
+	old = payload.get("invcNo")
+	res = eTIMS.searchTrns(trns_type="sales", last_req_dt=add_days(now_datetime(), -400))
+	rows = ((res.get("Success") or {}) if isinstance(res, dict) else {}).get("salesList") or []
+	if not rows:
+		return False  # cannot see KRA's state — leave Failed for manual recovery
+
+	for r in rows:
+		if (
+			r.get("invcNo") == old
+			and float(r.get("totAmt") or 0) == float(payload.get("totAmt") or 0)
+			and r.get("salesDt") == payload.get("salesDt")
+			and (r.get("custNm") or "") == (payload.get("custNm") or "")
+		):
+			return False  # already ours at KRA
+
+	doc = frappe.get_doc(queue_entry.reference_doctype, queue_entry.reference_name)
+	branch_id = doc.custom_tax_branch_office
+	sync_kra_invoice_floor(branch_id, rows=rows)
+	new = get_last_inv_number(doc, branch_id)  # max(device floor, local max) + 1
+
+	payload["invcNo"] = new
+	frappe.db.set_value(doc.doctype, doc.name, "custom_invoice_number", new, update_modified=False)
+	queue_entry.payload = json.dumps(payload)
+	queue_entry.status = "Queued"
+	queue_entry.retry_count = (queue_entry.retry_count or 0) + 1
+	queue_entry.next_retry_at = None
+	queue_entry.last_error = f"KRA 924: invoice number {old} already used at KRA; renumbered to {new}"
+	queue_entry.save(ignore_permissions=True)
+	frappe.db.commit()
+	_update_source_status(queue_entry, "Queued")
+	frappe.enqueue(
+		"kenya_etims_compliance.custom_methods.queue_processor.process_queue_entry",
+		queue="short",
+		queue_entry_name=queue_entry.name,
+	)
+	return True
 
 
 # A fresh enqueue is processed by its enqueue_after_commit job within seconds;

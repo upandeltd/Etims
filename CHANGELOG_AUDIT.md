@@ -23,6 +23,7 @@
 13. [Role Profiles (2026-07-29)](#13-role-profiles-2026-07-29)
 14. [Number Card Dashboard Fixes (2026-09-06)](#14-number-card-dashboard-fixes-2026-09-06)
 15. [Purchase-Side Reconciliation Engine (2026-09-06)](#15-purchase-side-reconciliation-engine-2026-09-06)
+16. [KRA Duplicate Invoice Number (924) Fix (2026-11-05)](#16-kra-duplicate-invoice-number-924-fix-2026-11-05)
 
 ---
 
@@ -703,6 +704,40 @@ Existing `enforce_invoice_verification` setting repurposed as the period-close g
 `git status --short` clean after commit; two independent, file-disjoint commits pushed to `upstream/coale-v16` with zero new Error Log entries introduced.
 
 **Files changed:** 42 files, +2251/-939. Primary: `custom_methods/reconciliation.py`, `tasks.py`, `custom_methods/payment_entry.py`, `custom_methods/purchase_invoice.py`/`.js`, `utils/etims_utils.py`, `utils/escpos.py`, `utils/kra_client.py`; new doctype `doctype/etims_reconciliation_exception/`; `doctype/etims_reconciliation_log/etims_reconciliation_log.js` (new); `doctype/etims_settings/`; reports `etims_vat_return_preview`, `etims_x_daily_report`, `etims_z_daily_report`, `etims_plu_report`, `etims_purchase_reconciliation`; `installation/after_install.py`; `custom_methods/install_queue_fields.py`; `fixtures/custom_field.json`; `custom_methods/setup_wizard.py`, `dashboard.py`, `sales_invoice.py`, `bulk_operations.py`, `queue_processor.py`, `stock_reconciliation_etims.py`; `doctype/etims_purchase_information/`, `etims_purchase_invoice/`, `etims_item_information/`; tests (`test_escpos.py` new, `test_etims_custom_methods.py`, `test_etims_expense_compliance.py`, `test_etims_utils.py`); `README.md`.
+
+---
+
+## 16. KRA Duplicate Invoice Number (924) Fix (2026-11-05)
+
+Sales submissions failed with `saveTrnsSalesOsdc error (924): … [KRA: Invoice number already exists.]`.
+
+### 16.1 Root cause
+
+- `get_last_inv_number` allocated `max(TIS Device "Last Sales Invoice Number", highest local Sales Invoice number) + 1` and never consulted KRA. The device field was never written by the app. When another system shares the SCU (verified on `vigilante`: KRA held 494-502, 701, 901-905 while local numbering was at 34), local numbers collided with KRA's.
+- The queue freezes `invcNo` in the payload at enqueue, so every retry resent the same rejected number until `max_retries` was exhausted.
+- `Receipt Copy Count` (`custom_receipt_copy_count`) is a print-only counter and is not part of the KRA payload; it is unrelated.
+
+### 16.2 Pre-allocation sync
+
+**File:** `custom_methods/sales_invoice.py`
+
+New `sync_kra_invoice_floor(branch_id, rows=None)`: reads KRA's sales list (last 400 days) and raises the device `last_sales_invoice_number` to KRA's highest `invcNo`, so the next allocation starts above it. Called from `get_last_inv_number` before the `FOR UPDATE` lock (network I/O stays outside the lock). Throttled to one lookup per branch per 5 minutes via `frappe.cache`; the throttle key is set before the call. Any KRA failure is logged ("eTIMS: KRA invoice-number sync failed") and the floor is left unchanged, so invoicing is never blocked.
+
+### 16.3 Renumber-and-retry on 924
+
+**File:** `custom_methods/queue_processor.py`
+
+New `_renumber_duplicate_invoice`, invoked from `process_queue_entry` for `save_sales` failures containing `(924)` while retries remain. It refreshes the device floor from KRA's list, allocates a fresh number (`max(KRA highest, local highest) + 1`), updates the Sales Invoice `custom_invoice_number` and the queued payload, consumes one retry, and re-queues. It does nothing (entry stays Failed) if KRA's record at the rejected number matches this invoice (same `totAmt`, `salesDt`, `custNm`), since renumbering a lost-acknowledgement retry would create a duplicate fiscal receipt, or if KRA's list cannot be read.
+
+### 16.4 Verification
+
+Smoke-tested on site `vigilante` (bench `vigilant`): forcing `invcNo=905` reproduced the exact 924; the entry was renumbered to 906, re-queued and ended **Sent**. With the device floor reset to 0, allocation for an invoice whose local max was 34 returned **907** (KRA highest 906) instead of 35; a repeat call inside the throttle window returned in 0.1s. No automated tests added.
+
+### 16.5 Known limits
+
+A number taken by another system between the lookup and the send, or within the 5-minute throttle window, still produces a 924, which is then handled by 16.3. KRA numbers older than the 400-day lookup are not seen. Purchase invoice numbering and stock entries are not covered. Allocation needs the cache (Redis) to be available.
+
+**Files changed:** `kenya_etims_compliance/custom_methods/sales_invoice.py`, `kenya_etims_compliance/custom_methods/queue_processor.py`, `CHANGELOG_AUDIT.md`.
 
 ---
 

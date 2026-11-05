@@ -646,6 +646,42 @@ def get_customer_details(customer):
 	return cust_dict
 
 
+KRA_FLOOR_SYNC_TTL = 300  # seconds between KRA lookups per branch
+
+
+def sync_kra_invoice_floor(branch_id, rows=None):
+	"""Raise the device's last_sales_invoice_number to KRA's highest sales invcNo.
+
+	The allocator only sees this site's numbers; a shared SCU / other POS / restored
+	DB leaves KRA ahead, and KRA rejects the reused number (924). Does network I/O,
+	so call BEFORE the allocation row lock. Throttled per branch; never blocks
+	invoicing — on any failure the floor is left as-is (queue 924 recovery covers it).
+	Pass ``rows`` (a KRA salesList) to skip the lookup.
+	"""
+	if rows is None:
+		from frappe.utils import add_days, now_datetime
+
+		key = f"etims_kra_floor_sync:{branch_id}"
+		if frappe.cache.get_value(key):
+			return
+		# Set first: a slow/failed KRA call must not be retried on every save.
+		frappe.cache.set_value(key, 1, expires_in_sec=KRA_FLOOR_SYNC_TTL)
+		try:
+			res = eTIMS.searchTrns(trns_type="sales", last_req_dt=add_days(now_datetime(), -400))
+			rows = ((res.get("Success") or {}) if isinstance(res, dict) else {}).get("salesList") or []
+		except Exception:
+			frappe.log_error(title="eTIMS: KRA invoice-number sync failed", message=traceback.format_exc())
+			return
+
+	nums = [int(r["invcNo"]) for r in rows if r.get("invcNo") is not None]
+	device = frappe.db.get_value("TIS Device Initialization", {"branch_id": branch_id}, "name")
+	if not (nums and device):
+		return
+	cur = frappe.db.get_value("TIS Device Initialization", device, "last_sales_invoice_number") or 0
+	if max(nums) > cur:
+		frappe.db.set_value("TIS Device Initialization", device, "last_sales_invoice_number", max(nums))
+
+
 def get_last_inv_number(doc, branch_id):
 
 	cur_number = 0
@@ -664,6 +700,8 @@ def get_last_inv_number(doc, branch_id):
 					"and try again."
 				)
 			)
+
+		sync_kra_invoice_floor(branch_id)
 
 		# Serialize per-branch number allocation. Lock the branch's device row
 		# with FOR UPDATE so two concurrent submits cannot read the same max and
