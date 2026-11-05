@@ -55,10 +55,11 @@ def get_etims_settings():
 	from kenya_etims_compliance.utils.permissions import is_etims_admin, is_etims_manager
 
 	is_privileged = is_etims_admin() or is_etims_manager() or "System Manager" in frappe.get_roles()
-	if not is_privileged:
-		# Anyone else still needs to read settings — they may legitimately
-		# need api_timeout / sar types — but must not see compliance or RBAC
-		# toggles. require() is on read here.
+	# The read gate guards the RPC endpoint only. Server-side callers (sales
+	# and stock hooks running as a cashier) get the limited subset below; gating
+	# them made every non-admin POS sale fail on submit.
+	is_rpc_target = frappe.form_dict.get("cmd") == f"{__name__}.get_etims_settings"
+	if is_rpc_target and not is_privileged:
 		require("eTIMS Settings", "read")
 
 	_defaults = {

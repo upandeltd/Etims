@@ -41,6 +41,7 @@ from kenya_etims_compliance.custom_methods.sales_invoice import (
 	etims_sale_item_list_sales,
 	get_total_discount,
 	insert_tax_amounts,
+	payment_type_code,
 	sales_return_information,
 	validate_inv_number,
 )
@@ -219,6 +220,23 @@ class TestSalesInvoiceCustomMethods(FrappeTestCase):
 		self.assertNotIn(20, result)
 		self.assertIn(10, result)
 		self.assertIn(30, result)
+
+	def test_payment_type_code_from_tendered_modes(self):
+		def sale(*rows, outstanding=0, is_return=0):
+			return MagicMock(
+				payments=[MockRow(mode_of_payment=m, type=t, amount=a) for m, t, a in rows],
+				outstanding_amount=outstanding,
+				is_return=is_return,
+			)
+
+		cash, mpesa = ("Cash", "Cash", 1000), ("M-pesa Starehe", "Cash", 1800)
+		self.assertEqual(payment_type_code(sale(cash)), "01")
+		self.assertEqual(payment_type_code(sale(mpesa)), "06")
+		self.assertEqual(payment_type_code(sale(cash, mpesa)), "06")  # largest amount wins
+		self.assertEqual(payment_type_code(sale(("Visa", "Bank", 500))), "05")
+		self.assertEqual(payment_type_code(sale(cash, outstanding=500)), "03")
+		self.assertEqual(payment_type_code(sale(("M-pesa", "Cash", -500), is_return=1)), "06")
+		self.assertIsNone(payment_type_code(sale()))
 
 	def test_get_total_discount_with_discount(self):
 		item1 = MockRow(discount_percentage=10, custom_discount_amount_kes=5, qty=2)

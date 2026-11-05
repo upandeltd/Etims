@@ -6,6 +6,22 @@ import frappe
 import requests
 
 
+KRA_ID_MAX_LEN = 20  # KRA rejects regrId/modrId longer than this (error 910); user emails exceed it
+
+
+def _cap_user_ids(node):
+	"""Truncate regrId/modrId to KRA's 20-char limit, in place, at any nesting depth."""
+	if isinstance(node, dict):
+		for key, value in node.items():
+			if key in ("regrId", "modrId") and isinstance(value, str):
+				node[key] = value[:KRA_ID_MAX_LEN]
+			else:
+				_cap_user_ids(value)
+	elif isinstance(node, list):
+		for value in node:
+			_cap_user_ids(value)
+
+
 class KRAClient:
 	"""Centralized KRA eTIMS API client with timeout, retry, and error handling.
 
@@ -58,6 +74,7 @@ class KRAClient:
 				"Retryable": False,
 			}
 
+		_cap_user_ids(payload)
 		timeout = self.settings.get("api_timeout", 30)
 		max_retries = (
 			self.settings.get("max_retry_attempts", 3) if self.settings.get("enable_retry_logic") else 1

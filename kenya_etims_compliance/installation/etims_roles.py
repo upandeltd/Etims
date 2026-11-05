@@ -28,7 +28,6 @@ def create_etims_roles():
 			"desk_access": 1,
 			"is_custom": 1,
 			"description": "Full access to all eTIMS functions and settings management",
-			"restrict_to_domain": 0,
 		},
 		{
 			"doctype": "Role",
@@ -36,7 +35,6 @@ def create_etims_roles():
 			"desk_access": 1,
 			"is_custom": 1,
 			"description": "Branch-level oversight with full operations access per branch",
-			"restrict_to_domain": 0,
 		},
 		{
 			"doctype": "Role",
@@ -44,7 +42,6 @@ def create_etims_roles():
 			"desk_access": 1,
 			"is_custom": 1,
 			"description": "Day-to-day eTIMS operations - create transactions, view data, no delete",
-			"restrict_to_domain": 0,
 		},
 		{
 			"doctype": "Role",
@@ -52,7 +49,6 @@ def create_etims_roles():
 			"desk_access": 0,
 			"is_custom": 1,
 			"description": "Read-only access for audit and review purposes",
-			"restrict_to_domain": 0,
 		},
 		{
 			"doctype": "Role",
@@ -60,7 +56,6 @@ def create_etims_roles():
 			"desk_access": 1,
 			"is_custom": 1,
 			"description": "Sales Invoice sync and item search operations",
-			"restrict_to_domain": 0,
 		},
 		{
 			"doctype": "Role",
@@ -68,7 +63,6 @@ def create_etims_roles():
 			"desk_access": 1,
 			"is_custom": 1,
 			"description": "Purchase Invoice sync and item search operations",
-			"restrict_to_domain": 0,
 		},
 		{
 			"doctype": "Role",
@@ -76,7 +70,6 @@ def create_etims_roles():
 			"desk_access": 1,
 			"is_custom": 1,
 			"description": "Stock Entry and Stock Release Number management",
-			"restrict_to_domain": 0,
 		},
 	]
 
